@@ -106,10 +106,6 @@ irm "https://raw.githubusercontent.com/SysAdminDoc/Wingetter/main/Wingetter.ps1"
 
 **Export as JSON** creates a portable config file that can be imported back into Wingetter on any machine.
 
-## Screenshots
-
-*Dark mode with categorized app grid, search filter, and bulk selection controls.*
-
 ## Contributing
 
 Contributions are welcome. To add applications to the database, edit the `$Script:SoftwareDatabase` hashtable in `Wingetter.ps1`. Each entry follows this format:
