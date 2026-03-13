@@ -71,7 +71,7 @@ function Show-Splash {
     $grad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#9b59b6"), 0.5)))
     $grad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#27ae60"), 1)))
     $accentLine.Background = $grad
-    $grid.Children.Add($accentLine)
+    [void]$grid.Children.Add($accentLine)
 
     # Center stack
     $stack = New-Object System.Windows.Controls.StackPanel
@@ -90,7 +90,7 @@ function Show-Splash {
     $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#5dade2"), 0)))
     $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#a29bfe"), 1)))
     $title.Foreground = $titleGrad
-    $stack.Children.Add($title)
+    [void]$stack.Children.Add($title)
 
     # Version
     $ver = New-Object System.Windows.Controls.TextBlock
@@ -98,7 +98,7 @@ function Show-Splash {
     $ver.Foreground = $bc.ConvertFromString("#4a4a6a")
     $ver.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
     $ver.Margin = [System.Windows.Thickness]::new(0, 0, 0, 24)
-    $stack.Children.Add($ver)
+    [void]$stack.Children.Add($ver)
 
     # Status text
     $statusTb = New-Object System.Windows.Controls.TextBlock
@@ -107,7 +107,7 @@ function Show-Splash {
     $statusTb.Foreground = $bc.ConvertFromString("#8a8aaa")
     $statusTb.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
     $statusTb.Margin = [System.Windows.Thickness]::new(0, 0, 0, 14)
-    $stack.Children.Add($statusTb)
+    [void]$stack.Children.Add($statusTb)
 
     # Progress bar container
     $barBg = New-Object System.Windows.Controls.Border
@@ -128,16 +128,16 @@ function Show-Splash {
     $barGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#9b59b6"), 1)))
     $barFill.Background = $barGrad
     $barBg.Child = $barFill
-    $stack.Children.Add($barBg)
+    [void]$stack.Children.Add($barBg)
 
     # Percent text
     $pctTb = New-Object System.Windows.Controls.TextBlock
     $pctTb.Text = ""; $pctTb.FontSize = 11
     $pctTb.Foreground = $bc.ConvertFromString("#4a4a6a")
     $pctTb.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
-    $stack.Children.Add($pctTb)
+    [void]$stack.Children.Add($pctTb)
 
-    $grid.Children.Add($stack)
+    [void]$grid.Children.Add($stack)
     $win.Content = $outer
 
     return @{
@@ -2248,10 +2248,10 @@ function Show-WinGetInstallerGUI {
         [System.Windows.Controls.Grid]::SetColumn($catSelectAll, 3)
         [void]$ui["Elements"]["CategoryAlls"].Add($catSelectAll)
 
-        $headerGrid.Children.Add($collapseArrow); $headerGrid.Children.Add($categoryTitle); $headerGrid.Children.Add($countBadge); $headerGrid.Children.Add($catSelectAll)
+        [void]$headerGrid.Children.Add($collapseArrow); [void]$headerGrid.Children.Add($categoryTitle); [void]$headerGrid.Children.Add($countBadge); [void]$headerGrid.Children.Add($catSelectAll)
         $headerBorder.Child = $headerGrid
         $headerBorder.Cursor = [System.Windows.Input.Cursors]::Hand
-        $categoryStack.Children.Add($headerBorder)
+        [void]$categoryStack.Children.Add($headerBorder)
 
         $appsStack = New-Object System.Windows.Controls.StackPanel
         $appsStack.Margin = [System.Windows.Thickness]::new(5, 3, 5, 5)
@@ -2292,7 +2292,7 @@ function Show-WinGetInstallerGUI {
             [void]$ui["Elements"]["AppLabels"].Add($appLabel)
 
             # Installed indicator dot (hidden by default, shown after background scan)
-            $installedDot = New-Object System.Windows.Controls.Ellipse
+            $installedDot = New-Object System.Windows.Shapes.Ellipse
             $installedDot.Width = 6; $installedDot.Height = 6
             $installedDot.Fill = (& $toBrush "#2ecc71")
             $installedDot.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
@@ -2301,10 +2301,10 @@ function Show-WinGetInstallerGUI {
             $installedDot.ToolTip = "Already installed"
             [void]$ui["Elements"]["InstalledDots"].Add($installedDot)
 
-            $appStack.Children.Add($checkbox)
-            $appStack.Children.Add($installedDot)
-            $appStack.Children.Add($iconImage)
-            $appStack.Children.Add($appLabel)
+            [void]$appStack.Children.Add($checkbox)
+            [void]$appStack.Children.Add($installedDot)
+            [void]$appStack.Children.Add($iconImage)
+            [void]$appStack.Children.Add($appLabel)
 
             $appBorder.Child = $appStack
 
@@ -2314,7 +2314,7 @@ function Show-WinGetInstallerGUI {
             $tipName.Text = $app.Name; $tipName.FontWeight = [System.Windows.FontWeights]::SemiBold; $tipName.FontSize = 12
             $tipId = New-Object System.Windows.Controls.TextBlock
             $tipId.Text = $app.WingetId; $tipId.Foreground = (& $toBrush "#6c7a89"); $tipId.FontSize = 11
-            $tipStack.Children.Add($tipName); $tipStack.Children.Add($tipId)
+            [void]$tipStack.Children.Add($tipName); [void]$tipStack.Children.Add($tipId)
             $appBorder.ToolTip = $tipStack
 
             # Shift-click support: track app index for range selection
@@ -2347,7 +2347,7 @@ function Show-WinGetInstallerGUI {
             $checkbox.Add_Checked({ param($sender,$e); $sc=$ui["SelectedBg"]; if($sc){$sender.Parent.Parent.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($sc)}; & $UpdateSelectedCount }.GetNewClosure())
             $checkbox.Add_Unchecked({ param($sender,$e); $sender.Parent.Parent.Background=[System.Windows.Media.Brushes]::Transparent; & $UpdateSelectedCount }.GetNewClosure())
 
-            $appsStack.Children.Add($appBorder)
+            [void]$appsStack.Children.Add($appBorder)
             $ui["AllCheckboxes"][$app.WingetId] = $checkbox
             [void]$categoryCheckboxList.Add($checkbox)
 
@@ -2375,10 +2375,10 @@ function Show-WinGetInstallerGUI {
             $e.Handled = $true
         }.GetNewClosure())
 
-        $categoryStack.Children.Add($appsStack)
+        [void]$categoryStack.Children.Add($appsStack)
         [void]$ui["CategoryAppsStacks"].Add($appsStack)
         $categoryBorder.Child = $categoryStack
-        $CategoriesPanel.Children.Add($categoryBorder)
+        [void]$CategoriesPanel.Children.Add($categoryBorder)
         [void]$ui["Categories"].Add($catData)
     }
 
@@ -2419,7 +2419,7 @@ function Show-WinGetInstallerGUI {
         $sideBtnCount.Margin = [System.Windows.Thickness]::new(4, 0, 0, 0)
         [System.Windows.Controls.Grid]::SetColumn($sideBtnCount, 1)
 
-        $sideBtnGrid.Children.Add($sideBtnText); $sideBtnGrid.Children.Add($sideBtnCount)
+        [void]$sideBtnGrid.Children.Add($sideBtnText); [void]$sideBtnGrid.Children.Add($sideBtnCount)
         $sideBtn.Child = $sideBtnGrid
 
         $sideBtn.Add_MouseEnter({ param($s,$e); $s.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1a1a3e") }.GetNewClosure())
@@ -2436,7 +2436,7 @@ function Show-WinGetInstallerGUI {
             $e.Handled = $true
         }.GetNewClosure())
 
-        $SidebarPanel.Children.Add($sideBtn)
+        [void]$SidebarPanel.Children.Add($sideBtn)
         [void]$ui["SidebarButtons"].Add($sideBtnText)
         $catIdx++
     }
@@ -2785,9 +2785,9 @@ function Show-WinGetInstallerGUI {
         $statusText.Text = $Status; $statusText.FontSize = 11; $statusText.FontWeight = [System.Windows.FontWeights]::SemiBold
         $statusText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($Color)
         [System.Windows.Controls.Grid]::SetColumn($statusText, 1)
-        $entryGrid.Children.Add($nameText); $entryGrid.Children.Add($statusText)
+        [void]$entryGrid.Children.Add($nameText); [void]$entryGrid.Children.Add($statusText)
         $entry.Child = $entryGrid
-        $LogEntriesPanel.Children.Add($entry)
+        [void]$LogEntriesPanel.Children.Add($entry)
         $LogScrollViewer.ScrollToEnd()
     }
 
