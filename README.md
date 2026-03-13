@@ -1,28 +1,46 @@
 # Wingetter
 
-A powerful PowerShell GUI application for discovering, selecting, and bulk installing Windows software using [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/winget/). Think Ninite, but with 734 apps and full winget integration.
+A powerful PowerShell GUI application for discovering, selecting, and bulk installing Windows software using [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/winget/). Think Ninite, but with 765 apps and full winget integration.
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)
-![Apps](https://img.shields.io/badge/Apps-734-green)
+![Apps](https://img.shields.io/badge/Apps-765-green)
 ![Categories](https://img.shields.io/badge/Categories-39-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
 
+## Quick Launch
+
+```powershell
+irm "https://raw.githubusercontent.com/SysAdminDoc/Wingetter/main/Wingetter.ps1" | iex
+```
+
+Paste the above into any PowerShell window to download and run Wingetter instantly. No installation required.
+
+---
+
 ## Features
 
-**734 applications** across **39 categories** with a polished WPF interface:
+**765 applications** across **39 categories** with a polished WPF interface:
 
 - **Dark / Light mode** -- defaults to dark, toggle with one click
-- **Live search** -- instantly filter across all 734 packages
-- **Favicon icons** -- auto-fetched from app domains with colored letter fallbacks and local caching
+- **Live search** -- instantly filter across all 765 packages
+- **Favicon icons** -- parallel-fetched from app domains with colored letter fallbacks and local caching
 - **Bulk install** -- select any combination and install them all in sequence via winget
+- **Update mode** -- toggle between Install and Update mode to upgrade already-installed apps
+- **Installed app detection** -- background scan via `winget list` with green dot indicators
 - **Silent install & auto-accept agreements** -- toggleable checkboxes for hands-free deployment
 - **Copy command** -- grab the raw `winget install` commands to clipboard
 - **Save / Load groups** -- persist custom selections as named groups for reuse
 - **Export as PS1 or JSON** -- generate standalone installer scripts or portable JSON configs
 - **Import groups** -- load previously exported PS1/JSON files back in
-- **7 built-in quick-select groups** -- one-click presets for common setups
+- **10 built-in quick-select groups** -- one-click presets for common setups
+- **Category sidebar** -- quick-jump navigation panel for all 39 categories
+- **Collapsible categories** -- click any category header to collapse/expand
+- **Shift-click range selection** -- hold Shift to select a range of apps at once
+- **Enhanced tooltips** -- hover to see app name and WingetId
+- **Install log panel** -- color-coded per-app results (success/skipped/failed) with summary
+- **Toast notifications** -- Windows notification when batch install completes
 - **Splash screen** -- loading progress indicator while icons are fetched
 - **Select All / Deselect All** per category or globally
 - **WinGet auto-detection** -- checks for winget on launch and offers to install it if missing
@@ -40,6 +58,9 @@ Pre-configured package groups for common use cases:
 | Gaming PC | Steam, Discord, Epic, GOG, MSI Afterburner, DS4Windows |
 | Privacy & Security | Bitwarden, KeePassXC, VeraCrypt, Tor, Mullvad, ProtonVPN |
 | System Admin | PowerShell 7, Windows Terminal, WinSCP, PuTTY, Sysinternals |
+| Remote Worker | Zoom, Teams, Slack, AnyDesk, Notion, Bitwarden |
+| Media & Entertainment | VLC, Plex, Spotify, Stremio, MPC-HC, foobar2000 |
+| Student Essentials | Firefox, LibreOffice, Notion, Zotero, Python, VS Code |
 
 ## Categories
 
@@ -85,20 +106,15 @@ Pre-configured package groups for common use cases:
 powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 ```
 
-### One-liner (download and run)
-
-```powershell
-irm "https://raw.githubusercontent.com/SysAdminDoc/Wingetter/main/Wingetter.ps1" | iex
-```
-
 ### Workflow
 
 1. Launch the script -- the splash screen loads while icons are fetched
-2. Browse categories or use the search bar to find apps
-3. Check the boxes for everything you want to install
+2. Browse categories using the sidebar or use the search bar to find apps
+3. Check the boxes for everything you want to install (Shift-click for range selection)
 4. Optionally toggle **Silent Install** and **Auto-accept Agreements**
 5. Click **Install Selected** to kick off the batch install
-6. Save your selection as a named group for next time, or export it as a standalone PS1/JSON
+6. Review results in the log panel -- color-coded per app
+7. Save your selection as a named group for next time, or export it as a standalone PS1/JSON
 
 ### Exporting
 
