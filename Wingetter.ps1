@@ -2550,17 +2550,6 @@ function Show-WinGetInstallerGUI {
     }.GetNewClosure())
 
     $DeselectAllBtn.Add_Click({
-        if ($ui["IsUpdateMode"]) {
-            # In update mode, "Select All" checks all visible installed apps
-            foreach ($cat in $ui["Categories"]) {
-                foreach ($appEntry in $cat["Apps"]) {
-                    if ($appEntry["Border"].Visibility -eq 'Visible') {
-                        $ui["AllCheckboxes"][$appEntry["WingetId"]].IsChecked = $true
-                    }
-                }
-            }
-            return
-        }
         foreach ($cb in $ui["AllCheckboxes"].Values) { $cb.IsChecked = $false }
     }.GetNewClosure())
 
@@ -2813,10 +2802,12 @@ function Show-WinGetInstallerGUI {
                 while (-not $proc.HasExited) { [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 100; if ($ui["Cancelled"]) { try { $proc.Kill() } catch {}; break } }
                 if (-not $ui["Cancelled"]) {
                     $out = $proc.StandardOutput.ReadToEnd()
-                    if ($proc.ExitCode -eq 0) {
+                    if ($out -match "already installed|No available upgrade|No newer package|No applicable update") {
+                        $skip++; & $AddLogEntry $app.Name "UP TO DATE" "#f39c12"
+                    } elseif ($out -match "Successfully installed") {
                         $ok++; & $AddLogEntry $app.Name "SUCCESS" "#2ecc71"
-                    } elseif ($out -match "already installed|No available upgrade|No newer package") {
-                        $skip++; & $AddLogEntry $app.Name "SKIPPED" "#f39c12"
+                    } elseif ($proc.ExitCode -eq 0) {
+                        $ok++; & $AddLogEntry $app.Name "SUCCESS" "#2ecc71"
                     } else {
                         $fail++; & $AddLogEntry $app.Name "FAILED" "#e74c3c"
                     }
@@ -2855,12 +2846,14 @@ function Show-WinGetInstallerGUI {
         # Change CategoriesPanel to single column vertical layout
         $CategoriesPanel.Orientation = [System.Windows.Controls.Orientation]::Vertical
 
-        # Hide all category cards, then show only those with installed apps
+        # Hide ALL category cards (headers, collapse arrows, etc.)
         $appIdx = 0; $installedCount = 0; $catIdx2 = 0
         foreach ($catName in $Script:SoftwareDatabase.Keys) {
             $card = $ui["Elements"]["CategoryCards"][$catIdx2]
             $apps = $Script:SoftwareDatabase[$catName]
-            $hasInstalled = $false
+
+            # Hide category header elements
+            try { $ui["Elements"]["CategoryHeaders"][$catIdx2].Visibility = [System.Windows.Visibility]::Collapsed } catch {}
 
             foreach ($app in $apps) {
                 $isInstalled = $ui["InstalledIds"].ContainsKey($app.WingetId)
@@ -2870,7 +2863,6 @@ function Show-WinGetInstallerGUI {
                     $border.Visibility = [System.Windows.Visibility]::Visible
                     $border.Opacity = 1.0
                     $ui["AllCheckboxes"][$app.WingetId].IsChecked = $true
-                    $hasInstalled = $true
                     $installedCount++
                 } else {
                     $border.Visibility = [System.Windows.Visibility]::Collapsed
@@ -2878,17 +2870,16 @@ function Show-WinGetInstallerGUI {
                 $appIdx++
             }
 
-            if ($hasInstalled) {
-                $card.Visibility = [System.Windows.Visibility]::Visible
-                $card.Width = [double]::NaN
-                $card.Margin = [System.Windows.Thickness]::new(4, 4, 4, 4)
-            } else {
-                $card.Visibility = [System.Windows.Visibility]::Collapsed
-            }
+            # Show card but without header - just the app list
+            $card.Visibility = [System.Windows.Visibility]::Visible
+            $card.Width = [double]::NaN
+            $card.Margin = [System.Windows.Thickness]::new(0)
+            $card.BorderThickness = [System.Windows.Thickness]::new(0)
+            $card.Background = [System.Windows.Media.Brushes]::Transparent
+            try { $card.Effect = $null } catch {}
 
-            # Expand category (in case collapsed)
+            # Expand apps stack (in case collapsed)
             try { $ui["CategoryAppsStacks"][$catIdx2].Visibility = [System.Windows.Visibility]::Visible } catch {}
-            try { $ui["Elements"]["CollapseArrows"][$catIdx2].Text = [string][char]0x25BC } catch {}
             $catIdx2++
         }
 
@@ -2898,13 +2889,13 @@ function Show-WinGetInstallerGUI {
         $ProgressText.Text = "$installedCount installed apps ready to update - uncheck any you want to skip"
         $SelectedCount.Text = "$installedCount"
 
-        # Show back button (reuse InstallWinGetBtn slot or create inline)
         $SelectAllBtn.Content = "Back to Install"
-        $DeselectAllBtn.Content = "Select All"
+        $DeselectAllBtn.Content = "Deselect All"
     }
 
     $ExitUpdateView = {
         $ui["IsUpdateMode"] = $false
+        $bc = [System.Windows.Media.BrushConverter]::new()
 
         # Restore sidebar
         $SidebarBorder.Visibility = [System.Windows.Visibility]::Visible
@@ -2912,15 +2903,26 @@ function Show-WinGetInstallerGUI {
         # Restore horizontal wrap layout
         $CategoriesPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
 
-        # Show all apps, restore installed dimming
+        # Show all apps, restore installed dimming and card styling
         $appIdx = 0; $catIdx2 = 0
         foreach ($catName in $Script:SoftwareDatabase.Keys) {
             $card = $ui["Elements"]["CategoryCards"][$catIdx2]
             $card.Visibility = [System.Windows.Visibility]::Visible
             $card.Width = 210
             $card.Margin = [System.Windows.Thickness]::new(4, 4, 4, 4)
-            $apps = $Script:SoftwareDatabase[$catName]
+            $card.BorderThickness = [System.Windows.Thickness]::new(2, 1, 1, 1)
+            $t = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+            $card.Background = $bc.ConvertFromString($t["CategoryBg"])
+            $card.BorderBrush = $bc.ConvertFromString($t["CategoryBorder"])
+            $shadow = New-Object System.Windows.Media.Effects.DropShadowEffect
+            $shadow.BlurRadius = 8; $shadow.Opacity = 0.2; $shadow.ShadowDepth = 2
+            $shadow.Color = [System.Windows.Media.Colors]::Black
+            $card.Effect = $shadow
 
+            # Restore category headers
+            try { $ui["Elements"]["CategoryHeaders"][$catIdx2].Visibility = [System.Windows.Visibility]::Visible } catch {}
+
+            $apps = $Script:SoftwareDatabase[$catName]
             foreach ($app in $apps) {
                 $border = $ui["Elements"]["AppBorders"][$appIdx]
                 $border.Visibility = [System.Windows.Visibility]::Visible
