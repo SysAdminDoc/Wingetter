@@ -1157,10 +1157,8 @@ function Test-WinGet {
 }
 
 function Install-WinGet {
-    Write-Host "Checking for WinGet..."
     $wingetStatus = Test-WinGet
-    if ($wingetStatus.Installed) { Write-Host "WinGet already installed ($($wingetStatus.Version))"; return $true }
-    Write-Host "WinGet not found. Installing..."
+    if ($wingetStatus.Installed) { return $true }
     try {
         $tempDir = "$env:TEMP\WinGetInstall"
         if (!(Test-Path $tempDir)) { New-Item -ItemType Directory -Path $tempDir -Force | Out-Null }
@@ -1184,10 +1182,10 @@ function Install-WinGet {
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
         Start-Sleep -Seconds 3
         $wingetStatus = Test-WinGet
-        if ($wingetStatus.Installed) { Write-Host "WinGet installed! ($($wingetStatus.Version))"; return $true }
+        if ($wingetStatus.Installed) { return $true }
         Start-Process "ms-windows-store://pdp/?ProductId=9NBLGGH4NNS1"
         return $false
-    } catch { Write-Host "ERROR: $($_.Exception.Message)"; return $false }
+    } catch { return $false }
 }
 
 # ============================================================================
@@ -2441,7 +2439,7 @@ function Show-WinGetInstallerGUI {
         $catIdx++
     }
 
-    Write-Host "$totalApps apps ready. Icons loading in background..."
+    # Apps ready, icons loading in background
 
     # ========================================================
     # GROUPS COMBO POPULATION
@@ -3031,7 +3029,7 @@ function Show-WinGetInstallerGUI {
 # ENTRY POINT
 # ============================================================================
 
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) { Write-Host "Note: Running without admin. Some installs may need elevation." -ForegroundColor Yellow }
+
+
 
 Show-WinGetInstallerGUI
