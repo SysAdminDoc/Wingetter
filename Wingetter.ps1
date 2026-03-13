@@ -1845,6 +1845,23 @@ function Show-WinGetInstallerGUI {
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                         <Button x:Name="InstallWinGetBtn" Style="{StaticResource ToolBtn}" Content="Install WinGet" Padding="12,6" Margin="0,0,6,0" FontSize="11" Cursor="Hand" Visibility="Collapsed"/>
+                        <Button x:Name="UpdateAllBtn" Content="Update All" FontSize="11" FontWeight="SemiBold" Padding="14,6" Margin="0,0,6,0" Cursor="Hand" Foreground="White" ToolTip="Run winget upgrade --all to update every installed app">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="updateAllBorder" CornerRadius="4" Padding="{TemplateBinding Padding}" Background="#e67e22">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#f39c12"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#4a4a6a"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
                         <Button x:Name="CancelBtn" Style="{StaticResource ToolBtn}" Content="Cancel" Padding="12,6" Margin="0,0,6,0" FontSize="11" Cursor="Hand" IsEnabled="False"/>
                         <Button x:Name="InstallBtn" Content="Get Your Apps" FontSize="14" FontWeight="SemiBold" Padding="28,10" Cursor="Hand" Foreground="White">
                             <Button.Template>
@@ -1897,6 +1914,7 @@ function Show-WinGetInstallerGUI {
     $ProgressPercent  = $Window.FindName("ProgressPercent")
     $InstallBtn       = $Window.FindName("InstallBtn")
     $CancelBtn        = $Window.FindName("CancelBtn")
+    $UpdateAllBtn     = $Window.FindName("UpdateAllBtn")
     $SelectAllBtn     = $Window.FindName("SelectAllBtn")
     $DeselectAllBtn   = $Window.FindName("DeselectAllBtn")
     $ExportBtn        = $Window.FindName("ExportBtn")
@@ -2860,6 +2878,84 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
+    # Update All handler - runs winget upgrade --all
+    $UpdateAllBtn.Add_Click({
+        $status = Test-WinGet
+        if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet not installed. Click 'Install WinGet' first.", "WinGet Required", "OK", "Warning"); return }
+
+        $UpdateAllBtn.IsEnabled = $false; $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true
+        $ui["Cancelled"] = $false
+
+        $LogEntriesPanel.Children.Clear()
+        $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
+
+        $ProgressBar.Value = 0; $ProgressPercent.Text = ""
+        $ProgressText.Text = "Updating all installed apps via winget..."
+        [System.Windows.Forms.Application]::DoEvents()
+
+        $wargs = @("upgrade", "--all")
+        if ($SilentCheck.IsChecked) { $wargs += "--silent" }
+        if ($AcceptCheck.IsChecked) { $wargs += "--accept-package-agreements"; $wargs += "--accept-source-agreements" }
+        $wargs += "--include-pinned"
+
+        try {
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = "winget"; $psi.Arguments = $wargs -join " "
+            $psi.UseShellExecute = $false; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.CreateNoWindow = $true
+            $proc = [System.Diagnostics.Process]::Start($psi)
+
+            $reader = $proc.StandardOutput
+            $ok = 0; $fail = 0; $skip = 0; $currentPkg = ""
+            while (-not $proc.HasExited) {
+                [System.Windows.Forms.Application]::DoEvents()
+                if ($ui["Cancelled"]) { try { $proc.Kill() } catch {}; break }
+                while (-not $reader.EndOfStream) {
+                    $line = $reader.ReadLine()
+                    if ($line -match 'Successfully installed\s+(.+)') {
+                        $ok++; $currentPkg = $Matches[1].Trim(); & $AddLogEntry $currentPkg "UPDATED" "#2ecc71"
+                        $ProgressText.Text = "Updated: $currentPkg ($ok updated so far)"
+                    } elseif ($line -match 'No applicable update found|No installed package found|is pinned') {
+                        $skip++
+                    } elseif ($line -match 'Failed to (install|upgrade)\s*(.*)') {
+                        $fail++; $pkg = $Matches[2].Trim(); if ($pkg) { & $AddLogEntry $pkg "FAILED" "#e74c3c" }
+                    } elseif ($line -match '^\s*(\S+\.\S+)\s+.*\s+(\S+)\s+winget$') {
+                        $currentPkg = $Matches[1]
+                        $ProgressText.Text = "Upgrading $currentPkg..."
+                    }
+                    [System.Windows.Forms.Application]::DoEvents()
+                }
+                Start-Sleep -Milliseconds 100
+            }
+
+            # Read any remaining output
+            $remaining = $reader.ReadToEnd()
+            foreach ($line in ($remaining -split "`n")) {
+                if ($line -match 'Successfully installed\s+(.+)') {
+                    $ok++; & $AddLogEntry $Matches[1].Trim() "UPDATED" "#2ecc71"
+                } elseif ($line -match 'Failed to (install|upgrade)\s*(.*)') {
+                    $fail++; $pkg = $Matches[2].Trim(); if ($pkg) { & $AddLogEntry $pkg "FAILED" "#e74c3c" }
+                }
+            }
+        } catch { & $AddLogEntry "Update All" "ERROR" "#e74c3c" }
+
+        $UpdateAllBtn.IsEnabled = $true; $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false
+        if (-not $ui["Cancelled"]) {
+            $ProgressBar.Value = 100; $ProgressPercent.Text = "100%"
+            $ProgressText.Text = "Update All complete: $ok updated, $fail failed"
+            & $AddLogEntry "--- Update All Summary ---" "$ok updated, $fail failed" "#5dade2"
+            try {
+                [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+                [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
+                $toastXml = [Windows.Data.Xml.Dom.XmlDocument]::new()
+                $toastXml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>Wingetter - Update All Complete</text><text>$ok updated, $fail failed</text></binding></visual></toast>")
+                $toast = [Windows.UI.Notifications.ToastNotification]::new($toastXml)
+                [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Wingetter").Show($toast)
+            } catch {}
+        } else {
+            $ProgressText.Text = "Update All cancelled"
+        }
+    }.GetNewClosure())
+
     & $ApplyTheme
     $VisibleCountText.Text = "Showing $totalApps of $totalApps"
 
@@ -2916,7 +3012,13 @@ function Show-WinGetInstallerGUI {
             if ($installedDotMap.ContainsKey($id)) {
                 $ui["InstalledIds"][$id] = $true
                 $idx = $installedDotMap[$id]
-                try { $ui["Elements"]["InstalledDots"][$idx].Visibility = [System.Windows.Visibility]::Visible } catch {}
+                try {
+                    $ui["Elements"]["InstalledDots"][$idx].Visibility = [System.Windows.Visibility]::Visible
+                    $lbl = $ui["Elements"]["AppLabels"][$idx]
+                    if ($lbl.Text -notmatch '\(installed\)$') { $lbl.Text = $lbl.Text + "  (installed)" }
+                    $lbl.Foreground = (New-Object System.Windows.Media.BrushConverter).ConvertFromString("#6c7a89")
+                    $ui["Elements"]["AppBorders"][$idx].Opacity = 0.55
+                } catch {}
             }
             $batch++
         }
