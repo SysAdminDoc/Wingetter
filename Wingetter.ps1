@@ -1702,20 +1702,6 @@ function Show-WinGetInstallerGUI {
                             <TextBlock x:Name="WinGetStatus" Text="Checking..." Foreground="#bdc3c7" FontSize="13" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <Button x:Name="UpdateModeBtn" Height="36" Cursor="Hand" ToolTip="Switch between Install and Update mode" Margin="0,0,6,0">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="updateModeBorder" Background="#2980b9" CornerRadius="4" Padding="10,0">
-                                    <TextBlock x:Name="updateModeText" Text="Install Mode" FontSize="11" Foreground="White" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="updateModeBorder" Property="Background" Value="#3498db"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
                     <Button x:Name="ModeBtn" Width="36" Height="36" Cursor="Hand" ToolTip="Toggle Dark/Light Mode">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
@@ -1928,7 +1914,7 @@ function Show-WinGetInstallerGUI {
     $SilentCheck      = $Window.FindName("SilentCheck")
     $AcceptCheck      = $Window.FindName("AcceptCheck")
     $ModeBtn          = $Window.FindName("ModeBtn")
-    $UpdateModeBtn    = $Window.FindName("UpdateModeBtn")
+
     $SearchBox        = $Window.FindName("SearchBox")
     $SearchPlaceholder= $Window.FindName("SearchPlaceholder")
     $VisibleCountText = $Window.FindName("VisibleCountText")
@@ -1970,7 +1956,7 @@ function Show-WinGetInstallerGUI {
     $ui["LogScrollViewer"]     = $LogScrollViewer
     $ui["LogToggleBtn"]        = $LogToggleBtn
     $ui["LogTitle"]            = $LogTitle
-    $ui["UpdateModeBtn"]       = $UpdateModeBtn
+
     $ui["IsUpdateMode"]        = $false
     $ui["LastClickedIndex"]    = -1
     $ui["InstalledIds"]        = @{}
@@ -2157,16 +2143,6 @@ function Show-WinGetInstallerGUI {
             $ui["LogPanelBorder"].Background = $bc.ConvertFromString($t["LogBg"])
             $ui["LogPanelBorder"].BorderBrush = $bc.ConvertFromString($t["LogBorder"])
             $ui["LogTitle"].Foreground = $bc.ConvertFromString($t["CategoryTitle"])
-        } catch {}
-
-        # Update mode button theming
-        try {
-            $UpdateModeBtn.ApplyTemplate()
-            $umBorder = [System.Windows.Media.VisualTreeHelper]::GetChild($UpdateModeBtn, 0)
-            if ($umBorder) {
-                $bgColor = if ($ui["IsUpdateMode"]) { "#e67e22" } else { "#2980b9" }
-                $umBorder.Background = $bc.ConvertFromString($bgColor)
-            }
         } catch {}
 
         # Collapse arrow theming
@@ -2549,28 +2525,6 @@ function Show-WinGetInstallerGUI {
     # Dark mode
     $ModeBtn.Add_Click({ $ui["IsDark"] = -not $ui["IsDark"]; & $ApplyTheme }.GetNewClosure())
 
-    # Update mode toggle
-    $UpdateModeBtn.Add_Click({
-        $ui["IsUpdateMode"] = -not $ui["IsUpdateMode"]
-        $bc = [System.Windows.Media.BrushConverter]::new()
-        try {
-            $UpdateModeBtn.ApplyTemplate()
-            $umBorder = [System.Windows.Media.VisualTreeHelper]::GetChild($UpdateModeBtn, 0)
-            $umText = $umBorder.Child
-            if ($ui["IsUpdateMode"]) {
-                $umBorder.Background = $bc.ConvertFromString("#e67e22")
-                $umText.Text = "Update Mode"
-                $InstallBtn.Content = "Update Your Apps"
-                $ProgressText.Text = "Update mode - will upgrade selected apps via winget"
-            } else {
-                $umBorder.Background = $bc.ConvertFromString("#2980b9")
-                $umText.Text = "Install Mode"
-                $InstallBtn.Content = "Get Your Apps"
-                $ProgressText.Text = "Ready - Select apps and click 'Get Your Apps'"
-            }
-        } catch {}
-    }.GetNewClosure())
-
     # Log panel toggle
     $LogToggleBtn.Add_Click({
         if ($LogPanelBorder.Visibility -eq [System.Windows.Visibility]::Visible) {
@@ -2580,8 +2534,12 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
-    # Select/deselect only visible apps
+    # Select/deselect only visible apps (or back to install in update mode)
     $SelectAllBtn.Add_Click({
+        if ($ui["IsUpdateMode"]) {
+            & $ExitUpdateView
+            return
+        }
         foreach ($cat in $ui["Categories"]) {
             foreach ($appEntry in $cat["Apps"]) {
                 if ($appEntry["Border"].Visibility -eq 'Visible') {
@@ -2592,10 +2550,21 @@ function Show-WinGetInstallerGUI {
     }.GetNewClosure())
 
     $DeselectAllBtn.Add_Click({
+        if ($ui["IsUpdateMode"]) {
+            # In update mode, "Select All" checks all visible installed apps
+            foreach ($cat in $ui["Categories"]) {
+                foreach ($appEntry in $cat["Apps"]) {
+                    if ($appEntry["Border"].Visibility -eq 'Visible') {
+                        $ui["AllCheckboxes"][$appEntry["WingetId"]].IsChecked = $true
+                    }
+                }
+            }
+            return
+        }
         foreach ($cb in $ui["AllCheckboxes"].Values) { $cb.IsChecked = $false }
     }.GetNewClosure())
 
-    $InstallWinGetBtn.Add_Click({ $ProgressText.Text = "Installing WinGet..."; Install-WinGet; & $checkWinGet; $ProgressText.Text = "Ready" }.GetNewClosure())
+    $InstallWinGetBtn.Add_Click({ $ProgressText.Text = "Installing WinGet..."; $null = Install-WinGet; & $checkWinGet; $ProgressText.Text = "Ready" }.GetNewClosure())
 
     # ========================================================
     # GROUP HANDLERS
@@ -2833,11 +2802,7 @@ function Show-WinGetInstallerGUI {
             $ProgressText.Text = "$actionVerb $($app.Name) ($current/$total)..."
             [System.Windows.Forms.Application]::DoEvents()
 
-            if ($isUpdate) {
-                $wargs = @("upgrade", "--id", $app.WingetId, "--exact")
-            } else {
-                $wargs = @("install", "--id", $app.WingetId, "--exact")
-            }
+            $wargs = if ($isUpdate) { @("upgrade", "--id", $app.WingetId, "--exact") } else { @("install", "--id", $app.WingetId, "--exact") }
             if ($SilentCheck.IsChecked) { $wargs += "--silent" }
             if ($AcceptCheck.IsChecked) { $wargs += "--accept-package-agreements"; $wargs += "--accept-source-agreements" }
             try {
@@ -2878,82 +2843,114 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
-    # Update All handler - runs winget upgrade --all
-    $UpdateAllBtn.Add_Click({
-        $status = Test-WinGet
-        if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet not installed. Click 'Install WinGet' first.", "WinGet Required", "OK", "Warning"); return }
+    # ========================================================
+    # UPDATE VIEW - show only installed apps in single column
+    # ========================================================
+    $EnterUpdateView = {
+        $ui["IsUpdateMode"] = $true
 
-        $UpdateAllBtn.IsEnabled = $false; $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true
-        $ui["Cancelled"] = $false
+        # Hide sidebar
+        $SidebarBorder.Visibility = [System.Windows.Visibility]::Collapsed
 
-        $LogEntriesPanel.Children.Clear()
-        $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
+        # Change CategoriesPanel to single column vertical layout
+        $CategoriesPanel.Orientation = [System.Windows.Controls.Orientation]::Vertical
 
-        $ProgressBar.Value = 0; $ProgressPercent.Text = ""
-        $ProgressText.Text = "Updating all installed apps via winget..."
-        [System.Windows.Forms.Application]::DoEvents()
+        # Hide all category cards, then show only those with installed apps
+        $appIdx = 0; $installedCount = 0; $catIdx2 = 0
+        foreach ($catName in $Script:SoftwareDatabase.Keys) {
+            $card = $ui["Elements"]["CategoryCards"][$catIdx2]
+            $apps = $Script:SoftwareDatabase[$catName]
+            $hasInstalled = $false
 
-        $wargs = @("upgrade", "--all")
-        if ($SilentCheck.IsChecked) { $wargs += "--silent" }
-        if ($AcceptCheck.IsChecked) { $wargs += "--accept-package-agreements"; $wargs += "--accept-source-agreements" }
-        $wargs += "--include-pinned"
+            foreach ($app in $apps) {
+                $isInstalled = $ui["InstalledIds"].ContainsKey($app.WingetId)
+                $border = $ui["Elements"]["AppBorders"][$appIdx]
 
-        try {
-            $psi = New-Object System.Diagnostics.ProcessStartInfo
-            $psi.FileName = "winget"; $psi.Arguments = $wargs -join " "
-            $psi.UseShellExecute = $false; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.CreateNoWindow = $true
-            $proc = [System.Diagnostics.Process]::Start($psi)
-
-            $reader = $proc.StandardOutput
-            $ok = 0; $fail = 0; $skip = 0; $currentPkg = ""
-            while (-not $proc.HasExited) {
-                [System.Windows.Forms.Application]::DoEvents()
-                if ($ui["Cancelled"]) { try { $proc.Kill() } catch {}; break }
-                while (-not $reader.EndOfStream) {
-                    $line = $reader.ReadLine()
-                    if ($line -match 'Successfully installed\s+(.+)') {
-                        $ok++; $currentPkg = $Matches[1].Trim(); & $AddLogEntry $currentPkg "UPDATED" "#2ecc71"
-                        $ProgressText.Text = "Updated: $currentPkg ($ok updated so far)"
-                    } elseif ($line -match 'No applicable update found|No installed package found|is pinned') {
-                        $skip++
-                    } elseif ($line -match 'Failed to (install|upgrade)\s*(.*)') {
-                        $fail++; $pkg = $Matches[2].Trim(); if ($pkg) { & $AddLogEntry $pkg "FAILED" "#e74c3c" }
-                    } elseif ($line -match '^\s*(\S+\.\S+)\s+.*\s+(\S+)\s+winget$') {
-                        $currentPkg = $Matches[1]
-                        $ProgressText.Text = "Upgrading $currentPkg..."
-                    }
-                    [System.Windows.Forms.Application]::DoEvents()
+                if ($isInstalled) {
+                    $border.Visibility = [System.Windows.Visibility]::Visible
+                    $border.Opacity = 1.0
+                    $ui["AllCheckboxes"][$app.WingetId].IsChecked = $true
+                    $hasInstalled = $true
+                    $installedCount++
+                } else {
+                    $border.Visibility = [System.Windows.Visibility]::Collapsed
                 }
-                Start-Sleep -Milliseconds 100
+                $appIdx++
             }
 
-            # Read any remaining output
-            $remaining = $reader.ReadToEnd()
-            foreach ($line in ($remaining -split "`n")) {
-                if ($line -match 'Successfully installed\s+(.+)') {
-                    $ok++; & $AddLogEntry $Matches[1].Trim() "UPDATED" "#2ecc71"
-                } elseif ($line -match 'Failed to (install|upgrade)\s*(.*)') {
-                    $fail++; $pkg = $Matches[2].Trim(); if ($pkg) { & $AddLogEntry $pkg "FAILED" "#e74c3c" }
-                }
+            if ($hasInstalled) {
+                $card.Visibility = [System.Windows.Visibility]::Visible
+                $card.Width = [double]::NaN
+                $card.Margin = [System.Windows.Thickness]::new(4, 4, 4, 4)
+            } else {
+                $card.Visibility = [System.Windows.Visibility]::Collapsed
             }
-        } catch { & $AddLogEntry "Update All" "ERROR" "#e74c3c" }
 
-        $UpdateAllBtn.IsEnabled = $true; $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false
-        if (-not $ui["Cancelled"]) {
-            $ProgressBar.Value = 100; $ProgressPercent.Text = "100%"
-            $ProgressText.Text = "Update All complete: $ok updated, $fail failed"
-            & $AddLogEntry "--- Update All Summary ---" "$ok updated, $fail failed" "#5dade2"
-            try {
-                [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-                [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
-                $toastXml = [Windows.Data.Xml.Dom.XmlDocument]::new()
-                $toastXml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>Wingetter - Update All Complete</text><text>$ok updated, $fail failed</text></binding></visual></toast>")
-                $toast = [Windows.UI.Notifications.ToastNotification]::new($toastXml)
-                [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Wingetter").Show($toast)
-            } catch {}
-        } else {
-            $ProgressText.Text = "Update All cancelled"
+            # Expand category (in case collapsed)
+            try { $ui["CategoryAppsStacks"][$catIdx2].Visibility = [System.Windows.Visibility]::Visible } catch {}
+            try { $ui["Elements"]["CollapseArrows"][$catIdx2].Text = [string][char]0x25BC } catch {}
+            $catIdx2++
         }
+
+        # Update button states
+        $UpdateAllBtn.Visibility = [System.Windows.Visibility]::Collapsed
+        $InstallBtn.Content = "Update Selected"
+        $ProgressText.Text = "$installedCount installed apps ready to update - uncheck any you want to skip"
+        $SelectedCount.Text = "$installedCount"
+
+        # Show back button (reuse InstallWinGetBtn slot or create inline)
+        $SelectAllBtn.Content = "Back to Install"
+        $DeselectAllBtn.Content = "Select All"
+    }
+
+    $ExitUpdateView = {
+        $ui["IsUpdateMode"] = $false
+
+        # Restore sidebar
+        $SidebarBorder.Visibility = [System.Windows.Visibility]::Visible
+
+        # Restore horizontal wrap layout
+        $CategoriesPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+
+        # Show all apps, restore installed dimming
+        $appIdx = 0; $catIdx2 = 0
+        foreach ($catName in $Script:SoftwareDatabase.Keys) {
+            $card = $ui["Elements"]["CategoryCards"][$catIdx2]
+            $card.Visibility = [System.Windows.Visibility]::Visible
+            $card.Width = 210
+            $card.Margin = [System.Windows.Thickness]::new(4, 4, 4, 4)
+            $apps = $Script:SoftwareDatabase[$catName]
+
+            foreach ($app in $apps) {
+                $border = $ui["Elements"]["AppBorders"][$appIdx]
+                $border.Visibility = [System.Windows.Visibility]::Visible
+                $ui["AllCheckboxes"][$app.WingetId].IsChecked = $false
+
+                if ($ui["InstalledIds"].ContainsKey($app.WingetId)) {
+                    $border.Opacity = 0.55
+                } else {
+                    $border.Opacity = 1.0
+                }
+                $appIdx++
+            }
+            $catIdx2++
+        }
+
+        $UpdateAllBtn.Visibility = [System.Windows.Visibility]::Visible
+        $InstallBtn.Content = "Get Your Apps"
+        $SelectAllBtn.Content = "Select All"
+        $DeselectAllBtn.Content = "Deselect All"
+        $ProgressText.Text = "Ready - Select apps and click 'Get Your Apps'"
+        $SelectedCount.Text = "0"
+        $ProgressBar.Value = 0; $ProgressPercent.Text = ""
+    }
+
+    $UpdateAllBtn.Add_Click({
+        if ($ui["InstalledIds"].Count -eq 0) {
+            [System.Windows.MessageBox]::Show("No installed apps detected yet. Please wait for the background scan to complete.", "No Installed Apps", "OK", "Information")
+            return
+        }
+        & $EnterUpdateView
     }.GetNewClosure())
 
     & $ApplyTheme
@@ -3128,10 +3125,7 @@ function Show-WinGetInstallerGUI {
 }
 
 # ============================================================================
-# ENTRY POINT
+# ENTRY POINT - redirect all output to suppress ps2exe -NoConsole popups
 # ============================================================================
 
-
-
-
-Show-WinGetInstallerGUI
+Show-WinGetInstallerGUI *> $null
