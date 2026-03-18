@@ -9,6 +9,9 @@ A powerful PowerShell GUI application for discovering, selecting, and bulk insta
 
 ---
 
+
+![Screenshot](screenshot.png)
+
 ## Quick Launch
 
 ```powershell
