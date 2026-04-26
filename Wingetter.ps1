@@ -42,15 +42,15 @@ function Show-Splash {
     $win.AllowsTransparency = $true
     $win.Background = [System.Windows.Media.Brushes]::Transparent
     $win.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
-    $win.Width = 520; $win.Height = 290
+    $win.Width = 540; $win.Height = 300
     $win.Topmost = $true; $win.ShowInTaskbar = $false
     $win.ResizeMode = [System.Windows.ResizeMode]::NoResize
 
     # Outer border with shadow
     $outer = New-Object System.Windows.Controls.Border
-    $outer.Background = $bc.ConvertFromString("#0f0f23")
+    $outer.Background = $bc.ConvertFromString("#08131f")
     $outer.CornerRadius = [System.Windows.CornerRadius]::new(18)
-    $outer.BorderBrush = $bc.ConvertFromString("#2a2a4a")
+    $outer.BorderBrush = $bc.ConvertFromString("#24374a")
     $outer.BorderThickness = [System.Windows.Thickness]::new(1.5, 1.5, 1.5, 1.5)
     $shadow = New-Object System.Windows.Media.Effects.DropShadowEffect
     $shadow.BlurRadius = 30; $shadow.Opacity = 0.5; $shadow.ShadowDepth = 0
@@ -67,9 +67,9 @@ function Show-Splash {
     $grad = New-Object System.Windows.Media.LinearGradientBrush
     $grad.StartPoint = [System.Windows.Point]::new(0, 0)
     $grad.EndPoint = [System.Windows.Point]::new(1, 0)
-    $grad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#5dade2"), 0)))
-    $grad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#9b59b6"), 0.5)))
-    $grad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#27ae60"), 1)))
+    $grad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#3da4ff"), 0)))
+    $grad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#7dd3fc"), 0.55)))
+    $grad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#22c55e"), 1)))
     $accentLine.Background = $grad
     [void]$grid.Children.Add($accentLine)
 
@@ -87,15 +87,15 @@ function Show-Splash {
     $titleGrad = New-Object System.Windows.Media.LinearGradientBrush
     $titleGrad.StartPoint = [System.Windows.Point]::new(0, 0)
     $titleGrad.EndPoint = [System.Windows.Point]::new(1, 0)
-    $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#5dade2"), 0)))
-    $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#a29bfe"), 1)))
+    $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#8cd2ff"), 0)))
+    $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#d3f1ff"), 1)))
     $title.Foreground = $titleGrad
     [void]$stack.Children.Add($title)
 
     # Version
     $ver = New-Object System.Windows.Controls.TextBlock
-    $ver.Text = "v6.0"; $ver.FontSize = 12
-    $ver.Foreground = $bc.ConvertFromString("#4a4a6a")
+    $ver.Text = "v6.1.0"; $ver.FontSize = 12
+    $ver.Foreground = $bc.ConvertFromString("#7a90a6")
     $ver.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
     $ver.Margin = [System.Windows.Thickness]::new(0, 0, 0, 24)
     [void]$stack.Children.Add($ver)
@@ -104,14 +104,14 @@ function Show-Splash {
     $statusTb = New-Object System.Windows.Controls.TextBlock
     $statusTb.Text = "Initializing..."
     $statusTb.FontSize = 13
-    $statusTb.Foreground = $bc.ConvertFromString("#8a8aaa")
+    $statusTb.Foreground = $bc.ConvertFromString("#9db0c2")
     $statusTb.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
     $statusTb.Margin = [System.Windows.Thickness]::new(0, 0, 0, 14)
     [void]$stack.Children.Add($statusTb)
 
     # Progress bar container
     $barBg = New-Object System.Windows.Controls.Border
-    $barBg.Background = $bc.ConvertFromString("#1a1a2e")
+    $barBg.Background = $bc.ConvertFromString("#132132")
     $barBg.CornerRadius = [System.Windows.CornerRadius]::new(4)
     $barBg.Height = 6; $barBg.Width = 340
     $barBg.Margin = [System.Windows.Thickness]::new(0, 0, 0, 10)
@@ -124,8 +124,8 @@ function Show-Splash {
     $barGrad = New-Object System.Windows.Media.LinearGradientBrush
     $barGrad.StartPoint = [System.Windows.Point]::new(0, 0)
     $barGrad.EndPoint = [System.Windows.Point]::new(1, 0)
-    $barGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#5dade2"), 0)))
-    $barGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#9b59b6"), 1)))
+    $barGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#3da4ff"), 0)))
+    $barGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#34d399"), 1)))
     $barFill.Background = $barGrad
     $barBg.Child = $barFill
     [void]$stack.Children.Add($barBg)
@@ -133,7 +133,7 @@ function Show-Splash {
     # Percent text
     $pctTb = New-Object System.Windows.Controls.TextBlock
     $pctTb.Text = ""; $pctTb.FontSize = 11
-    $pctTb.Foreground = $bc.ConvertFromString("#4a4a6a")
+    $pctTb.Foreground = $bc.ConvertFromString("#7a90a6")
     $pctTb.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
     [void]$stack.Children.Add($pctTb)
 
@@ -1354,60 +1354,64 @@ $Script:BuiltInGroups = [ordered]@{
 
 $Script:Themes = @{
     Light = @{
-        WindowBg = "#f5f5f5"; HeaderBg = "#2c3e50"; HeaderText = "#ffffff"; HeaderSubText = "#bdc3c7"
-        ToolbarBg = "#ffffff"; ToolbarBorder = "#ecf0f1"
-        CategoryCardBg = "#ffffff"; CategoryCardBorder = "#e0e0e0"
-        CategoryHeaderBg = "#f8f9fa"; CategoryHeaderBorder = "#e0e0e0"
-        CategoryTitle = "#3498db"; CategoryAllText = "#7f8c8d"
-        AppText = "#2c3e50"; AppHoverBg = "#f0f0f0"; AppSelectedBg = "#e8f4fc"
-        FooterBg = "#ffffff"; FooterBorder = "#ecf0f1"; FooterText = "#7f8c8d"
-        StatusPillBg = "#34495e"; StatusPillText = "#bdc3c7"
-        AccentGreen = "#27ae60"; AccentGreenHover = "#2ecc71"
-        ProgressBg = "#ecf0f1"; ProgressText = "#2c3e50"
-        SecBtnBg = "#ecf0f1"; SecBtnBorder = "#bdc3c7"; SecBtnText = "#2c3e50"
-        CheckboxText = "#2c3e50"
-        SearchBg = "#ffffff"; SearchBorder = "#dcdcdc"; SearchText = "#2c3e50"; SearchPlaceholder = "#bdc3c7"
-        CountBg = "#f0f0f0"; CountText = "#2c3e50"
-        GroupBtnBg = "#f0e6ff"; GroupBtnBorder = "#9b59b6"; GroupBtnText = "#9b59b6"
-        ComboBg = "#ffffff"; ComboBorder = "#dcdcdc"; ComboPopupBg = "#ffffff"; ComboArrow = "#7f8c8d"
-        ComboItemHover = "#f0f0f0"; ComboItemText = "#2c3e50"; ComboDisabledText = "#bdc3c7"
-        ScrollThumbBg = "#c0c0c0"; ScrollThumbHover = "#a0a0a0"
-        DividerColor = "#dcdcdc"; CountBadgeBg = "#e8e8e8"
-        ChkBorder = "#bdc3c7"; ChkBorderHover = "#3498db"; ChkMark = "#3498db"; ChkText = "#2c3e50"
-        SearchIcon = "#bdc3c7"; VersionText = "#bdc3c7"
-        SidebarBg = "#f0f0f0"; SidebarText = "#2c3e50"; SidebarHover = "#e0e0e0"; SidebarActive = "#d5e8f5"
-        SidebarBorder = "#dcdcdc"; SidebarCountText = "#7f8c8d"
-        LogBg = "#f5f5f5"; LogBorder = "#dcdcdc"; LogSuccess = "#27ae60"; LogFail = "#e74c3c"; LogSkip = "#f39c12"; LogText = "#2c3e50"
-        InstalledDot = "#27ae60"; UpdateBtnBg = "#2980b9"; UpdateBtnHover = "#3498db"
-        CollapseArrow = "#7f8c8d"
+        WindowBg = "#f3f6fb"; HeaderBg = "#0f2740"; HeaderText = "#ffffff"; HeaderSubText = "#d6e2ee"
+        ToolbarBg = "#ffffff"; ToolbarBorder = "#dbe6f0"
+        CategoryCardBg = "#ffffff"; CategoryCardBorder = "#d7e2ed"
+        CategoryHeaderBg = "#f7fafe"; CategoryHeaderBorder = "#dbe6f0"
+        CategoryTitle = "#0f5fb8"; CategoryAllText = "#5f7487"
+        AppText = "#17293b"; AppSubtleText = "#6a7f91"; AppHoverBg = "#f2f7fc"; AppSelectedBg = "#e6f2ff"
+        FooterBg = "#ffffff"; FooterBorder = "#dbe6f0"; FooterText = "#54697c"
+        StatusPillBg = "#eef4fa"; StatusPillText = "#294053"; StatusPillBorder = "#d0dde8"
+        AccentGreen = "#198754"; AccentGreenHover = "#157347"
+        ProgressBg = "#e4ecf4"; ProgressText = "#1c3246"
+        SecBtnBg = "#f6f9fc"; SecBtnBorder = "#d2dde8"; SecBtnText = "#22384d"
+        CheckboxText = "#22384d"
+        SearchBg = "#ffffff"; SearchBorder = "#c7d6e3"; SearchText = "#0f2438"; SearchPlaceholder = "#77899b"; SearchFocus = "#0f6fd6"
+        CountBg = "#eef4fa"; CountText = "#1c3246"
+        GroupBtnBg = "#eef4fa"; GroupBtnBorder = "#d2dde8"; GroupBtnText = "#22384d"
+        ComboBg = "#ffffff"; ComboBorder = "#c7d6e3"; ComboPopupBg = "#ffffff"; ComboArrow = "#77899b"
+        ComboItemHover = "#f2f7fc"; ComboItemText = "#17293b"; ComboDisabledText = "#9cb0c1"
+        ScrollThumbBg = "#c2d3e2"; ScrollThumbHover = "#9eb8cc"
+        DividerColor = "#dbe6f0"; CountBadgeBg = "#eef4fa"; CountBadgeText = "#60778b"
+        ChkBorder = "#94abc0"; ChkBorderHover = "#0f6fd6"; ChkMark = "#0f6fd6"; ChkText = "#22384d"
+        SearchIcon = "#8094a8"; VersionText = "#d6e2ee"
+        SidebarBg = "#f8fbff"; SidebarText = "#304658"; SidebarHover = "#edf5fd"; SidebarActive = "#dbeeff"
+        SidebarBorder = "#dbe6f0"; SidebarCountText = "#7a8ea0"; SidebarSubtitle = "#7a8ea0"
+        LogBg = "#f8fbff"; LogBorder = "#dbe6f0"; LogSuccess = "#198754"; LogFail = "#dc3545"; LogSkip = "#b7791f"; LogText = "#1f3447"; LogEntryBg = "#ffffff"
+        InstalledDot = "#1aa56b"; InstalledBadgeBg = "#e7f8ef"; InstalledBadgeText = "#167d53"
+        UpdateBtnBg = "#dd8b21"; UpdateBtnHover = "#c77611"
+        CollapseArrow = "#6e8296"
+        EmptyStateBg = "#ffffff"; EmptyStateBorder = "#dbe6f0"; EmptyStateTitle = "#12263a"; EmptyStateText = "#60778b"
     }
     Dark = @{
-        WindowBg = "#1a1a2e"; HeaderBg = "#0f0f23"; HeaderText = "#e0e0e0"; HeaderSubText = "#6c7a89"
-        ToolbarBg = "#16213e"; ToolbarBorder = "#2a2a4a"
-        CategoryCardBg = "#16213e"; CategoryCardBorder = "#2a2a4a"
-        CategoryHeaderBg = "#1a1a3e"; CategoryHeaderBorder = "#2a2a4a"
-        CategoryTitle = "#5dade2"; CategoryAllText = "#6c7a89"
-        AppText = "#d0d0d0"; AppHoverBg = "#2a2a4a"; AppSelectedBg = "#1a3a5c"
-        FooterBg = "#16213e"; FooterBorder = "#2a2a4a"; FooterText = "#6c7a89"
-        StatusPillBg = "#0f0f23"; StatusPillText = "#6c7a89"
-        AccentGreen = "#27ae60"; AccentGreenHover = "#2ecc71"
-        ProgressBg = "#2a2a4a"; ProgressText = "#e0e0e0"
-        SecBtnBg = "#2a2a4a"; SecBtnBorder = "#3a3a5a"; SecBtnText = "#d0d0d0"
-        CheckboxText = "#d0d0d0"
-        SearchBg = "#0f0f23"; SearchBorder = "#3a3a5a"; SearchText = "#e0e0e0"; SearchPlaceholder = "#6c7a89"
-        CountBg = "#2a2a4a"; CountText = "#d0d0d0"
-        GroupBtnBg = "#2a1a3e"; GroupBtnBorder = "#bb86fc"; GroupBtnText = "#bb86fc"
-        ComboBg = "#0f0f23"; ComboBorder = "#3a3a5a"; ComboPopupBg = "#16213e"; ComboArrow = "#6c7a89"
-        ComboItemHover = "#2a2a4a"; ComboItemText = "#d0d0d0"; ComboDisabledText = "#4a4a6a"
-        ScrollThumbBg = "#3a3a5a"; ScrollThumbHover = "#5a5a7a"
-        DividerColor = "#2a2a4a"; CountBadgeBg = "#2a2a4a"
-        ChkBorder = "#3a3a5a"; ChkBorderHover = "#5dade2"; ChkMark = "#5dade2"; ChkText = "#d0d0d0"
-        SearchIcon = "#4a4a6a"; VersionText = "#4a4a6a"
-        SidebarBg = "#0f0f23"; SidebarText = "#8a8aaa"; SidebarHover = "#1a1a3e"; SidebarActive = "#1a2a4e"
-        SidebarBorder = "#2a2a4a"; SidebarCountText = "#4a4a6a"
-        LogBg = "#0f0f23"; LogBorder = "#2a2a4a"; LogSuccess = "#2ecc71"; LogFail = "#e74c3c"; LogSkip = "#f39c12"; LogText = "#d0d0d0"
-        InstalledDot = "#2ecc71"; UpdateBtnBg = "#2980b9"; UpdateBtnHover = "#3498db"
-        CollapseArrow = "#4a4a6a"
+        WindowBg = "#071018"; HeaderBg = "#08131f"; HeaderText = "#f8fafc"; HeaderSubText = "#8ca0b7"
+        ToolbarBg = "#0b1725"; ToolbarBorder = "#1d2a3a"
+        CategoryCardBg = "#0d1b2b"; CategoryCardBorder = "#1f3145"
+        CategoryHeaderBg = "#0f2133"; CategoryHeaderBorder = "#21354a"
+        CategoryTitle = "#8cd2ff"; CategoryAllText = "#8ca0b7"
+        AppText = "#e5edf5"; AppSubtleText = "#95a7bb"; AppHoverBg = "#11263a"; AppSelectedBg = "#15334b"
+        FooterBg = "#0b1725"; FooterBorder = "#1d2a3a"; FooterText = "#94a7bc"
+        StatusPillBg = "#0d1f30"; StatusPillText = "#c4d2df"; StatusPillBorder = "#22405a"
+        AccentGreen = "#1fb879"; AccentGreenHover = "#32c98a"
+        ProgressBg = "#132132"; ProgressText = "#c8d8e8"
+        SecBtnBg = "#102133"; SecBtnBorder = "#23374c"; SecBtnText = "#dbe7f1"
+        CheckboxText = "#dbe7f1"
+        SearchBg = "#08131f"; SearchBorder = "#24374a"; SearchText = "#eff6fb"; SearchPlaceholder = "#70859b"; SearchFocus = "#5ab0ff"
+        CountBg = "#102133"; CountText = "#dce8f3"
+        GroupBtnBg = "#102133"; GroupBtnBorder = "#23374c"; GroupBtnText = "#dbe7f1"
+        ComboBg = "#08131f"; ComboBorder = "#24374a"; ComboPopupBg = "#0b1725"; ComboArrow = "#7a90a6"
+        ComboItemHover = "#102133"; ComboItemText = "#dbe7f1"; ComboDisabledText = "#5f7489"
+        ScrollThumbBg = "#27405a"; ScrollThumbHover = "#3b5d7f"
+        DividerColor = "#223247"; CountBadgeBg = "#102133"; CountBadgeText = "#8ca0b7"
+        ChkBorder = "#36506a"; ChkBorderHover = "#63b7ff"; ChkMark = "#63b7ff"; ChkText = "#dbe7f1"
+        SearchIcon = "#7a90a6"; VersionText = "#7a90a6"
+        SidebarBg = "#08131f"; SidebarText = "#acc0d4"; SidebarHover = "#0f2438"; SidebarActive = "#15314a"
+        SidebarBorder = "#1d2a3a"; SidebarCountText = "#6e859a"; SidebarSubtitle = "#8196aa"
+        LogBg = "#071019"; LogBorder = "#1d2a3a"; LogSuccess = "#2dd58f"; LogFail = "#ff6b6b"; LogSkip = "#ffbf69"; LogText = "#dbe7f2"; LogEntryBg = "#0d1825"
+        InstalledDot = "#1fd389"; InstalledBadgeBg = "#103526"; InstalledBadgeText = "#78ddb1"
+        UpdateBtnBg = "#d97706"; UpdateBtnHover = "#f59e0b"
+        CollapseArrow = "#6f879e"
+        EmptyStateBg = "#0b1724"; EmptyStateBorder = "#1f3145"; EmptyStateTitle = "#f0f6fb"; EmptyStateText = "#90a4b8"
     }
 }
 
@@ -1431,62 +1435,77 @@ function Show-WinGetInstallerGUI {
             CategoryHeaders = [System.Collections.ArrayList]::new()
             CategoryTitles  = [System.Collections.ArrayList]::new()
             CategoryAlls    = [System.Collections.ArrayList]::new()
+            CountBadges     = [System.Collections.ArrayList]::new()
+            CountTexts      = [System.Collections.ArrayList]::new()
             AppBorders      = [System.Collections.ArrayList]::new()
             AppLabels       = [System.Collections.ArrayList]::new()
+            AppStatusBadges = [System.Collections.ArrayList]::new()
+            AppStatusTexts  = [System.Collections.ArrayList]::new()
             SecButtons      = [System.Collections.ArrayList]::new()
             FooterChecks    = [System.Collections.ArrayList]::new()
             CollapseArrows  = [System.Collections.ArrayList]::new()
             InstalledDots   = [System.Collections.ArrayList]::new()
+            SidebarButtons  = [System.Collections.ArrayList]::new()
+            SidebarCounts   = [System.Collections.ArrayList]::new()
+            SidebarRows     = [System.Collections.ArrayList]::new()
         }
     }
 
     $XAML = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Wingetter v6.1.0 - 765 Apps | Install or Update Multiple Apps at Once"
-        Height="900" Width="1350" MinHeight="700" MinWidth="1000"
-        WindowStartupLocation="CenterScreen" Background="#1a1a2e">
+        Title="Wingetter v6.1.0 - Curated Windows App Installs and Updates"
+        Height="920" Width="1450" MinHeight="720" MinWidth="1080"
+        WindowStartupLocation="CenterScreen" Background="#071018"
+        FontFamily="Segoe UI" SnapsToDevicePixels="True" UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display" TextOptions.TextRenderingMode="ClearType">
     <Window.Resources>
         <!-- Theme brush resources (updated dynamically by ApplyTheme) -->
-        <SolidColorBrush x:Key="ComboBg" Color="#0f0f23"/>
-        <SolidColorBrush x:Key="ComboBorder" Color="#3a3a5a"/>
-        <SolidColorBrush x:Key="ComboPopupBg" Color="#16213e"/>
-        <SolidColorBrush x:Key="ComboArrow" Color="#6c7a89"/>
-        <SolidColorBrush x:Key="ComboItemHover" Color="#2a2a4a"/>
-        <SolidColorBrush x:Key="ComboItemText" Color="#d0d0d0"/>
-        <SolidColorBrush x:Key="ComboDisabledText" Color="#4a4a6a"/>
-        <SolidColorBrush x:Key="ScrollThumbBg" Color="#3a3a5a"/>
-        <SolidColorBrush x:Key="ScrollThumbHover" Color="#5a5a7a"/>
-        <SolidColorBrush x:Key="DividerBrush" Color="#2a2a4a"/>
-        <SolidColorBrush x:Key="ChkBorder" Color="#3a3a5a"/>
-        <SolidColorBrush x:Key="ChkBorderHover" Color="#5dade2"/>
-        <SolidColorBrush x:Key="ChkMark" Color="#5dade2"/>
-        <SolidColorBrush x:Key="ChkText" Color="#d0d0d0"/>
+        <SolidColorBrush x:Key="ComboBg" Color="#08131f"/>
+        <SolidColorBrush x:Key="ComboBorder" Color="#24374a"/>
+        <SolidColorBrush x:Key="ComboPopupBg" Color="#0b1725"/>
+        <SolidColorBrush x:Key="ComboArrow" Color="#7a90a6"/>
+        <SolidColorBrush x:Key="ComboItemHover" Color="#102133"/>
+        <SolidColorBrush x:Key="ComboItemText" Color="#dbe7f1"/>
+        <SolidColorBrush x:Key="ComboDisabledText" Color="#5f7489"/>
+        <SolidColorBrush x:Key="ScrollThumbBg" Color="#27405a"/>
+        <SolidColorBrush x:Key="ScrollThumbHover" Color="#3b5d7f"/>
+        <SolidColorBrush x:Key="DividerBrush" Color="#223247"/>
+        <SolidColorBrush x:Key="ChkBorder" Color="#36506a"/>
+        <SolidColorBrush x:Key="ChkBorderHover" Color="#63b7ff"/>
+        <SolidColorBrush x:Key="ChkMark" Color="#63b7ff"/>
+        <SolidColorBrush x:Key="ChkText" Color="#dbe7f1"/>
         <!-- Toolbar / secondary button style -->
         <Style x:Key="ToolBtn" TargetType="Button">
-            <Setter Property="Background" Value="#2a2a4a"/>
-            <Setter Property="Foreground" Value="#d0d0d0"/>
-            <Setter Property="BorderBrush" Value="#3a3a5a"/>
+            <Setter Property="Background" Value="#102133"/>
+            <Setter Property="Foreground" Value="#dbe7f1"/>
+            <Setter Property="BorderBrush" Value="#23374c"/>
             <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="MinHeight" Value="34"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <Border x:Name="hover" Background="White" Opacity="0" CornerRadius="4" IsHitTestVisible="False"/>
+                            <Border x:Name="hover" Background="White" Opacity="0" CornerRadius="10" IsHitTestVisible="False"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="hover" Property="Opacity" Value="0.07"/>
-                                <Setter TargetName="bd" Property="BorderBrush" Value="#5dade2"/>
+                                <Setter TargetName="hover" Property="Opacity" Value="0.06"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#63b7ff"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="hover" Property="Opacity" Value="0.12"/>
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#63b7ff"/>
+                                <Setter TargetName="bd" Property="BorderThickness" Value="1.5"/>
+                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="bd" Property="Opacity" Value="0.4"/>
+                                <Setter TargetName="bd" Property="Opacity" Value="0.38"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -1498,16 +1517,20 @@ function Show-WinGetInstallerGUI {
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
-                    <ColumnDefinition Width="22"/>
+                    <ColumnDefinition Width="26"/>
                 </Grid.ColumnDefinitions>
-                <Border x:Name="bd" Grid.ColumnSpan="2" Background="{DynamicResource ComboBg}" BorderBrush="{DynamicResource ComboBorder}" BorderThickness="1" CornerRadius="4"/>
-                <Border x:Name="hv" Grid.ColumnSpan="2" Background="White" Opacity="0" CornerRadius="4" IsHitTestVisible="False"/>
+                <Border x:Name="bd" Grid.ColumnSpan="2" Background="{DynamicResource ComboBg}" BorderBrush="{DynamicResource ComboBorder}" BorderThickness="1" CornerRadius="10"/>
+                <Border x:Name="hv" Grid.ColumnSpan="2" Background="White" Opacity="0" CornerRadius="10" IsHitTestVisible="False"/>
                 <Path x:Name="arrow" Grid.Column="1" Fill="{DynamicResource ComboArrow}" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M0,0 L4,4 L8,0 Z"/>
             </Grid>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter TargetName="hv" Property="Opacity" Value="0.05"/>
-                    <Setter TargetName="bd" Property="BorderBrush" Value="#5dade2"/>
+                    <Setter TargetName="bd" Property="BorderBrush" Value="#63b7ff"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="bd" Property="BorderBrush" Value="#63b7ff"/>
+                    <Setter TargetName="bd" Property="BorderThickness" Value="1.5"/>
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -1515,15 +1538,16 @@ function Show-WinGetInstallerGUI {
         <Style TargetType="ComboBox">
             <Setter Property="Foreground" Value="{DynamicResource ComboItemText}"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Height" Value="36"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBox">
                         <Grid>
                             <ToggleButton x:Name="ToggleButton" Template="{StaticResource ComboToggle}" Focusable="False" IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press"/>
-                            <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" Margin="8,3,24,3" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                            <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                            <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" Margin="12,5,28,5" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                            <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
                                 <Grid x:Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                    <Border Background="{DynamicResource ComboPopupBg}" BorderBrush="{DynamicResource ComboBorder}" BorderThickness="1" CornerRadius="4" Margin="0,2,0,0" Padding="2">
+                                    <Border Background="{DynamicResource ComboPopupBg}" BorderBrush="{DynamicResource ComboBorder}" BorderThickness="1" CornerRadius="10" Margin="0,4,0,0" Padding="4">
                                         <ScrollViewer SnapsToDevicePixels="True">
                                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
                                         </ScrollViewer>
@@ -1538,11 +1562,11 @@ function Show-WinGetInstallerGUI {
         <!-- ComboBoxItem -->
         <Style TargetType="ComboBoxItem">
             <Setter Property="Foreground" Value="{DynamicResource ComboItemText}"/>
-            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="Padding" Value="10,7"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ComboBoxItem">
-                        <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="3">
+                        <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="8">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -1562,7 +1586,7 @@ function Show-WinGetInstallerGUI {
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Thumb">
-                        <Border x:Name="tb" Background="{DynamicResource ScrollThumbBg}" CornerRadius="4" Margin="1"/>
+                        <Border x:Name="tb" Background="{DynamicResource ScrollThumbBg}" CornerRadius="6" Margin="2"/>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="tb" Property="Background" Value="{DynamicResource ScrollThumbHover}"/>
@@ -1576,7 +1600,7 @@ function Show-WinGetInstallerGUI {
             <Setter Property="Background" Value="Transparent"/>
             <Style.Triggers>
                 <Trigger Property="Orientation" Value="Vertical">
-                    <Setter Property="Width" Value="10"/>
+                    <Setter Property="Width" Value="12"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ScrollBar">
@@ -1590,7 +1614,7 @@ function Show-WinGetInstallerGUI {
                     </Setter>
                 </Trigger>
                 <Trigger Property="Orientation" Value="Horizontal">
-                    <Setter Property="Height" Value="10"/>
+                    <Setter Property="Height" Value="12"/>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ScrollBar">
@@ -1611,12 +1635,12 @@ function Show-WinGetInstallerGUI {
                 <Setter.Value>
                     <ControlTemplate TargetType="ProgressBar">
                         <Grid>
-                            <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="3"/>
-                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="3">
+                            <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="999"/>
+                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="999">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop Color="#27ae60" Offset="0"/>
-                                        <GradientStop Color="#2ecc71" Offset="1"/>
+                                        <GradientStop Color="#1fb879" Offset="0"/>
+                                        <GradientStop Color="#34d399" Offset="1"/>
                                     </LinearGradientBrush>
                                 </Border.Background>
                             </Border>
@@ -1632,10 +1656,10 @@ function Show-WinGetInstallerGUI {
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border x:Name="box" Width="16" Height="16" Background="Transparent" BorderBrush="{DynamicResource ChkBorder}" BorderThickness="1.5" CornerRadius="3" VerticalAlignment="Center">
-                                <Path x:Name="mark" Data="M2,6 L6,10 L12,2" Stroke="{DynamicResource ChkMark}" StrokeThickness="1.5" Visibility="Collapsed" Margin="0,-1,0,0"/>
+                            <Border x:Name="box" Width="18" Height="18" Background="Transparent" BorderBrush="{DynamicResource ChkBorder}" BorderThickness="1.5" CornerRadius="5" VerticalAlignment="Center">
+                                <Path x:Name="mark" Data="M3,8 L7,12 L14,4" Stroke="{DynamicResource ChkMark}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
                             </Border>
-                            <ContentPresenter Margin="6,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
                         </StackPanel>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
@@ -1643,6 +1667,10 @@ function Show-WinGetInstallerGUI {
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="box" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
+                                <Setter TargetName="box" Property="BorderThickness" Value="2"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -1660,16 +1688,16 @@ function Show-WinGetInstallerGUI {
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <!-- Top gradient accent bar -->
-        <Border Grid.Row="0" Height="3">
+        <Border Grid.Row="0" Height="4">
             <Border.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#5dade2" Offset="0"/>
-                    <GradientStop Color="#9b59b6" Offset="0.5"/>
-                    <GradientStop Color="#27ae60" Offset="1"/>
+                    <GradientStop Color="#3da4ff" Offset="0"/>
+                    <GradientStop Color="#7dd3fc" Offset="0.58"/>
+                    <GradientStop Color="#22c55e" Offset="1"/>
                 </LinearGradientBrush>
             </Border.Background>
         </Border>
-        <Border x:Name="HeaderBorder" Grid.Row="1" Background="#0f0f23" Padding="24,14">
+        <Border x:Name="HeaderBorder" Grid.Row="1" Background="#08131f" Padding="28,20,28,18">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -1677,40 +1705,46 @@ function Show-WinGetInstallerGUI {
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock x:Name="HeaderTitle" Text="Wingetter" FontSize="26" FontWeight="Bold">
+                        <TextBlock x:Name="HeaderTitle" Text="Wingetter" FontSize="30" FontWeight="Bold">
                             <TextBlock.Foreground>
                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#5dade2" Offset="0"/>
-                                    <GradientStop Color="#a29bfe" Offset="1"/>
+                                    <GradientStop Color="#8cd2ff" Offset="0"/>
+                                    <GradientStop Color="#d3f1ff" Offset="1"/>
                                 </LinearGradientBrush>
                             </TextBlock.Foreground>
                         </TextBlock>
-                        <TextBlock x:Name="HeaderVersion" Text="v6.1.0" FontSize="11" Foreground="#4a4a6a" VerticalAlignment="Bottom" Margin="8,0,0,4"/>
+                        <Border Margin="10,0,0,2" Padding="8,3" CornerRadius="999" Background="#102133" BorderBrush="#24374a" BorderThickness="1">
+                            <TextBlock x:Name="HeaderVersion" Text="v6.1.0" FontSize="11" FontWeight="SemiBold" Foreground="#7a90a6"/>
+                        </Border>
                     </StackPanel>
-                    <TextBlock x:Name="HeaderSubtitle" Text="765 apps  |  Search and select  |  Install in bulk with winget" FontSize="12" Foreground="#7f8c8d" Margin="0,3,0,0"/>
+                    <TextBlock x:Name="HeaderSubtitle" Text="Curated winget installs, reusable package groups, and cleaner Windows setup flows." FontSize="13" Foreground="#8ca0b7" Margin="0,8,0,0"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border x:Name="CountPill" Background="#34495e" CornerRadius="4" Padding="14,7" Margin="0,0,8,0">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Border x:Name="CountPill" Background="#0d1f30" BorderBrush="#22405a" BorderThickness="1" CornerRadius="14" Padding="14,9" Margin="0,0,10,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock x:Name="CountLabel1" Text="Selected: " Foreground="#bdc3c7" FontSize="13"/>
-                            <TextBlock x:Name="SelectedCount" Text="0" Foreground="#2ecc71" FontSize="13" FontWeight="Bold"/>
+                            <TextBlock x:Name="CountLabel1" Text="Selected" Foreground="#c4d2df" FontSize="12" Margin="0,0,7,0"/>
+                            <TextBlock x:Name="SelectedCount" Text="0" Foreground="#2bd28f" FontSize="14" FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
-                    <Border x:Name="StatusPill" Background="#34495e" CornerRadius="4" Padding="14,7" Margin="0,0,8,0">
+                    <Border x:Name="StatusPill" Background="#0d1f30" BorderBrush="#22405a" BorderThickness="1" CornerRadius="14" Padding="14,9" Margin="0,0,10,0">
                         <StackPanel Orientation="Horizontal">
-                            <Ellipse x:Name="WinGetDot" Width="9" Height="9" Fill="#f39c12" Margin="0,0,7,0" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="WinGetStatus" Text="Checking..." Foreground="#bdc3c7" FontSize="13" VerticalAlignment="Center"/>
+                            <Ellipse x:Name="WinGetDot" Width="10" Height="10" Fill="#ff9d2f" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="WinGetStatus" Text="Checking WinGet..." Foreground="#c4d2df" FontSize="12.5" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <Button x:Name="ModeBtn" Width="36" Height="36" Cursor="Hand" ToolTip="Toggle Dark/Light Mode">
+                    <Button x:Name="ModeBtn" Width="44" Height="44" Cursor="Hand" ToolTip="Switch between dark and light mode">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border x:Name="modeBorder" Background="#34495e" CornerRadius="4">
-                                    <TextBlock Text="&#x1F319;" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Border x:Name="modeBorder" Background="#102133" BorderBrush="#24374a" BorderThickness="1" CornerRadius="14">
+                                    <TextBlock Text="◐" FontSize="17" Foreground="#dbe7f1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="modeBorder" Property="Background" Value="#4a6278"/>
+                                        <Setter TargetName="modeBorder" Property="BorderBrush" Value="#63b7ff"/>
+                                    </Trigger>
+                                    <Trigger Property="IsKeyboardFocused" Value="True">
+                                        <Setter TargetName="modeBorder" Property="BorderBrush" Value="#63b7ff"/>
+                                        <Setter TargetName="modeBorder" Property="BorderThickness" Value="1.5"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -1719,106 +1753,144 @@ function Show-WinGetInstallerGUI {
                 </StackPanel>
             </Grid>
         </Border>
-        <Border x:Name="ToolbarBorder" Grid.Row="2" Background="#16213e" BorderBrush="#2a2a4a" BorderThickness="0,0,0,1" Padding="24,8">
+        <Border x:Name="ToolbarBorder" Grid.Row="2" Background="#0b1725" BorderBrush="#1d2a3a" BorderThickness="0,0,0,1" Padding="28,16">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <Border x:Name="SearchBorder" Grid.Column="0" Background="#0f0f23" BorderBrush="#3a3a5a" BorderThickness="1" CornerRadius="4" Padding="8,0" Margin="0,0,8,0" Width="280">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="SearchIcon" Grid.Column="0" Text="&#x1F50D;" FontSize="12" Foreground="#4a4a6a" VerticalAlignment="Center" Margin="2,0,6,0" IsHitTestVisible="False"/>
-                        <TextBlock x:Name="SearchPlaceholder" Grid.Column="1" Text="Search 765 apps..." Foreground="#6c7a89" FontSize="13" VerticalAlignment="Center" IsHitTestVisible="False" Margin="0,0,0,0"/>
-                        <TextBox x:Name="SearchBox" Grid.Column="1" Background="Transparent" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Foreground="#e0e0e0" Padding="2,4"/>
-                    </Grid>
-                </Border>
-                <Border x:Name="VisibleCountBorder" Grid.Column="2" Background="#2a2a4a" CornerRadius="4" Padding="10,5" VerticalAlignment="Center">
-                    <TextBlock x:Name="VisibleCountText" Text="Showing 765 of 765" FontSize="11" Foreground="#6c7a89"/>
-                </Border>
-                <StackPanel Grid.Column="4" Orientation="Horizontal">
-                    <Button x:Name="SelectAllBtn" Style="{StaticResource ToolBtn}" Content="Select All" Padding="12,5" Margin="0,0,4,0" FontSize="11" Cursor="Hand"/>
-                    <Button x:Name="DeselectAllBtn" Style="{StaticResource ToolBtn}" Content="Deselect All" Padding="12,5" Margin="0,0,4,0" FontSize="11" Cursor="Hand"/>
-                    <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="4,2,8,2"/>
-                    <ComboBox x:Name="GroupCombo" Width="180" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                    <Button x:Name="LoadGroupBtn" Style="{StaticResource ToolBtn}" Content="Load" Padding="10,5" Margin="0,0,4,0" FontSize="11" Cursor="Hand"/>
-                    <Button x:Name="SaveGroupBtn" Style="{StaticResource ToolBtn}" Content="Save Group" Padding="10,5" Margin="0,0,4,0" FontSize="11" Cursor="Hand"/>
-                    <Button x:Name="DeleteGroupBtn" Style="{StaticResource ToolBtn}" Content="Del" Padding="8,5" Margin="0,0,4,0" FontSize="11" Cursor="Hand" ToolTip="Delete selected group"/>
-                    <Border x:Name="Divider2" Background="{DynamicResource DividerBrush}" Width="1" Margin="4,2,8,2"/>
-                    <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export" Padding="10,5" Margin="0,0,4,0" FontSize="11" Cursor="Hand" ToolTip="Export selection as JSON config or PS1 script"/>
-                    <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import" Padding="10,5" Margin="0,0,4,0" FontSize="11" Cursor="Hand"/>
-                    <Button x:Name="CopyCommandBtn" Style="{StaticResource ToolBtn}" Content="Copy Cmds" Padding="10,5" FontSize="11" Cursor="Hand"/>
-                </StackPanel>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="SearchBorder" Grid.Column="0" Background="#08131f" BorderBrush="#24374a" BorderThickness="1" CornerRadius="14" Padding="12,0" Margin="0,0,12,0" Width="380" Height="42">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="SearchIcon" Grid.Column="0" Text="⌕" FontSize="17" Foreground="#7a90a6" VerticalAlignment="Center" Margin="1,0,8,0" IsHitTestVisible="False"/>
+                            <TextBlock x:Name="SearchPlaceholder" Grid.Column="1" Text="Search apps or Winget IDs" Foreground="#70859b" FontSize="13" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                            <TextBox x:Name="SearchBox" Grid.Column="1" Background="Transparent" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Foreground="#eff6fb" Padding="0,8,0,8"/>
+                            <Button x:Name="ClearSearchBtn" Grid.Column="2" Style="{StaticResource ToolBtn}" Content="Clear" Padding="10,5" Margin="8,0,0,0" FontSize="11" Cursor="Hand" Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+                    <Border x:Name="VisibleCountBorder" Grid.Column="1" Background="#102133" BorderBrush="#223247" BorderThickness="1" CornerRadius="12" Padding="12,9" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock x:Name="VisibleCountText" Text="765 apps available" FontSize="12" FontWeight="SemiBold" Foreground="#dce8f3"/>
+                    </Border>
+                    <Border x:Name="ToolbarHintBorder" Grid.Column="3" Background="#102133" BorderBrush="#223247" BorderThickness="1" CornerRadius="12" Padding="12,9" VerticalAlignment="Center">
+                        <TextBlock x:Name="ToolbarHintText" Text="Tip: Shift+Click selects a range." FontSize="11.5" Foreground="#94a7bc"/>
+                    </Border>
+                </Grid>
+                <Grid Grid.Row="1" Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Button x:Name="SelectAllBtn" Style="{StaticResource ToolBtn}" Content="Select Visible" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
+                        <Button x:Name="DeselectAllBtn" Style="{StaticResource ToolBtn}" Content="Clear Visible" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <ComboBox x:Name="GroupCombo" Width="220" FontSize="11.5" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <Button x:Name="LoadGroupBtn" Style="{StaticResource ToolBtn}" Content="Apply Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
+                        <Button x:Name="SaveGroupBtn" Style="{StaticResource ToolBtn}" Content="Save Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
+                        <Button x:Name="DeleteGroupBtn" Style="{StaticResource ToolBtn}" Content="Delete" Margin="0,0,12,0" FontSize="11.5" Cursor="Hand" ToolTip="Delete the selected saved group"/>
+                        <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="0,2,12,2"/>
+                        <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON or a PowerShell install script"/>
+                        <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
+                        <Button x:Name="CopyCommandBtn" Style="{StaticResource ToolBtn}" Content="Copy Commands" FontSize="11.5" Cursor="Hand"/>
+                        <Border x:Name="Divider2" Visibility="Collapsed" Width="0"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Border>
         <!-- Main content: Sidebar + Categories -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="175"/>
+                <ColumnDefinition Width="215"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <!-- Category Sidebar -->
-            <Border x:Name="SidebarBorder" Grid.Column="0" Background="#0f0f23" BorderBrush="#2a2a4a" BorderThickness="0,0,1,0">
+            <Border x:Name="SidebarBorder" Grid.Column="0" Background="#08131f" BorderBrush="#1d2a3a" BorderThickness="0,0,1,0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Border Grid.Row="0" Padding="12,10" BorderBrush="#2a2a4a" BorderThickness="0,0,0,1">
-                        <TextBlock x:Name="SidebarTitle" Text="Categories" FontSize="11" FontWeight="SemiBold" Foreground="#5dade2"/>
+                    <Border Grid.Row="0" Padding="16,14" BorderBrush="#1d2a3a" BorderThickness="0,0,0,1">
+                        <StackPanel>
+                            <TextBlock x:Name="SidebarTitle" Text="Browse categories" FontSize="12.5" FontWeight="SemiBold" Foreground="#8cd2ff"/>
+                            <TextBlock x:Name="SidebarSubtitle" Text="Jump into the software collection." FontSize="11.5" Foreground="#8196aa" Margin="0,4,0,0"/>
+                        </StackPanel>
                     </Border>
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,8,0,8">
                         <StackPanel x:Name="SidebarPanel" Margin="0,4,0,4"/>
                     </ScrollViewer>
                 </Grid>
             </Border>
             <!-- App Cards Area -->
-            <ScrollViewer x:Name="MainScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14,8">
-                <WrapPanel x:Name="CategoriesPanel" Orientation="Horizontal"/>
-            </ScrollViewer>
+            <Grid Grid.Column="1">
+                <ScrollViewer x:Name="MainScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="18,16,18,22">
+                    <WrapPanel x:Name="CategoriesPanel" Orientation="Horizontal"/>
+                </ScrollViewer>
+                <Border x:Name="EmptyStateBorder" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="430" Padding="28,26" CornerRadius="20" Background="#0b1724" BorderBrush="#1f3145" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock x:Name="EmptyStateEyebrow" Text="Nothing to show" FontSize="11.5" FontWeight="SemiBold" Foreground="#8cd2ff" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="EmptyStateTitle" Text="No apps match your current filters." FontSize="20" FontWeight="Bold" Foreground="#f0f6fb" Margin="0,10,0,0" TextAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="EmptyStateBody" Text="Try another search, clear the filter, or switch back from update mode to browse the full catalog." FontSize="12.5" Foreground="#90a4b8" Margin="0,10,0,0" TextAlignment="Center" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0">
+                            <Button x:Name="EmptyStateClearBtn" Style="{StaticResource ToolBtn}" Content="Clear Search" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
+                            <Button x:Name="EmptyStateResetModeBtn" Style="{StaticResource ToolBtn}" Content="Back to Browse" FontSize="11.5" Cursor="Hand" Visibility="Collapsed"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
         <!-- Log Panel (shown during install) -->
-        <Border x:Name="LogPanelBorder" Grid.Row="4" Background="#0f0f23" BorderBrush="#2a2a4a" BorderThickness="0,1,0,0" Visibility="Collapsed" MaxHeight="180">
+        <Border x:Name="LogPanelBorder" Grid.Row="4" Background="#071019" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Visibility="Collapsed" MaxHeight="210">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Margin="12,6,12,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock x:Name="LogTitle" Grid.Column="0" Text="Install Log" FontSize="11" FontWeight="SemiBold" Foreground="#5dade2" VerticalAlignment="Center"/>
-                    <Button x:Name="LogToggleBtn" Grid.Column="1" Style="{StaticResource ToolBtn}" Content="Hide Log" Padding="8,3" FontSize="10" Cursor="Hand"/>
-                </Grid>
-                <ScrollViewer x:Name="LogScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12,0,12,8">
-                    <StackPanel x:Name="LogEntriesPanel"/>
-                </ScrollViewer>
-            </Grid>
-        </Border>
-        <Border x:Name="FooterBorder" Grid.Row="5" Background="#16213e" BorderBrush="#2a2a4a" BorderThickness="0,1,0,0" Padding="24,12">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <Grid Grid.Row="0" Margin="0,0,0,8">
+                <Grid Grid.Row="0" Margin="16,10,16,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock x:Name="ProgressText" Text="Ready - Select apps and click 'Get Your Apps'" Foreground="#7f8c8d" FontSize="12"/>
-                        <ProgressBar x:Name="ProgressBar" Height="6" Value="0" Maximum="100" Background="#ecf0f1" Foreground="#27ae60" BorderThickness="0" Margin="0,6,0,0"/>
+                        <TextBlock x:Name="LogTitle" Text="Activity" FontSize="12" FontWeight="SemiBold" Foreground="#8cd2ff"/>
+                        <TextBlock x:Name="LogSubtitle" Text="Install and update results appear here in real time." FontSize="11" Foreground="#94a7bc" Margin="0,3,0,0"/>
                     </StackPanel>
-                    <TextBlock x:Name="ProgressPercent" Grid.Column="1" Text="" Foreground="#2c3e50" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="18,0,0,0"/>
+                    <Button x:Name="LogToggleBtn" Grid.Column="1" Style="{StaticResource ToolBtn}" Content="Hide" Padding="10,5" FontSize="10.5" Cursor="Hand"/>
+                </Grid>
+                <ScrollViewer x:Name="LogScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="16,0,16,12">
+                    <StackPanel x:Name="LogEntriesPanel"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+        <Border x:Name="FooterBorder" Grid.Row="5" Background="#0b1725" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Padding="28,16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock x:Name="ProgressText" Text="Choose apps to install or load a saved group to get started." Foreground="#94a7bc" FontSize="12.5"/>
+                        <ProgressBar x:Name="ProgressBar" Height="8" Value="0" Maximum="100" Background="#132132" Foreground="#1fb879" BorderThickness="0" Margin="0,8,0,0"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ProgressPercent" Grid.Column="1" Text="" Foreground="#c8d8e8" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="20,0,0,0"/>
                 </Grid>
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
@@ -1826,54 +1898,61 @@ function Show-WinGetInstallerGUI {
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <CheckBox x:Name="SilentCheck" Content="Silent Install" IsChecked="True" Foreground="#2c3e50" FontSize="12" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                        <CheckBox x:Name="AcceptCheck" Content="Auto-accept Agreements" IsChecked="True" Foreground="#2c3e50" FontSize="12" VerticalAlignment="Center"/>
+                        <CheckBox x:Name="SilentCheck" Content="Use silent install where available" IsChecked="True" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                        <CheckBox x:Name="AcceptCheck" Content="Accept package and source agreements" IsChecked="True" FontSize="12.5" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <Button x:Name="InstallWinGetBtn" Style="{StaticResource ToolBtn}" Content="Install WinGet" Padding="12,6" Margin="0,0,6,0" FontSize="11" Cursor="Hand" Visibility="Collapsed"/>
-                        <Button x:Name="UpdateAllBtn" Content="Update All" FontSize="11" FontWeight="SemiBold" Padding="14,6" Margin="0,0,6,0" Cursor="Hand" Foreground="White" ToolTip="Run winget upgrade --all to update every installed app">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="InstallWinGetBtn" Style="{StaticResource ToolBtn}" Content="Install WinGet" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" Visibility="Collapsed"/>
+                        <Button x:Name="UpdateAllBtn" Content="Review Updates" FontSize="11.5" FontWeight="SemiBold" Padding="14,8" Margin="0,0,8,0" Cursor="Hand" Foreground="White" ToolTip="Show installed apps from this catalog so you can choose what to update.">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Border x:Name="updateAllBorder" CornerRadius="4" Padding="{TemplateBinding Padding}" Background="#e67e22">
+                                    <Border x:Name="updateAllBorder" CornerRadius="10" Padding="{TemplateBinding Padding}" Background="#d97706">
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#f39c12"/>
+                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#f59e0b"/>
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#f59e0b"/>
                                         </Trigger>
                                         <Trigger Property="IsEnabled" Value="False">
-                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#4a4a6a"/>
+                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#445265"/>
+                                            <Setter TargetName="updateAllBorder" Property="Opacity" Value="0.7"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
-                        <Button x:Name="CancelBtn" Style="{StaticResource ToolBtn}" Content="Cancel" Padding="12,6" Margin="0,0,6,0" FontSize="11" Cursor="Hand" IsEnabled="False"/>
-                        <Button x:Name="InstallBtn" Content="Get Your Apps" FontSize="14" FontWeight="SemiBold" Padding="28,10" Cursor="Hand" Foreground="White">
+                        <Button x:Name="CancelBtn" Style="{StaticResource ToolBtn}" Content="Stop" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" IsEnabled="False"/>
+                        <Button x:Name="InstallBtn" Content="Install Selected" FontSize="14" FontWeight="SemiBold" Padding="24,11" Cursor="Hand" Foreground="White" IsEnabled="False">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Grid>
-                                        <Border x:Name="installBorder" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                        <Border x:Name="installBorder" CornerRadius="12" Padding="{TemplateBinding Padding}">
                                             <Border.Background>
                                                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                    <GradientStop Color="#27ae60" Offset="0"/>
-                                                    <GradientStop Color="#2ecc71" Offset="1"/>
+                                                    <GradientStop Color="#1fb879" Offset="0"/>
+                                                    <GradientStop Color="#34d399" Offset="1"/>
                                                 </LinearGradientBrush>
                                             </Border.Background>
                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
-                                        <Border x:Name="installGlow" CornerRadius="6" Background="White" Opacity="0" IsHitTestVisible="False"/>
+                                        <Border x:Name="installGlow" CornerRadius="12" Background="White" Opacity="0" IsHitTestVisible="False"/>
                                     </Grid>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="installGlow" Property="Opacity" Value="0.1"/>
+                                            <Setter TargetName="installGlow" Property="Opacity" Value="0.08"/>
                                         </Trigger>
                                         <Trigger Property="IsPressed" Value="True">
-                                            <Setter TargetName="installGlow" Property="Opacity" Value="0.15"/>
+                                            <Setter TargetName="installGlow" Property="Opacity" Value="0.16"/>
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="installGlow" Property="Opacity" Value="0.12"/>
                                         </Trigger>
                                         <Trigger Property="IsEnabled" Value="False">
-                                            <Setter TargetName="installBorder" Property="Background" Value="#4a4a6a"/>
-                                            <Setter TargetName="installBorder" Property="Opacity" Value="0.6"/>
+                                            <Setter TargetName="installBorder" Property="Background" Value="#445265"/>
+                                            <Setter TargetName="installBorder" Property="Opacity" Value="0.72"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -1890,6 +1969,15 @@ function Show-WinGetInstallerGUI {
     $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($XAML))
     $Window = [Windows.Markup.XamlReader]::Load($reader)
 
+# codex-branding:start
+                try {
+                    $brandingIconPath = Join-Path $PSScriptRoot 'icon.ico'
+                    if (Test-Path $brandingIconPath) {
+                        $Window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri($brandingIconPath)))
+                    }
+                } catch {
+                }
+                # codex-branding:end
     # Named controls
     $CategoriesPanel  = $Window.FindName("CategoriesPanel")
     $SelectedCount    = $Window.FindName("SelectedCount")
@@ -1915,7 +2003,9 @@ function Show-WinGetInstallerGUI {
     $AcceptCheck      = $Window.FindName("AcceptCheck")
     $ModeBtn          = $Window.FindName("ModeBtn")
 
+    $MainScroll       = $Window.FindName("MainScroll")
     $SearchBox        = $Window.FindName("SearchBox")
+    $ClearSearchBtn   = $Window.FindName("ClearSearchBtn")
     $SearchPlaceholder= $Window.FindName("SearchPlaceholder")
     $VisibleCountText = $Window.FindName("VisibleCountText")
     $SidebarPanel     = $Window.FindName("SidebarPanel")
@@ -1926,6 +2016,11 @@ function Show-WinGetInstallerGUI {
     $LogScrollViewer  = $Window.FindName("LogScrollViewer")
     $LogToggleBtn     = $Window.FindName("LogToggleBtn")
     $LogTitle         = $Window.FindName("LogTitle")
+    $EmptyStateBorder = $Window.FindName("EmptyStateBorder")
+    $EmptyStateTitle  = $Window.FindName("EmptyStateTitle")
+    $EmptyStateBody   = $Window.FindName("EmptyStateBody")
+    $EmptyStateClearBtn = $Window.FindName("EmptyStateClearBtn")
+    $EmptyStateResetModeBtn = $Window.FindName("EmptyStateResetModeBtn")
 
     # Store in $ui for closure access
     $ui["Window"]          = $Window
@@ -1953,11 +2048,22 @@ function Show-WinGetInstallerGUI {
     $ui["SidebarPanel"]        = $SidebarPanel
     $ui["SidebarBorder"]       = $Window.FindName("SidebarBorder")
     $ui["SidebarTitle"]        = $Window.FindName("SidebarTitle")
+    $ui["SidebarSubtitle"]     = $Window.FindName("SidebarSubtitle")
     $ui["LogPanelBorder"]      = $LogPanelBorder
     $ui["LogEntriesPanel"]     = $LogEntriesPanel
     $ui["LogScrollViewer"]     = $LogScrollViewer
     $ui["LogToggleBtn"]        = $LogToggleBtn
     $ui["LogTitle"]            = $LogTitle
+    $ui["LogSubtitle"]         = $Window.FindName("LogSubtitle")
+    $ui["MainScroll"]          = $MainScroll
+    $ui["ToolbarHintBorder"]   = $Window.FindName("ToolbarHintBorder")
+    $ui["ToolbarHintText"]     = $Window.FindName("ToolbarHintText")
+    $ui["ClearSearchBtn"]      = $ClearSearchBtn
+    $ui["EmptyStateBorder"]    = $EmptyStateBorder
+    $ui["EmptyStateTitle"]     = $EmptyStateTitle
+    $ui["EmptyStateBody"]      = $EmptyStateBody
+    $ui["EmptyStateClearBtn"]  = $EmptyStateClearBtn
+    $ui["EmptyStateResetModeBtn"] = $EmptyStateResetModeBtn
 
     $ui["IsUpdateMode"]        = $false
     $ui["LastClickedIndex"]    = -1
@@ -1977,18 +2083,81 @@ function Show-WinGetInstallerGUI {
     $totalApps = 0
     foreach ($cat in $Script:SoftwareDatabase.Keys) { $totalApps += $Script:SoftwareDatabase[$cat].Count }
     $ui["TotalApps"] = $totalApps
+    $ui["SidebarSubtitle"].Text = "$($Script:SoftwareDatabase.Keys.Count) categories ready to browse."
 
     $CountPill = $Window.FindName("CountPill")
+    $UpdateGroupActionState = {
+        $selected = $GroupCombo.SelectedItem
+        $hasGroup = ($null -ne $selected) -and ($null -ne $selected.Tag)
+        $isUserGroup = $hasGroup -and ($selected.Tag["Type"] -eq "user")
+        $LoadGroupBtn.IsEnabled = $hasGroup
+        $DeleteGroupBtn.IsEnabled = $isUserGroup
+    }
+    $UpdateCardLayout = {
+        if ($ui["IsUpdateMode"]) { return }
+        $available = $ui["MainScroll"].ViewportWidth
+        if ($available -le 0) { $available = $ui["MainScroll"].ActualWidth }
+        if ($available -le 0) { return }
+
+        $gap = 16
+        $minWidth = 252
+        $maxWidth = 340
+        $columns = [math]::Max(1, [math]::Min(4, [math]::Floor(($available + $gap) / ($minWidth + $gap))))
+        $targetWidth = [math]::Floor(($available - (($columns + 1) * 8)) / $columns)
+        $targetWidth = [math]::Max($minWidth, [math]::Min($maxWidth, $targetWidth))
+
+        foreach ($card in $ui["Elements"]["CategoryCards"]) {
+            $card.Width = $targetWidth
+        }
+    }
+    $UpdateEmptyState = {
+        $hasVisibleContent = $false
+        foreach ($cat in $ui["Categories"]) {
+            if ($cat["Card"].Visibility -eq [System.Windows.Visibility]::Visible) {
+                $hasVisibleContent = $true
+                break
+            }
+        }
+
+        if ($hasVisibleContent) {
+            $ui["EmptyStateBorder"].Visibility = [System.Windows.Visibility]::Collapsed
+        } else {
+            $ui["EmptyStateBorder"].Visibility = [System.Windows.Visibility]::Visible
+            if ($ui["IsUpdateMode"]) {
+                $ui["EmptyStateTitle"].Text = "No installed apps match the current view."
+                $ui["EmptyStateBody"].Text = "Try a different search, or switch back to the full catalog to browse everything Wingetter can install."
+                $ui["EmptyStateResetModeBtn"].Visibility = [System.Windows.Visibility]::Visible
+            } else {
+                $ui["EmptyStateTitle"].Text = "No apps match your current filters."
+                $ui["EmptyStateBody"].Text = "Try another search term, or clear the filter to browse the full catalog."
+                $ui["EmptyStateResetModeBtn"].Visibility = [System.Windows.Visibility]::Collapsed
+            }
+        }
+    }
     $UpdateSelectedCount = {
         $count = 0
         foreach ($cb in $ui["AllCheckboxes"].Values) { if ($cb.IsChecked -eq $true) { $count++ } }
         $SelectedCount.Text = $count.ToString()
+        $theme = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+        $accentBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString($theme["AccentGreen"])
         if ($count -gt 0) {
-            $CountPill.BorderBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#2ecc71")
+            $CountPill.BorderBrush = $accentBrush
             $CountPill.BorderThickness = [System.Windows.Thickness]::new(1)
+            $SelectedCount.Foreground = $accentBrush
         } else {
-            $CountPill.BorderBrush = [System.Windows.Media.Brushes]::Transparent
-            $CountPill.BorderThickness = [System.Windows.Thickness]::new(0)
+            $CountPill.BorderBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString($theme["StatusPillBorder"])
+            $CountPill.BorderThickness = [System.Windows.Thickness]::new(1)
+            $SelectedCount.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($theme["StatusPillText"])
+        }
+
+        $InstallBtn.IsEnabled = ($count -gt 0)
+        $SaveGroupBtn.IsEnabled = ($count -gt 0)
+        $ExportBtn.IsEnabled = ($count -gt 0)
+        $CopyCommandBtn.IsEnabled = ($count -gt 0)
+        $InstallBtn.Content = if ($count -gt 0) {
+            if ($ui["IsUpdateMode"]) { "Update Selected ($count)" } else { "Install Selected ($count)" }
+        } else {
+            if ($ui["IsUpdateMode"]) { "Update Selected" } else { "Install Selected" }
         }
     }
 
@@ -2023,7 +2192,16 @@ function Show-WinGetInstallerGUI {
         }
 
         $total = if ($inUpdateMode) { $ui["InstalledIds"].Count } else { $ui["TotalApps"] }
-        $VisibleCountText.Text = "Showing $visCount of $total"
+        $VisibleCountText.Text = if ($searchText -ne "") {
+            if ($visCount -eq 1) { "1 match" } else { "$visCount matches" }
+        } elseif ($inUpdateMode) {
+            if ($total -eq 1) { "1 installed app ready" } else { "$total installed apps ready" }
+        } else {
+            "$total apps available"
+        }
+        $ClearSearchBtn.Visibility = if ($searchText -ne "") { [System.Windows.Visibility]::Visible } else { [System.Windows.Visibility]::Collapsed }
+        & $UpdateEmptyState
+        & $UpdateCardLayout
     }
 
     # ========================================================
@@ -2044,19 +2222,21 @@ function Show-WinGetInstallerGUI {
         $titleGrad.StartPoint = [System.Windows.Point]::new(0, 0)
         $titleGrad.EndPoint = [System.Windows.Point]::new(1, 0)
         if ($ui["IsDark"]) {
-            $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#5dade2"), 0)))
-            $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#a29bfe"), 1)))
+            $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#8cd2ff"), 0)))
+            $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#d3f1ff"), 1)))
         } else {
             $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#ffffff"), 0)))
-            $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#e0e0e0"), 1)))
+            $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#d6e2ee"), 1)))
         }
         $ui["HeaderTitle"].Foreground         = $titleGrad
         $ui["HeaderSubtitle"].Foreground      = $bc.ConvertFromString($t["HeaderSubText"])
         $ui["ToolbarBorder"].Background       = $bc.ConvertFromString($t["ToolbarBg"])
         $ui["ToolbarBorder"].BorderBrush      = $bc.ConvertFromString($t["ToolbarBorder"])
         $ui["StatusPill"].Background          = $bc.ConvertFromString($t["StatusPillBg"])
+        $ui["StatusPill"].BorderBrush         = $bc.ConvertFromString($t["StatusPillBorder"])
         $ui["WinGetStatusCtl"].Foreground     = $bc.ConvertFromString($t["StatusPillText"])
         $ui["CountPill"].Background           = $bc.ConvertFromString($t["StatusPillBg"])
+        $ui["CountPill"].BorderBrush          = $bc.ConvertFromString($t["StatusPillBorder"])
         $ui["CountLabel1"].Foreground         = $bc.ConvertFromString($t["StatusPillText"])
         $ui["FooterBorder"].Background        = $bc.ConvertFromString($t["FooterBg"])
         $ui["FooterBorder"].BorderBrush       = $bc.ConvertFromString($t["FooterBorder"])
@@ -2072,7 +2252,11 @@ function Show-WinGetInstallerGUI {
 
         # Visible count
         $ui["VisibleCountBorder"].Background = $bc.ConvertFromString($t["CountBg"])
-        $ui["VisibleCountText"].Foreground   = $bc.ConvertFromString($t["FooterText"])
+        $ui["VisibleCountBorder"].BorderBrush = $bc.ConvertFromString($t["SecBtnBorder"])
+        $ui["VisibleCountText"].Foreground   = $bc.ConvertFromString($t["CountText"])
+        $ui["ToolbarHintBorder"].Background  = $bc.ConvertFromString($t["CountBg"])
+        $ui["ToolbarHintBorder"].BorderBrush = $bc.ConvertFromString($t["SecBtnBorder"])
+        $ui["ToolbarHintText"].Foreground    = $bc.ConvertFromString($t["FooterText"])
 
         # DynamicResource brush updates (ComboBox, ScrollBar, Dividers, CheckBox)
         $res = $ui["Window"].Resources
@@ -2113,8 +2297,26 @@ function Show-WinGetInstallerGUI {
         for ($i = 0; $i -lt $el["CategoryAlls"].Count; $i++) {
             $el["CategoryAlls"][$i].Foreground = $bc.ConvertFromString($t["CategoryAllText"])
         }
+        for ($i = 0; $i -lt $el["CountBadges"].Count; $i++) {
+            $el["CountBadges"][$i].Background = $bc.ConvertFromString($t["CountBadgeBg"])
+        }
+        for ($i = 0; $i -lt $el["CountTexts"].Count; $i++) {
+            $el["CountTexts"][$i].Foreground = $bc.ConvertFromString($t["CountBadgeText"])
+        }
         for ($i = 0; $i -lt $el["AppLabels"].Count; $i++) {
-            $el["AppLabels"][$i].Foreground = $bc.ConvertFromString($t["AppText"])
+            $labelColor = if (($i -lt $el["InstalledDots"].Count) -and ($el["InstalledDots"][$i].Visibility -eq [System.Windows.Visibility]::Visible) -and (-not $ui["IsUpdateMode"])) {
+                $t["AppSubtleText"]
+            } else {
+                $t["AppText"]
+            }
+            $el["AppLabels"][$i].Foreground = $bc.ConvertFromString($labelColor)
+        }
+        for ($i = 0; $i -lt $el["AppStatusBadges"].Count; $i++) {
+            $el["AppStatusBadges"][$i].Background = $bc.ConvertFromString($t["InstalledBadgeBg"])
+            $el["AppStatusBadges"][$i].BorderBrush = $bc.ConvertFromString($t["InstalledBadgeBg"])
+        }
+        for ($i = 0; $i -lt $el["AppStatusTexts"].Count; $i++) {
+            $el["AppStatusTexts"][$i].Foreground = $bc.ConvertFromString($t["InstalledBadgeText"])
         }
         for ($i = 0; $i -lt $el["AppBorders"].Count; $i++) {
             $ab = $el["AppBorders"][$i]
@@ -2132,9 +2334,10 @@ function Show-WinGetInstallerGUI {
             $ModeBtn.ApplyTemplate()
             $modeBorder = [System.Windows.Media.VisualTreeHelper]::GetChild($ModeBtn, 0)
             if ($modeBorder) {
-                $modeBorder.Background = $bc.ConvertFromString($t["StatusPillBg"])
+                $modeBorder.Background = $bc.ConvertFromString($t["SecBtnBg"])
+                $modeBorder.BorderBrush = $bc.ConvertFromString($t["SecBtnBorder"])
                 $iconTb = $modeBorder.Child
-                if ($iconTb) { $iconTb.Text = if ($ui["IsDark"]) { [char]0x2600 } else { [char]0x1F319 } }
+                if ($iconTb) { $iconTb.Text = if ($ui["IsDark"]) { [char]0x2600 } else { [char]0x263E } }
             }
         } catch {}
 
@@ -2143,8 +2346,19 @@ function Show-WinGetInstallerGUI {
             $ui["SidebarBorder"].Background = $bc.ConvertFromString($t["SidebarBg"])
             $ui["SidebarBorder"].BorderBrush = $bc.ConvertFromString($t["SidebarBorder"])
             $ui["SidebarTitle"].Foreground = $bc.ConvertFromString($t["CategoryTitle"])
-            foreach ($sbBtn in $ui["SidebarButtons"]) {
+            $ui["SidebarSubtitle"].Foreground = $bc.ConvertFromString($t["SidebarSubtitle"])
+            foreach ($sbBtn in $ui["Elements"]["SidebarButtons"]) {
                 $sbBtn.Foreground = $bc.ConvertFromString($t["SidebarText"])
+            }
+            foreach ($sbCount in $ui["Elements"]["SidebarCounts"]) {
+                $sbCount.Foreground = $bc.ConvertFromString($t["SidebarCountText"])
+            }
+            foreach ($sbRow in $ui["Elements"]["SidebarRows"]) {
+                if ($ui["ActiveSidebarRow"] -eq $sbRow) {
+                    $sbRow.Background = $bc.ConvertFromString($t["SidebarActive"])
+                } else {
+                    $sbRow.Background = [System.Windows.Media.Brushes]::Transparent
+                }
             }
         } catch {}
 
@@ -2153,6 +2367,14 @@ function Show-WinGetInstallerGUI {
             $ui["LogPanelBorder"].Background = $bc.ConvertFromString($t["LogBg"])
             $ui["LogPanelBorder"].BorderBrush = $bc.ConvertFromString($t["LogBorder"])
             $ui["LogTitle"].Foreground = $bc.ConvertFromString($t["CategoryTitle"])
+            $ui["LogSubtitle"].Foreground = $bc.ConvertFromString($t["FooterText"])
+        } catch {}
+
+        try {
+            $ui["EmptyStateBorder"].Background = $bc.ConvertFromString($t["EmptyStateBg"])
+            $ui["EmptyStateBorder"].BorderBrush = $bc.ConvertFromString($t["EmptyStateBorder"])
+            $ui["EmptyStateTitle"].Foreground = $bc.ConvertFromString($t["EmptyStateTitle"])
+            $ui["EmptyStateBody"].Foreground = $bc.ConvertFromString($t["EmptyStateText"])
         } catch {}
 
         # Collapse arrow theming
@@ -2175,14 +2397,14 @@ function Show-WinGetInstallerGUI {
         $catData = @{ Card = $null; Apps = [System.Collections.ArrayList]::new() }
 
         $categoryBorder = New-Object System.Windows.Controls.Border
-        $categoryBorder.Background = (& $toBrush "#16213e")
-        $categoryBorder.BorderBrush = (& $toBrush "#2a2a4a")
-        $categoryBorder.BorderThickness = [System.Windows.Thickness]::new(2, 1, 1, 1)
-        $categoryBorder.CornerRadius = [System.Windows.CornerRadius]::new(6)
-        $categoryBorder.Margin = [System.Windows.Thickness]::new(4, 4, 4, 4)
-        $categoryBorder.Width = 210
+        $categoryBorder.Background = (& $toBrush "#0d1b2b")
+        $categoryBorder.BorderBrush = (& $toBrush "#1f3145")
+        $categoryBorder.BorderThickness = [System.Windows.Thickness]::new(1)
+        $categoryBorder.CornerRadius = [System.Windows.CornerRadius]::new(14)
+        $categoryBorder.Margin = [System.Windows.Thickness]::new(6, 6, 6, 6)
+        $categoryBorder.Width = 252
         $shadow = New-Object System.Windows.Media.Effects.DropShadowEffect
-        $shadow.BlurRadius = 8; $shadow.Opacity = 0.2; $shadow.ShadowDepth = 2
+        $shadow.BlurRadius = 16; $shadow.Opacity = 0.18; $shadow.ShadowDepth = 2
         $shadow.Color = [System.Windows.Media.Colors]::Black
         $categoryBorder.Effect = $shadow
         [void]$ui["Elements"]["CategoryCards"].Add($categoryBorder)
@@ -2191,10 +2413,10 @@ function Show-WinGetInstallerGUI {
         $categoryStack = New-Object System.Windows.Controls.StackPanel
 
         $headerBorder = New-Object System.Windows.Controls.Border
-        $headerBorder.Background = (& $toBrush "#1a1a3e")
-        $headerBorder.CornerRadius = [System.Windows.CornerRadius]::new(6, 6, 0, 0)
-        $headerBorder.Padding = [System.Windows.Thickness]::new(10, 7, 10, 7)
-        $headerBorder.BorderBrush = (& $toBrush "#2a2a4a")
+        $headerBorder.Background = (& $toBrush "#0f2133")
+        $headerBorder.CornerRadius = [System.Windows.CornerRadius]::new(14, 14, 0, 0)
+        $headerBorder.Padding = [System.Windows.Thickness]::new(12, 10, 12, 10)
+        $headerBorder.BorderBrush = (& $toBrush "#21354a")
         $headerBorder.BorderThickness = [System.Windows.Thickness]::new(0, 0, 0, 1)
         [void]$ui["Elements"]["CategoryHeaders"].Add($headerBorder)
 
@@ -2208,41 +2430,44 @@ function Show-WinGetInstallerGUI {
         # Collapse/expand arrow
         $collapseArrow = New-Object System.Windows.Controls.TextBlock
         $collapseArrow.Text = [string][char]0x25BC
-        $collapseArrow.FontSize = 8
-        $collapseArrow.Foreground = (& $toBrush "#4a4a6a")
+        $collapseArrow.FontSize = 9
+        $collapseArrow.Foreground = (& $toBrush "#6f879e")
         $collapseArrow.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $collapseArrow.Margin = [System.Windows.Thickness]::new(0, 0, 6, 0)
+        $collapseArrow.Margin = [System.Windows.Thickness]::new(0, 0, 8, 0)
         [System.Windows.Controls.Grid]::SetColumn($collapseArrow, 0)
         [void]$ui["Elements"]["CollapseArrows"].Add($collapseArrow)
 
         $categoryTitle = New-Object System.Windows.Controls.TextBlock
         $categoryTitle.Text = $category
-        $categoryTitle.FontSize = 11
+        $categoryTitle.FontSize = 12
         $categoryTitle.FontWeight = [System.Windows.FontWeights]::SemiBold
-        $categoryTitle.Foreground = (& $toBrush "#5dade2")
+        $categoryTitle.Foreground = (& $toBrush "#8cd2ff")
         $categoryTitle.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
         [System.Windows.Controls.Grid]::SetColumn($categoryTitle, 1)
         [void]$ui["Elements"]["CategoryTitles"].Add($categoryTitle)
 
         $catCount = $Script:SoftwareDatabase[$category].Count
         $countBadge = New-Object System.Windows.Controls.Border
-        $countBadge.Background = (& $toBrush "#2a2a4a")
-        $countBadge.CornerRadius = [System.Windows.CornerRadius]::new(8)
-        $countBadge.Padding = [System.Windows.Thickness]::new(6, 1, 6, 1)
+        $countBadge.Background = (& $toBrush "#102133")
+        $countBadge.CornerRadius = [System.Windows.CornerRadius]::new(999)
+        $countBadge.Padding = [System.Windows.Thickness]::new(8, 3, 8, 3)
         $countBadge.Margin = [System.Windows.Thickness]::new(6, 0, 6, 0)
         $countBadge.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
         $countText = New-Object System.Windows.Controls.TextBlock
         $countText.Text = $catCount.ToString()
-        $countText.FontSize = 9
-        $countText.Foreground = (& $toBrush "#6c7a89")
+        $countText.FontSize = 9.5
+        $countText.FontWeight = [System.Windows.FontWeights]::SemiBold
+        $countText.Foreground = (& $toBrush "#8ca0b7")
         $countText.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
         $countBadge.Child = $countText
         [System.Windows.Controls.Grid]::SetColumn($countBadge, 2)
+        [void]$ui["Elements"]["CountBadges"].Add($countBadge)
+        [void]$ui["Elements"]["CountTexts"].Add($countText)
 
         $catSelectAll = New-Object System.Windows.Controls.CheckBox
         $catSelectAll.Content = "All"
-        $catSelectAll.Foreground = (& $toBrush "#6c7a89")
-        $catSelectAll.FontSize = 10
+        $catSelectAll.Foreground = (& $toBrush "#8ca0b7")
+        $catSelectAll.FontSize = 10.5
         $catSelectAll.Cursor = [System.Windows.Input.Cursors]::Hand
         $catSelectAll.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
         [System.Windows.Controls.Grid]::SetColumn($catSelectAll, 3)
@@ -2254,30 +2479,36 @@ function Show-WinGetInstallerGUI {
         [void]$categoryStack.Children.Add($headerBorder)
 
         $appsStack = New-Object System.Windows.Controls.StackPanel
-        $appsStack.Margin = [System.Windows.Thickness]::new(5, 3, 5, 5)
+        $appsStack.Margin = [System.Windows.Thickness]::new(8, 6, 8, 8)
         $categoryCheckboxList = [System.Collections.ArrayList]::new()
 
         foreach ($app in $Script:SoftwareDatabase[$category]) {
             $appNum++
 
             $appBorder = New-Object System.Windows.Controls.Border
-            $appBorder.CornerRadius = [System.Windows.CornerRadius]::new(3)
-            $appBorder.Padding = [System.Windows.Thickness]::new(3, 2, 3, 2)
-            $appBorder.Margin = [System.Windows.Thickness]::new(0, 1, 0, 1)
+            $appBorder.CornerRadius = [System.Windows.CornerRadius]::new(10)
+            $appBorder.Padding = [System.Windows.Thickness]::new(8, 6, 8, 6)
+            $appBorder.Margin = [System.Windows.Thickness]::new(0, 2, 0, 2)
             $appBorder.Cursor = [System.Windows.Input.Cursors]::Hand
             [void]$ui["Elements"]["AppBorders"].Add($appBorder)
 
-            $appStack = New-Object System.Windows.Controls.StackPanel
-            $appStack.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+            $appStack = New-Object System.Windows.Controls.Grid
+            $appStack.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{ Width = [System.Windows.GridLength]::Auto }))
+            $appStack.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{ Width = [System.Windows.GridLength]::Auto }))
+            $appStack.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{ Width = [System.Windows.GridLength]::Auto }))
+            $appStack.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{ Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star) }))
+            $appStack.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition -Property @{ Width = [System.Windows.GridLength]::Auto }))
 
             $checkbox = New-Object System.Windows.Controls.CheckBox
             $checkbox.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
             $checkbox.Tag = $app
+            [System.Windows.Controls.Grid]::SetColumn($checkbox, 0)
 
             $iconImage = New-Object System.Windows.Controls.Image
-            $iconImage.Width = 16; $iconImage.Height = 16
-            $iconImage.Margin = [System.Windows.Thickness]::new(5, 0, 5, 0)
+            $iconImage.Width = 18; $iconImage.Height = 18
+            $iconImage.Margin = [System.Windows.Thickness]::new(10, 0, 8, 0)
             $iconImage.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            [System.Windows.Controls.Grid]::SetColumn($iconImage, 2)
 
             # Instant letter-icon placeholder; real icons load async after window opens
             $iconImage.Source = New-LetterIcon -Letter $app.Name[0] -ColorHex (Get-LetterColor $app.Name)
@@ -2285,26 +2516,39 @@ function Show-WinGetInstallerGUI {
 
             $appLabel = New-Object System.Windows.Controls.TextBlock
             $appLabel.Text = $app.Name
-            $appLabel.FontSize = 11
-            $appLabel.Foreground = (& $toBrush "#d0d0d0")
+            $appLabel.FontSize = 11.5
+            $appLabel.Foreground = (& $toBrush "#e5edf5")
             $appLabel.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
             $appLabel.TextTrimming = [System.Windows.TextTrimming]::CharacterEllipsis
+            [System.Windows.Controls.Grid]::SetColumn($appLabel, 3)
             [void]$ui["Elements"]["AppLabels"].Add($appLabel)
 
-            # Installed indicator dot (hidden by default, shown after background scan)
-            $installedDot = New-Object System.Windows.Shapes.Ellipse
-            $installedDot.Width = 6; $installedDot.Height = 6
-            $installedDot.Fill = (& $toBrush "#2ecc71")
-            $installedDot.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-            $installedDot.Margin = [System.Windows.Thickness]::new(0, 0, 3, 0)
-            $installedDot.Visibility = [System.Windows.Visibility]::Collapsed
-            $installedDot.ToolTip = "Already installed"
-            [void]$ui["Elements"]["InstalledDots"].Add($installedDot)
+            $installedBadge = New-Object System.Windows.Controls.Border
+            $installedBadge.Background = (& $toBrush "#103526")
+            $installedBadge.BorderBrush = (& $toBrush "#103526")
+            $installedBadge.BorderThickness = [System.Windows.Thickness]::new(1)
+            $installedBadge.CornerRadius = [System.Windows.CornerRadius]::new(999)
+            $installedBadge.Padding = [System.Windows.Thickness]::new(7, 2, 7, 2)
+            $installedBadge.Margin = [System.Windows.Thickness]::new(8, 0, 0, 0)
+            $installedBadge.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            $installedBadge.Visibility = [System.Windows.Visibility]::Collapsed
+            $installedBadge.ToolTip = "Already installed"
+            [System.Windows.Controls.Grid]::SetColumn($installedBadge, 4)
+
+            $installedText = New-Object System.Windows.Controls.TextBlock
+            $installedText.Text = "Installed"
+            $installedText.FontSize = 9.5
+            $installedText.FontWeight = [System.Windows.FontWeights]::SemiBold
+            $installedText.Foreground = (& $toBrush "#78ddb1")
+            $installedBadge.Child = $installedText
+            [void]$ui["Elements"]["InstalledDots"].Add($installedBadge)
+            [void]$ui["Elements"]["AppStatusBadges"].Add($installedBadge)
+            [void]$ui["Elements"]["AppStatusTexts"].Add($installedText)
 
             [void]$appStack.Children.Add($checkbox)
-            [void]$appStack.Children.Add($installedDot)
             [void]$appStack.Children.Add($iconImage)
             [void]$appStack.Children.Add($appLabel)
+            [void]$appStack.Children.Add($installedBadge)
 
             $appBorder.Child = $appStack
 
@@ -2392,9 +2636,9 @@ function Show-WinGetInstallerGUI {
         $localCard = $ui["Categories"][$catIdx]["Card"]
 
         $sideBtn = New-Object System.Windows.Controls.Border
-        $sideBtn.Padding = [System.Windows.Thickness]::new(10, 5, 10, 5)
-        $sideBtn.Margin = [System.Windows.Thickness]::new(4, 1, 4, 1)
-        $sideBtn.CornerRadius = [System.Windows.CornerRadius]::new(4)
+        $sideBtn.Padding = [System.Windows.Thickness]::new(12, 8, 12, 8)
+        $sideBtn.Margin = [System.Windows.Thickness]::new(6, 2, 6, 2)
+        $sideBtn.CornerRadius = [System.Windows.CornerRadius]::new(10)
         $sideBtn.Cursor = [System.Windows.Input.Cursors]::Hand
         $sideBtn.Background = [System.Windows.Media.Brushes]::Transparent
 
@@ -2405,25 +2649,36 @@ function Show-WinGetInstallerGUI {
 
         $sideBtnText = New-Object System.Windows.Controls.TextBlock
         $sideBtnText.Text = $category
-        $sideBtnText.FontSize = 10.5
-        $sideBtnText.Foreground = (& $toBrush "#8a8aaa")
+        $sideBtnText.FontSize = 11
+        $sideBtnText.Foreground = (& $toBrush "#acc0d4")
         $sideBtnText.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
         $sideBtnText.TextTrimming = [System.Windows.TextTrimming]::CharacterEllipsis
         [System.Windows.Controls.Grid]::SetColumn($sideBtnText, 0)
 
         $sideBtnCount = New-Object System.Windows.Controls.TextBlock
         $sideBtnCount.Text = $catCount.ToString()
-        $sideBtnCount.FontSize = 9
-        $sideBtnCount.Foreground = (& $toBrush "#4a4a6a")
+        $sideBtnCount.FontSize = 9.5
+        $sideBtnCount.Foreground = (& $toBrush "#6e859a")
         $sideBtnCount.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
-        $sideBtnCount.Margin = [System.Windows.Thickness]::new(4, 0, 0, 0)
+        $sideBtnCount.Margin = [System.Windows.Thickness]::new(6, 0, 0, 0)
         [System.Windows.Controls.Grid]::SetColumn($sideBtnCount, 1)
 
         [void]$sideBtnGrid.Children.Add($sideBtnText); [void]$sideBtnGrid.Children.Add($sideBtnCount)
         $sideBtn.Child = $sideBtnGrid
 
-        $sideBtn.Add_MouseEnter({ param($s,$e); $s.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1a1a3e") }.GetNewClosure())
-        $sideBtn.Add_MouseLeave({ param($s,$e); $s.Background = [System.Windows.Media.Brushes]::Transparent }.GetNewClosure())
+        $sideBtn.Add_MouseEnter({
+            param($s,$e)
+            if ($ui["ActiveSidebarRow"] -ne $s) {
+                $t = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+                $s.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString($t["SidebarHover"])
+            }
+        }.GetNewClosure())
+        $sideBtn.Add_MouseLeave({
+            param($s,$e)
+            if ($ui["ActiveSidebarRow"] -ne $s) {
+                $s.Background = [System.Windows.Media.Brushes]::Transparent
+            }
+        }.GetNewClosure())
         $sideBtn.Add_MouseLeftButtonDown({
             param($s,$e)
             # Expand the category if collapsed
@@ -2432,12 +2687,21 @@ function Show-WinGetInstallerGUI {
                 $stack.Visibility = [System.Windows.Visibility]::Visible
                 $ui["Elements"]["CollapseArrows"][$localIdx].Text = [string][char]0x25BC
             }
+            if ($ui["ActiveSidebarRow"] -and $ui["ActiveSidebarRow"] -ne $s) {
+                $ui["ActiveSidebarRow"].Background = [System.Windows.Media.Brushes]::Transparent
+            }
+            $t = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+            $s.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString($t["SidebarActive"])
+            $ui["ActiveSidebarRow"] = $s
             $localCard.BringIntoView()
             $e.Handled = $true
         }.GetNewClosure())
 
         [void]$SidebarPanel.Children.Add($sideBtn)
         [void]$ui["SidebarButtons"].Add($sideBtnText)
+        [void]$ui["Elements"]["SidebarButtons"].Add($sideBtnText)
+        [void]$ui["Elements"]["SidebarCounts"].Add($sideBtnCount)
+        [void]$ui["Elements"]["SidebarRows"].Add($sideBtn)
         $catIdx++
     }
 
@@ -2450,7 +2714,7 @@ function Show-WinGetInstallerGUI {
         $GroupCombo.Items.Clear()
         # Placeholder
         $placeholder = New-Object System.Windows.Controls.ComboBoxItem
-        $placeholder.Content = "-- Select Group --"
+        $placeholder.Content = "Saved and starter groups"
         $placeholder.IsEnabled = $false
         $GroupCombo.Items.Add($placeholder) | Out-Null
 
@@ -2491,6 +2755,7 @@ function Show-WinGetInstallerGUI {
         }
 
         $GroupCombo.SelectedIndex = 0
+        & $UpdateGroupActionState
     }
     & $RefreshGroupCombo
 
@@ -2501,11 +2766,11 @@ function Show-WinGetInstallerGUI {
         $status = Test-WinGet
         if ($status.Installed) {
             $WinGetStatus.Text = "WinGet $($status.Version)"
-            $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#27ae60")
+            $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1fb879")
             $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Collapsed
         } else {
-            $WinGetStatus.Text = "WinGet Not Found"
-            $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#e74c3c")
+            $WinGetStatus.Text = "WinGet required"
+            $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#dc3545")
             $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Visible
         }
     }
@@ -2518,27 +2783,37 @@ function Show-WinGetInstallerGUI {
     # Search
     $SearchBorder = $Window.FindName("SearchBorder")
     $SearchBox.Add_GotFocus({
-        $SearchBorder.BorderBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#5dade2")
+        $t = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+        $SearchBorder.BorderBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString($t["SearchFocus"])
         $SearchBorder.BorderThickness = [System.Windows.Thickness]::new(1.5)
     }.GetNewClosure())
     $SearchBox.Add_LostFocus({
-        $SearchBorder.BorderBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#3a3a5a")
+        $t = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+        $SearchBorder.BorderBrush = [System.Windows.Media.BrushConverter]::new().ConvertFromString($t["SearchBorder"])
         $SearchBorder.BorderThickness = [System.Windows.Thickness]::new(1)
     }.GetNewClosure())
     $SearchBox.Add_TextChanged({
         $SearchPlaceholder.Visibility = if ($SearchBox.Text.Length -gt 0) { "Collapsed" } else { "Visible" }
         & $ApplyFilter
     }.GetNewClosure())
+    $ClearSearchBtn.Add_Click({ $SearchBox.Clear(); $SearchBox.Focus() | Out-Null }.GetNewClosure())
+    $EmptyStateClearBtn.Add_Click({ $SearchBox.Clear(); $SearchBox.Focus() | Out-Null }.GetNewClosure())
+    $EmptyStateResetModeBtn.Add_Click({ & $ExitUpdateView }.GetNewClosure())
+    $MainScroll.Add_SizeChanged({ & $UpdateCardLayout }.GetNewClosure())
+    $Window.Add_SizeChanged({ & $UpdateCardLayout }.GetNewClosure())
+    $GroupCombo.Add_SelectionChanged({ & $UpdateGroupActionState }.GetNewClosure())
 
     # Dark mode
-    $ModeBtn.Add_Click({ $ui["IsDark"] = -not $ui["IsDark"]; & $ApplyTheme }.GetNewClosure())
+    $ModeBtn.Add_Click({ $ui["IsDark"] = -not $ui["IsDark"]; & $ApplyTheme; & $UpdateSelectedCount }.GetNewClosure())
 
     # Log panel toggle
     $LogToggleBtn.Add_Click({
         if ($LogPanelBorder.Visibility -eq [System.Windows.Visibility]::Visible) {
             $LogPanelBorder.Visibility = [System.Windows.Visibility]::Collapsed
+            $LogToggleBtn.Content = "Show"
         } else {
             $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
+            $LogToggleBtn.Content = "Hide"
         }
     }.GetNewClosure())
 
@@ -2563,7 +2838,7 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
-    $InstallWinGetBtn.Add_Click({ $ProgressText.Text = "Installing WinGet..."; $null = Install-WinGet; & $checkWinGet; $ProgressText.Text = "Ready" }.GetNewClosure())
+    $InstallWinGetBtn.Add_Click({ $ProgressText.Text = "Installing WinGet..."; $null = Install-WinGet; & $checkWinGet; $ProgressText.Text = "WinGet check complete." }.GetNewClosure())
 
     # ========================================================
     # GROUP HANDLERS
@@ -2595,7 +2870,7 @@ function Show-WinGetInstallerGUI {
     $LoadGroupBtn.Add_Click({
         $selected = $GroupCombo.SelectedItem
         if ($null -eq $selected -or $null -eq $selected.Tag) {
-            $ProgressText.Text = "Select a group from the dropdown first"
+            $ProgressText.Text = "Choose a starter group or saved group first."
             return
         }
         $gName = $selected.Tag["Name"]
@@ -2609,13 +2884,13 @@ function Show-WinGetInstallerGUI {
         }
 
         $loaded = & $ApplyPackageList $ids
-        $ProgressText.Text = "Loaded group '$gName': $loaded of $($ids.Count) apps selected"
+        $ProgressText.Text = "Applied '$gName' and selected $loaded of $($ids.Count) apps."
     }.GetNewClosure())
 
     $SaveGroupBtn.Add_Click({
         $sel = & $GetSelectedIds
         if ($sel.Count -eq 0) {
-            [System.Windows.MessageBox]::Show("Select at least one app before saving a group.", "No Selection", "OK", "Information")
+            [System.Windows.MessageBox]::Show("Select at least one app before saving a group.", "No Apps Selected", "OK", "Information")
             return
         }
 
@@ -2624,15 +2899,16 @@ function Show-WinGetInstallerGUI {
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Save Package Group" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize" Background="#1a1a2e" MinWidth="380">
-    <StackPanel Margin="24,18,24,18">
-        <TextBlock Text="Save current selection as a package group" Foreground="#d0d0d0" FontSize="13" Margin="0,0,0,12"/>
-        <TextBlock Text="Group Name:" Foreground="#bdc3c7" FontSize="12" Margin="0,0,0,4"/>
-        <TextBox x:Name="GroupNameBox" FontSize="13" Padding="8,6" Background="#0f0f23" Foreground="#e0e0e0" BorderBrush="#3a3a5a" BorderThickness="1"/>
-        <TextBlock Text="$($sel.Count) apps will be saved" Foreground="#6c7a89" FontSize="11" Margin="0,8,0,0"/>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button x:Name="OkBtn" Content="Save" Padding="20,6" Margin="0,0,8,0" FontSize="12" IsDefault="True" Background="#27ae60" Foreground="White" BorderThickness="0" Cursor="Hand"/>
-            <Button x:Name="CancelDlgBtn" Content="Cancel" Padding="20,6" FontSize="12" IsCancel="True" Background="#2a2a4a" Foreground="#d0d0d0" BorderBrush="#3a3a5a" BorderThickness="1" Cursor="Hand"/>
+        ResizeMode="NoResize" Background="#071018" MinWidth="420">
+    <StackPanel Margin="26,22,26,22">
+        <TextBlock Text="Save the current selection as a reusable group" Foreground="#f0f6fb" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <TextBlock Text="Wingetter will keep the exact package IDs so you can reload this setup later." Foreground="#90a4b8" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap" MaxWidth="340"/>
+        <TextBlock Text="Group name" Foreground="#c4d2df" FontSize="12" Margin="0,0,0,6"/>
+        <TextBox x:Name="GroupNameBox" FontSize="13" Padding="10,8" Background="#08131f" Foreground="#eff6fb" BorderBrush="#24374a" BorderThickness="1"/>
+        <TextBlock Text="$($sel.Count) selected apps will be included." Foreground="#7a90a6" FontSize="11.5" Margin="0,10,0,0"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button x:Name="OkBtn" Content="Save Group" Padding="20,7" Margin="0,0,8,0" FontSize="12" IsDefault="True" Background="#1fb879" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+            <Button x:Name="CancelDlgBtn" Content="Cancel" Padding="18,7" FontSize="12" IsCancel="True" Background="#102133" Foreground="#dbe7f1" BorderBrush="#24374a" BorderThickness="1" Cursor="Hand"/>
         </StackPanel>
     </StackPanel>
 </Window>
@@ -2653,7 +2929,7 @@ function Show-WinGetInstallerGUI {
             if ($gName -ne "") {
                 Save-GroupToFile -Name $gName -PackageIds $sel
                 & $RefreshGroupCombo
-                $ProgressText.Text = "Saved group '$gName' with $($sel.Count) apps"
+                $ProgressText.Text = "Saved '$gName' with $($sel.Count) selected apps."
             }
         }
     }.GetNewClosure())
@@ -2661,17 +2937,22 @@ function Show-WinGetInstallerGUI {
     $DeleteGroupBtn.Add_Click({
         $selected = $GroupCombo.SelectedItem
         if ($null -eq $selected -or $null -eq $selected.Tag) {
-            $ProgressText.Text = "Select a group to delete"
+            $ProgressText.Text = "Choose a saved group to delete."
             return
         }
         if ($selected.Tag["Type"] -eq "builtin") {
-            $ProgressText.Text = "Built-in groups cannot be deleted"
+            $ProgressText.Text = "Built-in groups can't be deleted."
             return
         }
         $gName = $selected.Tag["Name"]
+        $confirm = [System.Windows.MessageBox]::Show("Delete the saved group '$gName'? This can't be undone.", "Delete Saved Group", "YesNo", "Warning")
+        if ($confirm -ne "Yes") {
+            $ProgressText.Text = "Delete cancelled."
+            return
+        }
         Remove-GroupFromFile -Name $gName
         & $RefreshGroupCombo
-        $ProgressText.Text = "Deleted group '$gName'"
+        $ProgressText.Text = "Deleted '$gName'."
     }.GetNewClosure())
 
     # ========================================================
@@ -2679,7 +2960,7 @@ function Show-WinGetInstallerGUI {
     # ========================================================
     $ExportBtn.Add_Click({
         $sel = & $GetSelectedIds
-        if ($sel.Count -eq 0) { $ProgressText.Text = "No apps selected to export"; return }
+        if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before exporting."; return }
 
         $dlg = New-Object Microsoft.Win32.SaveFileDialog
         $dlg.Filter = "PowerShell Script (*.ps1)|*.ps1|JSON Config (*.json)|*.json"
@@ -2691,10 +2972,10 @@ function Show-WinGetInstallerGUI {
 
             if ($ext -eq ".ps1") {
                 Export-GroupAsPS1 -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName -Silent $SilentCheck.IsChecked -AcceptAgreements $AcceptCheck.IsChecked
-                $ProgressText.Text = "Exported $($sel.Count) apps as PowerShell script"
+                $ProgressText.Text = "Exported $($sel.Count) apps as a PowerShell installer."
             } else {
                 Export-GroupAsJSON -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName
-                $ProgressText.Text = "Exported $($sel.Count) apps as JSON config"
+                $ProgressText.Text = "Exported $($sel.Count) apps as a JSON config."
             }
         }
     }.GetNewClosure())
@@ -2712,23 +2993,23 @@ function Show-WinGetInstallerGUI {
                 # Detect format: group config (has PackageIds) vs simple array
                 if ($content.PackageIds) {
                     $ids = @($content.PackageIds)
-                    $gName = if ($content.GroupName) { $content.GroupName } else { "Imported" }
+                    $gName = if ($content.GroupName) { $content.GroupName } else { "Imported Group" }
                 } elseif ($content -is [System.Array]) {
                     $ids = @($content)
-                    $gName = "Imported"
+                    $gName = "Imported Group"
                 } else {
                     throw "Unrecognized JSON format"
                 }
 
                 $loaded = & $ApplyPackageList $ids
-                $ProgressText.Text = "Imported '$gName': $loaded of $($ids.Count) apps selected"
+                $ProgressText.Text = "Imported '$gName' and selected $loaded of $($ids.Count) apps."
 
                 # Offer to save as group
-                $save = [System.Windows.MessageBox]::Show("Save as a named group for future use?", "Save Imported Group", "YesNo", "Question")
+                $save = [System.Windows.MessageBox]::Show("Save '$gName' as a reusable group for later?", "Save Imported Group", "YesNo", "Question")
                 if ($save -eq "Yes") {
                     Save-GroupToFile -Name $gName -PackageIds $ids
                     & $RefreshGroupCombo
-                    $ProgressText.Text = "Imported and saved group '$gName' ($loaded apps)"
+                    $ProgressText.Text = "Imported and saved '$gName' ($loaded apps)."
                 }
             } catch {
                 $ProgressText.Text = "Import failed: $($_.Exception.Message)"
@@ -2738,35 +3019,61 @@ function Show-WinGetInstallerGUI {
 
     $CopyCommandBtn.Add_Click({
         $sel = @(); foreach ($cb in $ui["AllCheckboxes"].Values) { if ($cb.IsChecked) { $sel += $cb.Tag.WingetId } }
-        if ($sel.Count -eq 0) { $ProgressText.Text = "No apps selected"; return }
+        if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before copying commands."; return }
         $s = if ($SilentCheck.IsChecked) { " --silent" } else { "" }
         $a = if ($AcceptCheck.IsChecked) { " --accept-package-agreements --accept-source-agreements" } else { "" }
         $cmds = $sel | ForEach-Object { "winget install --id $_ --exact$s$a" }
-        [System.Windows.Clipboard]::SetText(($cmds -join "`n")); $ProgressText.Text = "Copied $($sel.Count) commands"
+        [System.Windows.Clipboard]::SetText(($cmds -join "`n")); $ProgressText.Text = "Copied $($sel.Count) winget commands to the clipboard."
     }.GetNewClosure())
 
-    $CancelBtn.Add_Click({ $ui["Cancelled"] = $true; $ProgressText.Text = "Cancelling..." }.GetNewClosure())
+    $CancelBtn.Add_Click({ $ui["Cancelled"] = $true; $ProgressText.Text = "Stopping after the current package..." }.GetNewClosure())
 
     # Helper: add log entry to log panel
     $AddLogEntry = {
         param([string]$AppName, [string]$Status, [string]$Color)
+        $statusBg = if ($ui["IsDark"]) {
+            switch ($Status) {
+                "SUCCESS" { "#183a2c" }
+                "UP TO DATE" { "#3d3119" }
+                "FAILED" { "#3d2024" }
+                "ERROR" { "#3d2024" }
+                "CANCELLED" { "#3d3119" }
+                default { "#132132" }
+            }
+        } else {
+            switch ($Status) {
+                "SUCCESS" { "#ecfaf2" }
+                "UP TO DATE" { "#fff8ea" }
+                "FAILED" { "#fdf0f2" }
+                "ERROR" { "#fdf0f2" }
+                "CANCELLED" { "#fff8ea" }
+                default { "#f4f7fb" }
+            }
+        }
         $entry = New-Object System.Windows.Controls.Border
-        $entry.Padding = [System.Windows.Thickness]::new(8, 3, 8, 3)
-        $entry.Margin = [System.Windows.Thickness]::new(0, 1, 0, 1)
-        $entry.CornerRadius = [System.Windows.CornerRadius]::new(3)
+        $entry.Padding = [System.Windows.Thickness]::new(10, 8, 10, 8)
+        $entry.Margin = [System.Windows.Thickness]::new(0, 2, 0, 2)
+        $entry.CornerRadius = [System.Windows.CornerRadius]::new(10)
+        $entry.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString($statusBg)
         $entryGrid = New-Object System.Windows.Controls.Grid
         $eCol1 = New-Object System.Windows.Controls.ColumnDefinition; $eCol1.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
         $eCol2 = New-Object System.Windows.Controls.ColumnDefinition; $eCol2.Width = [System.Windows.GridLength]::Auto
         $entryGrid.ColumnDefinitions.Add($eCol1); $entryGrid.ColumnDefinitions.Add($eCol2)
         $nameText = New-Object System.Windows.Controls.TextBlock
-        $nameText.Text = $AppName; $nameText.FontSize = 11
-        $nameText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#d0d0d0")
+        $nameText.Text = $AppName; $nameText.FontSize = 11.5
+        $theme = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+        $nameText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($theme["LogText"])
         [System.Windows.Controls.Grid]::SetColumn($nameText, 0)
+        $statusBadge = New-Object System.Windows.Controls.Border
+        $statusBadge.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString((if ($ui["IsDark"]) { "#132132" } else { "#ffffff" }))
+        $statusBadge.CornerRadius = [System.Windows.CornerRadius]::new(999)
+        $statusBadge.Padding = [System.Windows.Thickness]::new(8, 3, 8, 3)
+        [System.Windows.Controls.Grid]::SetColumn($statusBadge, 1)
         $statusText = New-Object System.Windows.Controls.TextBlock
-        $statusText.Text = $Status; $statusText.FontSize = 11; $statusText.FontWeight = [System.Windows.FontWeights]::SemiBold
+        $statusText.Text = $Status; $statusText.FontSize = 10; $statusText.FontWeight = [System.Windows.FontWeights]::SemiBold
         $statusText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($Color)
-        [System.Windows.Controls.Grid]::SetColumn($statusText, 1)
-        [void]$entryGrid.Children.Add($nameText); [void]$entryGrid.Children.Add($statusText)
+        $statusBadge.Child = $statusText
+        [void]$entryGrid.Children.Add($nameText); [void]$entryGrid.Children.Add($statusBadge)
         $entry.Child = $entryGrid
         [void]$LogEntriesPanel.Children.Add($entry)
         $LogScrollViewer.ScrollToEnd()
@@ -2775,27 +3082,31 @@ function Show-WinGetInstallerGUI {
     # Install / Update handler
     $InstallBtn.Add_Click({
         $status = Test-WinGet
-        if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet not installed. Click 'Install WinGet' first.", "WinGet Required", "OK", "Warning"); return }
+        if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can install packages. Use 'Install WinGet' and try again.", "WinGet Required", "OK", "Warning"); return }
         $selected = @()
         foreach ($cb in $ui["AllCheckboxes"].Values) { if ($cb.IsChecked) { $selected += @{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId } } }
-        if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app.", "No Selection", "OK", "Information"); return }
+        if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }
 
         $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true; $SelectAllBtn.IsEnabled = $false; $DeselectAllBtn.IsEnabled = $false
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn)) {
+            $ctl.IsEnabled = $false
+        }
         $ui["Cancelled"] = $false
 
         # Show log panel and clear previous entries
         $LogEntriesPanel.Children.Clear()
         $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
+        $LogToggleBtn.Content = "Hide"
 
         $isUpdate = $ui["IsUpdateMode"]
         $actionVerb = if ($isUpdate) { "Updating" } else { "Installing" }
         $total = $selected.Count; $current = 0; $ok = 0; $fail = 0; $skip = 0
 
         foreach ($app in $selected) {
-            if ($ui["Cancelled"]) { $ProgressText.Text = "Cancelled"; & $AddLogEntry $app.Name "CANCELLED" "#f39c12"; break }
+            if ($ui["Cancelled"]) { $ProgressText.Text = "Stopped before completing the full list."; & $AddLogEntry $app.Name "CANCELLED" "#f39c12"; break }
             $current++; $pct = [math]::Round(($current / $total) * 100)
             $ProgressBar.Value = $pct; $ProgressPercent.Text = "$pct%"
-            $ProgressText.Text = "$actionVerb $($app.Name) ($current/$total)..."
+            $ProgressText.Text = "$actionVerb $($app.Name) ($current of $total)..."
             [System.Windows.Forms.Application]::DoEvents()
 
             $wargs = if ($isUpdate) { @("upgrade", "--id", $app.WingetId, "--exact") } else { @("install", "--id", $app.WingetId, "--exact") }
@@ -2827,10 +3138,15 @@ function Show-WinGetInstallerGUI {
         }
 
         $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false; $SelectAllBtn.IsEnabled = $true; $DeselectAllBtn.IsEnabled = $true
+        foreach ($ctl in @($ImportBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn)) {
+            $ctl.IsEnabled = $true
+        }
+        & $UpdateGroupActionState
+        & $UpdateSelectedCount
         $doneVerb = if ($isUpdate) { "updated" } else { "installed" }
         if (-not $ui["Cancelled"]) {
             $ProgressBar.Value = 100; $ProgressPercent.Text = "100%"
-            $ProgressText.Text = "Done: $ok $doneVerb, $skip already present, $fail failed"
+            $ProgressText.Text = "Finished: $ok $doneVerb, $skip already current, $fail failed."
 
             # Windows Toast notification
             try {
@@ -2856,6 +3172,7 @@ function Show-WinGetInstallerGUI {
     # ========================================================
     $EnterUpdateView = {
         $ui["IsUpdateMode"] = $true
+        $bc = [System.Windows.Media.BrushConverter]::new()
 
         # Hide sidebar
         $SidebarBorder.Visibility = [System.Windows.Visibility]::Collapsed
@@ -2876,6 +3193,7 @@ function Show-WinGetInstallerGUI {
 
         # Show only installed apps, hide everything else
         $appIdx = 0; $installedCount = 0; $catIdx2 = 0
+        $activeTheme = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
         foreach ($catName in $Script:SoftwareDatabase.Keys) {
             $card = $ui["Elements"]["CategoryCards"][$catIdx2]
             $apps = $Script:SoftwareDatabase[$catName]
@@ -2891,6 +3209,7 @@ function Show-WinGetInstallerGUI {
                 if ($isInstalled) {
                     $border.Visibility = [System.Windows.Visibility]::Visible
                     $border.Opacity = 1.0
+                    $ui["Elements"]["AppLabels"][$appIdx].Foreground = $bc.ConvertFromString($activeTheme["AppText"])
                     $ui["AllCheckboxes"][$app.WingetId].IsChecked = $true
                     $installedCount++
                     $catHasInstalled = $true
@@ -2917,15 +3236,16 @@ function Show-WinGetInstallerGUI {
             $catIdx2++
         }
 
-        # Update button states - repurpose UpdateAllBtn as "Back to Install"
-        $UpdateAllBtn.Content = "Back to Install"
-        $InstallBtn.Content = "Update Selected"
-        $ProgressText.Text = "$installedCount installed apps ready to update - uncheck any you want to skip"
-        $SelectedCount.Text = "$installedCount"
-        $VisibleCountText.Text = "Showing $installedCount of $installedCount"
+        # Update button states - repurpose UpdateAllBtn as "Back to Browse"
+        $UpdateAllBtn.Content = "Back to Browse"
+        $UpdateAllBtn.ToolTip = "Return to the full install catalog."
+        $ProgressText.Text = "$installedCount installed apps are ready to review. Uncheck anything you want to skip."
+        $ToolbarHintText.Text = "Review mode shows only apps already detected on this PC."
 
-        $SelectAllBtn.Content = "Select All"
-        $DeselectAllBtn.Content = "Deselect All"
+        $SelectAllBtn.Content = "Select Visible"
+        $DeselectAllBtn.Content = "Clear Visible"
+        & $UpdateSelectedCount
+        & $ApplyFilter
     }
 
     $ExitUpdateView = {
@@ -2957,14 +3277,14 @@ function Show-WinGetInstallerGUI {
         foreach ($catName in $Script:SoftwareDatabase.Keys) {
             $card = $ui["Elements"]["CategoryCards"][$catIdx2]
             $card.Visibility = [System.Windows.Visibility]::Visible
-            $card.Width = 210
-            $card.Margin = [System.Windows.Thickness]::new(4, 4, 4, 4)
-            $card.BorderThickness = [System.Windows.Thickness]::new(2, 1, 1, 1)
+            $card.Width = 252
+            $card.Margin = [System.Windows.Thickness]::new(6, 6, 6, 6)
+            $card.BorderThickness = [System.Windows.Thickness]::new(1)
             $t = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
-            $card.Background = $bc.ConvertFromString($t["CategoryBg"])
-            $card.BorderBrush = $bc.ConvertFromString($t["CategoryBorder"])
+            $card.Background = $bc.ConvertFromString($t["CategoryCardBg"])
+            $card.BorderBrush = $bc.ConvertFromString($t["CategoryCardBorder"])
             $shadow = New-Object System.Windows.Media.Effects.DropShadowEffect
-            $shadow.BlurRadius = 8; $shadow.Opacity = 0.2; $shadow.ShadowDepth = 2
+            $shadow.BlurRadius = 16; $shadow.Opacity = 0.18; $shadow.ShadowDepth = 2
             $shadow.Color = [System.Windows.Media.Colors]::Black
             $card.Effect = $shadow
 
@@ -2979,23 +3299,26 @@ function Show-WinGetInstallerGUI {
 
                 if ($ui["InstalledIds"].ContainsKey($app.WingetId)) {
                     $border.Opacity = 0.55
+                    $ui["Elements"]["AppLabels"][$appIdx].Foreground = $bc.ConvertFromString($t["AppSubtleText"])
                 } else {
                     $border.Opacity = 1.0
+                    $ui["Elements"]["AppLabels"][$appIdx].Foreground = $bc.ConvertFromString($t["AppText"])
                 }
                 $appIdx++
             }
             $catIdx2++
         }
 
-        $UpdateAllBtn.Content = "Update All"
-        $InstallBtn.Content = "Get Your Apps"
-        $SelectAllBtn.Content = "Select All"
-        $DeselectAllBtn.Content = "Deselect All"
-        $ProgressText.Text = "Ready - Select apps and click 'Get Your Apps'"
-        $SelectedCount.Text = "0"
+        $UpdateAllBtn.Content = "Review Updates"
+        $UpdateAllBtn.ToolTip = "Show installed apps from this catalog so you can choose what to update."
+        $SelectAllBtn.Content = "Select Visible"
+        $DeselectAllBtn.Content = "Clear Visible"
+        $ToolbarHintText.Text = "Tip: Shift+Click selects a range."
+        $ProgressText.Text = "Choose apps to install or load a saved group to get started."
         $ProgressBar.Value = 0; $ProgressPercent.Text = ""
-        $total = $ui["TotalApps"]
-        $VisibleCountText.Text = "Showing $total of $total"
+        & $UpdateSelectedCount
+        & $ApplyFilter
+        & $UpdateCardLayout
     }
 
     $UpdateAllBtn.Add_Click({
@@ -3004,14 +3327,16 @@ function Show-WinGetInstallerGUI {
             return
         }
         if ($ui["InstalledIds"].Count -eq 0) {
-            [System.Windows.MessageBox]::Show("No installed apps detected yet. Please wait for the background scan to complete.", "No Installed Apps", "OK", "Information")
+            [System.Windows.MessageBox]::Show("Wingetter has not detected any installed apps from its catalog yet. Please wait for the background scan to finish and try again.", "Updates Not Ready", "OK", "Information")
             return
         }
         & $EnterUpdateView
     }.GetNewClosure())
 
     & $ApplyTheme
-    $VisibleCountText.Text = "Showing $totalApps of $totalApps"
+    & $UpdateSelectedCount
+    & $UpdateCardLayout
+    & $ApplyFilter
 
     Update-Splash $splash "Ready!" 100
     $splash.Window.Close()
@@ -3060,20 +3385,28 @@ function Show-WinGetInstallerGUI {
                 try { $installedPs.EndInvoke($installedHandle) } catch {}
                 $installedPs.Dispose(); $installedRunspace.Close()
                 $count = $ui["InstalledIds"].Count
-                if ($count -gt 0) { $ProgressText.Text = "$count installed apps detected" }
+                $baselineText = "Choose apps to install or load a saved group to get started."
+                if (($ProgressText.Text -eq $baselineText) -or ($ProgressText.Text -eq "Installed-app scan complete.")) {
+                    if ($count -gt 0) {
+                        $ProgressText.Text = "$count installed apps detected from the Wingetter catalog. Use Review Updates to focus on them."
+                    } else {
+                        $ProgressText.Text = "Installed-app scan complete."
+                    }
+                }
                 break
             }
-            if ($installedDotMap.ContainsKey($id)) {
-                $ui["InstalledIds"][$id] = $true
-                $idx = $installedDotMap[$id]
-                try {
-                    $ui["Elements"]["InstalledDots"][$idx].Visibility = [System.Windows.Visibility]::Visible
-                    $lbl = $ui["Elements"]["AppLabels"][$idx]
-                    if ($lbl.Text -notmatch '\(installed\)$') { $lbl.Text = $lbl.Text + "  (installed)" }
-                    $lbl.Foreground = (New-Object System.Windows.Media.BrushConverter).ConvertFromString("#6c7a89")
-                    $ui["Elements"]["AppBorders"][$idx].Opacity = 0.55
-                } catch {}
-            }
+                if ($installedDotMap.ContainsKey($id)) {
+                    $ui["InstalledIds"][$id] = $true
+                    $idx = $installedDotMap[$id]
+                    try {
+                        $ui["Elements"]["InstalledDots"][$idx].Visibility = [System.Windows.Visibility]::Visible
+                        $lbl = $ui["Elements"]["AppLabels"][$idx]
+                        $themeName = if ($ui["IsDark"]) { "Dark" } else { "Light" }
+                        $theme = $ui["Themes"][$themeName]
+                        $lbl.Foreground = (New-Object System.Windows.Media.BrushConverter).ConvertFromString($theme["AppSubtleText"])
+                        $ui["Elements"]["AppBorders"][$idx].Opacity = 0.55
+                    } catch {}
+                }
             $batch++
         }
     }.GetNewClosure())
