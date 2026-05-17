@@ -92,12 +92,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L08, E22.
 - Completed 2026-05-17: added `Microsoft.WinGet.Client` `Get-WinGetPackage` object-based detection with `winget list` fallback, installed package cache JSON under `%APPDATA%\Wingetter\installed-cache.json`, richer records for package ID, installed/available version, source, optional scope, detection method, and scan timestamp, UI consumption of those records, and parser tests for object and fallback paths.
 
-### [ ] R-011 - Add profile lifecycle and migration reports
+### [x] R-011 - Add profile lifecycle and migration reports
 
 - Problem: saved groups are useful but do not capture source, version intent, installed/current state, failures, or machine migration history.
 - Build: add profile metadata, last run date, per-package state, import warnings, missing packages, unavailable packages, and a "migration report" export.
 - Acceptance: after a run, users can export a report showing selected packages, installed/skipped/failed counts, versions, sources, and commands.
 - Sources: L04, E03, E04, E13, E14.
+- Completed 2026-05-17: added `Wingetter.MigrationReport.v1` report generation, automatic `migration-report.json` writing in each run log directory, GUI export to Markdown or JSON after install/update runs, import-warning capture, summary counts, per-package command/result paths, and installed/available version/source/scope state where available.
 
 ### [ ] R-012 - Make search metadata-rich
 

@@ -850,6 +850,7 @@ function Show-WinGetInstallerGUI {
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
+                        <Button x:Name="ExportReportBtn" Style="{StaticResource ToolBtn}" Content="Export Report" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" IsEnabled="False" ToolTip="Export the most recent install or update migration report"/>
                         <Button x:Name="CancelBtn" Style="{StaticResource ToolBtn}" Content="Stop" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" IsEnabled="False"/>
                         <Button x:Name="InstallBtn" Content="Install Selected" FontSize="14" FontWeight="SemiBold" Padding="24,11" Cursor="Hand" Foreground="White" IsEnabled="False">
                             <Button.Template>
@@ -915,6 +916,7 @@ function Show-WinGetInstallerGUI {
     $InstallBtn       = $Window.FindName("InstallBtn")
     $CancelBtn        = $Window.FindName("CancelBtn")
     $UpdateAllBtn     = $Window.FindName("UpdateAllBtn")
+    $ExportReportBtn  = $Window.FindName("ExportReportBtn")
     $SelectAllBtn     = $Window.FindName("SelectAllBtn")
     $DeselectAllBtn   = $Window.FindName("DeselectAllBtn")
     $ExportBtn        = $Window.FindName("ExportBtn")
@@ -1034,11 +1036,14 @@ function Show-WinGetInstallerGUI {
     $ui["PinnedIds"]           = @{}
     $ui["PinBadgesById"]       = @{}
     $ui["SelectedPackage"]     = $null
+    $ui["LastRunReport"]       = $null
+    $ui["LastRunSelectedPackages"] = @()
+    $ui["LastImportWarnings"]  = @()
     $ui["SidebarButtons"]      = [System.Collections.ArrayList]::new()
     $ui["CategoryAppsStacks"]  = [System.Collections.ArrayList]::new()
     $ui["BuiltInGroups"]       = $Script:BuiltInGroups
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ImportBtn, $InstallWinGetBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ImportBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
     foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck)) {
@@ -2081,6 +2086,25 @@ function Show-WinGetInstallerGUI {
     # ========================================================
     # EXPORT (WinGet JSON, Wingetter JSON, or PS1 script)
     # ========================================================
+    $ExportReportBtn.Add_Click({
+        if ($null -eq $ui["LastRunReport"]) {
+            $ProgressText.Text = "Run an install or update before exporting a report."
+            return
+        }
+
+        $dlg = New-Object Microsoft.Win32.SaveFileDialog
+        $dlg.Filter = "Markdown Report (*.md)|*.md|JSON Report (*.json)|*.json"
+        $dlg.FileName = "Wingetter-Migration-Report.md"
+        if ($dlg.ShowDialog() -eq $true) {
+            try {
+                Export-WingetterMigrationReport -Report $ui["LastRunReport"] -FilePath $dlg.FileName
+                $ProgressText.Text = "Exported migration report to $($dlg.FileName)."
+            } catch {
+                $ProgressText.Text = "Report export failed: $($_.Exception.Message)"
+            }
+        }
+    }.GetNewClosure())
+
     $ExportBtn.Add_Click({
         $sel = & $GetSelectedIds
         if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before exporting."; return }
@@ -2123,7 +2147,10 @@ function Show-WinGetInstallerGUI {
                 $ids = @($import.PackageIds)
                 if ($ids.Count -eq 0) { throw "No package IDs were found in the selected JSON file." }
                 if ($import.Warnings.Count -gt 0) {
+                    $ui["LastImportWarnings"] = @($import.Warnings)
                     $ProgressText.Text = "Import warning: $($import.Warnings[0])"
+                } else {
+                    $ui["LastImportWarnings"] = @()
                 }
 
                 $loaded = & $ApplyPackageList $ids
@@ -2219,7 +2246,7 @@ function Show-WinGetInstallerGUI {
         if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }
 
         $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true; $SelectAllBtn.IsEnabled = $false; $DeselectAllBtn.IsEnabled = $false
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportReportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck)) {
             $ctl.IsEnabled = $false
         }
         $ui["Cancelled"] = $false
@@ -2267,17 +2294,46 @@ function Show-WinGetInstallerGUI {
 
         $ui["LastRunLogDir"] = $runLogDir
         $ui["LastRunResults"] = $runResults.ToArray()
+        $ui["LastRunSelectedPackages"] = @($selected)
+
+        try {
+            $selectedIds = @($selected | ForEach-Object { [string]$_.WingetId })
+            $postRunScan = Get-WinGetInstalledCatalogPackages -PackageIds $selectedIds
+            foreach ($record in @($postRunScan.Packages.Values)) {
+                $ui["InstalledIds"][[string]$record.PackageId] = $record
+            }
+        } catch {}
+
+        $profileName = "Manual selection"
+        try {
+            if ($ui["IsUpdateMode"]) {
+                $profileName = "Update review"
+            } elseif ($GroupCombo.SelectedItem -and $GroupCombo.SelectedItem.Tag -and $GroupCombo.SelectedItem.Tag["Name"]) {
+                $profileName = [string]$GroupCombo.SelectedItem.Tag["Name"]
+            }
+        } catch {}
+        $report = New-WingetterMigrationReport `
+            -ProfileName $profileName `
+            -SelectedPackages $selected `
+            -RunResults $ui["LastRunResults"] `
+            -InstalledRecords $ui["InstalledIds"] `
+            -ImportWarnings $ui["LastImportWarnings"] `
+            -RunLogDir $runLogDir
+        $ui["LastRunReport"] = $report
+        $reportPath = Join-Path $runLogDir "migration-report.json"
+        try { Export-WingetterMigrationReport -Report $report -FilePath $reportPath } catch {}
 
         $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false; $SelectAllBtn.IsEnabled = $true; $DeselectAllBtn.IsEnabled = $true
         foreach ($ctl in @($ImportBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck)) {
             $ctl.IsEnabled = $true
         }
+        $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
         & $UpdateGroupActionState
         & $UpdateSelectedCount
         $doneVerb = if ($isUpdate) { "updated" } else { "installed" }
         if (-not $ui["Cancelled"]) {
             $ProgressBar.Value = 100; $ProgressPercent.Text = "100%"
-            $ProgressText.Text = "Finished: $ok $doneVerb, $skip already current, $fail failed. Logs: $runLogDir"
+            $ProgressText.Text = "Finished: $ok $doneVerb, $skip already current, $fail failed. Logs: $runLogDir. Report: $reportPath"
 
             # Windows Toast notification
             try {
@@ -2296,7 +2352,7 @@ function Show-WinGetInstallerGUI {
                 $ProgressText.Text = $doneMsg
             }
         } else {
-            $ProgressText.Text = "Stopped before completing the full list. Logs: $runLogDir"
+            $ProgressText.Text = "Stopped before completing the full list. Logs: $runLogDir. Report: $reportPath"
         }
     }.GetNewClosure())
 
