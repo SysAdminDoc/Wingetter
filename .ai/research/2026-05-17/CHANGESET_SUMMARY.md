@@ -93,6 +93,22 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
 - Live helper smoke: `Get-WinGetInstalledCatalogPackages -PackageIds @('7zip.7zip','Google.Chrome','Mozilla.Firefox')`
 
+## Development Follow-up: 2026-05-17 Migration Reports Batch
+
+### Files Modified
+
+- `src/Wingetter.Groups.ps1` - added `Wingetter.MigrationReport.v1` report creation, Markdown rendering, and JSON/Markdown export helpers.
+- `src/Wingetter.Ui.ps1` - added Export Report action, automatic run report creation, automatic `migration-report.json` writing under the run log directory, and import-warning carry-forward.
+- `tools/Test-ProfileJson.ps1` - added migration report summary, package state, JSON round-trip, and Markdown content coverage.
+- `tools/Test-Xaml.ps1` - added `ExportReportBtn` to the required control smoke test.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented migration reports and marked R-011 complete.
+
+### Verification Performed
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+
 ## Development Follow-up: 2026-05-17 Pin Controls Batch
 
 ### Files Modified

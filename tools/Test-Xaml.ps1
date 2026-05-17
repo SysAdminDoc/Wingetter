@@ -22,6 +22,7 @@ try {
         "LogPanelBorder",
         "InstallBtn",
         "ExportBtn",
+        "ExportReportBtn",
         "ImportBtn",
         "IncludePinnedCheck",
         "DetailPinState",

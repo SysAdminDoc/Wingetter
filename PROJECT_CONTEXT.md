@@ -42,6 +42,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 - Search filters app name and WinGet ID only.
 - Installs and updates run serially by launching `winget install` or `winget upgrade` with `--id`, `--exact`, and optional `--silent` / agreement flags.
 - Install/update execution writes per-package stdout, stderr, and JSON result files under `%APPDATA%\Wingetter\logs\<timestamp>-<action>`, passes `--verbose-logs`, and records command, action, package ID, exit code, status, stdout/stderr excerpts, cancellation state, run log directory, and WinGet diagnostic log directory when available.
+- Each completed or cancelled install/update run also builds a `Wingetter.MigrationReport.v1` report, writes `migration-report.json` into the run log directory, and enables GUI export as Markdown or JSON. Reports include selected packages, status counts, commands, result paths, version/source/scope state where available, scan timestamps, and import warnings.
 - WinGet bootstrap/repair now tries documented App Installer registration, then the `Microsoft.WinGet.Client` PowerShell module with `Repair-WinGetPackageManager -Force -Latest`, logs JSONL audit entries under `%APPDATA%\Wingetter\logs`, and falls back to the Microsoft Store App Installer page for manual follow-up.
 - Installed app detection runs in a background runspace using `Microsoft.WinGet.Client` `Get-WinGetPackage` object data when available, falls back to `winget list --source winget`, and writes `%APPDATA%\Wingetter\installed-cache.json` with package ID, installed version, available version, source, scope when available, detection method, and scan timestamp.
 - Icons are loaded lazily across a 4-worker runspace pool from Google favicon URLs, with letter placeholders before network fetches complete.
@@ -74,7 +75,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 The next phase should move Wingetter from "modularized WinGet GUI" to "trustworthy setup cockpit":
 
-1. Add profile lifecycle and migration reports using the richer run/install state now available.
+1. Make search metadata-rich using tags, publisher/source/state fields, and local scoring.
 2. Add deeper tests for import/export edge cases, install-result fixtures, pin-output fixtures, and installed-app parsing.
 3. Continue moving UI-heavy workflow code behind smaller functions now that the source is split into modules.
 4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the WinGet execution layer is separated behind a package-source interface.

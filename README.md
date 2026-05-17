@@ -56,6 +56,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Enhanced tooltips** -- hover to see app name and WingetId
 - **Install log panel** -- color-coded per-app results (success/skipped/failed) with summary
 - **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`
+- **Migration reports** -- completed install/update runs create exportable Markdown or JSON reports with summary counts, commands, result paths, versions, and sources
 - **Toast notifications** -- Windows notification when batch install completes
 - **Splash screen** -- loading progress indicator while icons are fetched
 - **Select All / Deselect All** per category or globally
@@ -140,6 +141,8 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 **Export as Wingetter Group JSON** creates a portable Wingetter profile that can be imported back into Wingetter on any machine.
 
 **Export as PS1** generates a self-contained PowerShell script that installs your selected packages with no dependencies -- hand it to a coworker or drop it in your deployment pipeline.
+
+**Export Report** becomes available after an install or update run and writes a migration report as Markdown or JSON. The report includes selected packages, status counts, commands, result log paths, installed/available versions, sources, scan timestamps, and import warnings when applicable.
 
 **Import JSON** accepts official WinGet import/export JSON, Wingetter group JSON, or a simple JSON array of package IDs. Packages not present in the Wingetter catalog are reported and skipped during selection.
 

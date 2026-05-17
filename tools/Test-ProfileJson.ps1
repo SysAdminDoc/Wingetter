@@ -77,6 +77,70 @@ if ($failures.Count -eq 0) {
 
         $arrayImport = Import-PackageIdsFromJSON -Content $ids -FallbackGroupName "Array"
         Assert-EqualArray -Actual $arrayImport.PackageIds -Expected $ids -Name "Array import package IDs"
+
+        $installedRecords = @{
+            "Google.Chrome" = [PSCustomObject]@{
+                InstalledVersion = "124.0"
+                AvailableVersion = "125.0"
+                Source           = "winget"
+                Scope            = "user"
+                DetectionMethod  = "Microsoft.WinGet.Client"
+                ScannedAtUtc     = "2026-05-17T00:00:00.0000000Z"
+            }
+        }
+        $runResults = @(
+            [PSCustomObject]@{
+                PackageId     = "Google.Chrome"
+                PackageName   = "Google Chrome"
+                Action        = "install"
+                Status        = "SUCCESS"
+                ExitCode      = 0
+                Command       = "winget install --id Google.Chrome --exact"
+                ResultPath    = Join-Path $tempDir "chrome.result.json"
+                StdOutExcerpt = "installed"
+                StdErrExcerpt = ""
+            },
+            [PSCustomObject]@{
+                PackageId     = "Mozilla.Firefox"
+                PackageName   = "Mozilla Firefox"
+                Action        = "install"
+                Status        = "FAILED"
+                ExitCode      = 1
+                Command       = "winget install --id Mozilla.Firefox --exact"
+                ResultPath    = Join-Path $tempDir "firefox.result.json"
+                StdOutExcerpt = ""
+                StdErrExcerpt = "failed"
+            }
+        )
+        $report = New-WingetterMigrationReport `
+            -ProfileName "Smoke" `
+            -SelectedPackages @(
+                @{ Name = "Google Chrome"; WingetId = "Google.Chrome" },
+                @{ Name = "Mozilla Firefox"; WingetId = "Mozilla.Firefox" }
+            ) `
+            -RunResults $runResults `
+            -InstalledRecords $installedRecords `
+            -ImportWarnings @("one warning") `
+            -RunLogDir $tempDir
+        if ($report.schema -ne "Wingetter.MigrationReport.v1") {
+            Add-Failure "Migration report has the wrong schema."
+        }
+        if ($report.summary.succeeded -ne 1 -or $report.summary.failed -ne 1 -or $report.summary.selected -ne 2) {
+            Add-Failure "Migration report summary counts were incorrect."
+        }
+        if (@($report.packages).Count -ne 2 -or $report.packages[0].installedVersion -ne "124.0") {
+            Add-Failure "Migration report did not include package version state."
+        }
+        $reportPath = Join-Path $tempDir "migration-report.json"
+        Export-WingetterMigrationReport -Report $report -FilePath $reportPath
+        $roundTripReport = Get-Content -Path $reportPath -Raw | ConvertFrom-Json
+        if ($roundTripReport.schema -ne "Wingetter.MigrationReport.v1") {
+            Add-Failure "Migration report JSON export did not round trip."
+        }
+        $markdown = ConvertTo-WingetterMigrationMarkdown -Report $report
+        if ($markdown -notmatch "Wingetter Migration Report" -or $markdown -notmatch "Google.Chrome") {
+            Add-Failure "Migration report Markdown export did not include expected content."
+        }
     } finally {
         Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     }

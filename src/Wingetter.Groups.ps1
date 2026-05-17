@@ -216,6 +216,118 @@ function Import-PackageIdsFromJSON {
     }
 }
 
+function New-WingetterMigrationReport {
+    param(
+        [string]$ProfileName,
+        [object[]]$SelectedPackages,
+        [object[]]$RunResults,
+        [hashtable]$InstalledRecords = @{},
+        [string[]]$ImportWarnings = @(),
+        [string]$RunLogDir = ""
+    )
+
+    $generatedUtc = (Get-Date).ToUniversalTime().ToString("o")
+    $statusCounts = @{}
+    foreach ($statusName in @("SUCCESS", "UP TO DATE", "FAILED", "CANCELLED")) {
+        $statusCounts[$statusName] = 0
+    }
+
+    $resultsById = @{}
+    foreach ($result in @($RunResults)) {
+        if ($result.PackageId) { $resultsById[[string]$result.PackageId] = $result }
+        $status = [string]$result.Status
+        if (!$statusCounts.ContainsKey($status)) { $statusCounts[$status] = 0 }
+        $statusCounts[$status]++
+    }
+
+    $packages = New-Object System.Collections.ArrayList
+    foreach ($package in @($SelectedPackages)) {
+        $id = if ($package.WingetId) { [string]$package.WingetId } elseif ($package.PackageId) { [string]$package.PackageId } else { [string]$package }
+        $name = if ($package.Name) { [string]$package.Name } else { $id }
+        $result = if ($resultsById.ContainsKey($id)) { $resultsById[$id] } else { $null }
+        $installed = if ($InstalledRecords -and $InstalledRecords.ContainsKey($id)) { $InstalledRecords[$id] } else { $null }
+
+        [void]$packages.Add([ordered]@{
+            name             = $name
+            packageId        = $id
+            status           = if ($result) { [string]$result.Status } else { "NOT RUN" }
+            action           = if ($result) { [string]$result.Action } else { "" }
+            exitCode         = if ($result) { $result.ExitCode } else { $null }
+            command          = if ($result) { [string]$result.Command } else { "" }
+            installedVersion = if ($installed) { [string]$installed.InstalledVersion } else { "" }
+            availableVersion = if ($installed) { [string]$installed.AvailableVersion } else { "" }
+            source           = if ($installed) { [string]$installed.Source } else { "" }
+            scope            = if ($installed) { [string]$installed.Scope } else { "" }
+            detectionMethod  = if ($installed) { [string]$installed.DetectionMethod } else { "" }
+            scannedAtUtc     = if ($installed) { [string]$installed.ScannedAtUtc } else { "" }
+            resultPath       = if ($result) { [string]$result.ResultPath } else { "" }
+            stdoutExcerpt    = if ($result) { [string]$result.StdOutExcerpt } else { "" }
+            stderrExcerpt    = if ($result) { [string]$result.StdErrExcerpt } else { "" }
+        })
+    }
+
+    [ordered]@{
+        schema         = "Wingetter.MigrationReport.v1"
+        generatedUtc   = $generatedUtc
+        profileName    = $ProfileName
+        runLogDir      = $RunLogDir
+        importWarnings = @($ImportWarnings)
+        summary        = [ordered]@{
+            selected  = @($SelectedPackages).Count
+            succeeded = [int]$statusCounts["SUCCESS"]
+            skipped   = [int]$statusCounts["UP TO DATE"]
+            failed    = [int]$statusCounts["FAILED"]
+            cancelled = [int]$statusCounts["CANCELLED"]
+        }
+        packages       = @($packages)
+    }
+}
+
+function ConvertTo-WingetterMigrationMarkdown {
+    param([object]$Report)
+
+    $sb = [System.Text.StringBuilder]::new()
+    [void]$sb.AppendLine("# Wingetter Migration Report")
+    [void]$sb.AppendLine("")
+    [void]$sb.AppendLine("- Generated UTC: $($Report.generatedUtc)")
+    [void]$sb.AppendLine("- Profile: $($Report.profileName)")
+    [void]$sb.AppendLine("- Run log directory: $($Report.runLogDir)")
+    [void]$sb.AppendLine("- Selected: $($Report.summary.selected)")
+    [void]$sb.AppendLine("- Succeeded: $($Report.summary.succeeded)")
+    [void]$sb.AppendLine("- Skipped/current: $($Report.summary.skipped)")
+    [void]$sb.AppendLine("- Failed: $($Report.summary.failed)")
+    [void]$sb.AppendLine("- Cancelled: $($Report.summary.cancelled)")
+    if (@($Report.importWarnings).Count -gt 0) {
+        [void]$sb.AppendLine("")
+        [void]$sb.AppendLine("## Import Warnings")
+        foreach ($warning in @($Report.importWarnings)) { [void]$sb.AppendLine("- $warning") }
+    }
+    [void]$sb.AppendLine("")
+    [void]$sb.AppendLine("## Packages")
+    [void]$sb.AppendLine("")
+    [void]$sb.AppendLine("| Package | ID | Status | Installed | Available | Source | Command |")
+    [void]$sb.AppendLine("|---|---|---|---|---|---|---|")
+    foreach ($package in @($Report.packages)) {
+        $command = ([string]$package.command) -replace '\|', '\|'
+        [void]$sb.AppendLine("| $($package.name) | $($package.packageId) | $($package.status) | $($package.installedVersion) | $($package.availableVersion) | $($package.source) | `$command` |")
+    }
+    return $sb.ToString()
+}
+
+function Export-WingetterMigrationReport {
+    param(
+        [object]$Report,
+        [string]$FilePath
+    )
+
+    $extension = [System.IO.Path]::GetExtension($FilePath)
+    if ($extension -eq ".md") {
+        ConvertTo-WingetterMigrationMarkdown -Report $Report | Set-Content -Path $FilePath -Encoding UTF8
+    } else {
+        $Report | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+    }
+}
+
 # Pre-built groups
 $Script:BuiltInGroups = [ordered]@{
     "Essential PC Setup" = @(
