@@ -39,7 +39,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 - `src/Wingetter.App.ps1` owns runtime initialization and starts the GUI.
 - `catalog/winget.json` and `catalog/groups.json` are the curation source files.
 - Local checkout runs prefer `catalog/winget.json` and `catalog/groups.json` if present and fall back to embedded module data if those files are unavailable or malformed.
-- Search filters app name and WinGet ID only.
+- Search uses local scoring across app name, WinGet ID, publisher-like ID prefix, category, built-in group membership, installed/update/pin state, source, and scope. Search results are re-ranked inside each category while preserving original ordering when no search is active.
 - Installs and updates run serially by launching `winget install` or `winget upgrade` with `--id`, `--exact`, and optional `--silent` / agreement flags.
 - Install/update execution writes per-package stdout, stderr, and JSON result files under `%APPDATA%\Wingetter\logs\<timestamp>-<action>`, passes `--verbose-logs`, and records command, action, package ID, exit code, status, stdout/stderr excerpts, cancellation state, run log directory, and WinGet diagnostic log directory when available.
 - Each completed or cancelled install/update run also builds a `Wingetter.MigrationReport.v1` report, writes `migration-report.json` into the run log directory, and enables GUI export as Markdown or JSON. Reports include selected packages, status counts, commands, result paths, version/source/scope state where available, scan timestamps, and import warnings.
@@ -75,7 +75,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 The next phase should move Wingetter from "modularized WinGet GUI" to "trustworthy setup cockpit":
 
-1. Make search metadata-rich using tags, publisher/source/state fields, and local scoring.
+1. Fix remaining visual rule violations and accessibility basics, especially pill-style backdrops and focus/contrast details.
 2. Add deeper tests for import/export edge cases, install-result fixtures, pin-output fixtures, and installed-app parsing.
 3. Continue moving UI-heavy workflow code behind smaller functions now that the source is split into modules.
 4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the WinGet execution layer is separated behind a package-source interface.

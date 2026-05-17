@@ -65,6 +65,64 @@ function ConvertFrom-WingetterGroupsJson {
     return $null
 }
 
+function ConvertTo-WingetterSearchText {
+    param([string[]]$Values)
+
+    $joined = (@($Values) | Where-Object { ![string]::IsNullOrWhiteSpace([string]$_) }) -join " "
+    return (($joined.ToLowerInvariant() -replace '[^a-z0-9]+', ' ') -replace '\s+', ' ').Trim()
+}
+
+function Get-WingetterSearchScore {
+    param(
+        [string]$Query,
+        [string]$Name,
+        [string]$WingetId,
+        [string]$Category = "",
+        [string[]]$Groups = @(),
+        [string]$Source = "",
+        [string]$Scope = "",
+        [bool]$IsInstalled = $false,
+        [bool]$IsPinned = $false,
+        [bool]$IsUpdateAvailable = $false
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Query)) { return 1 }
+
+    $tokens = @((ConvertTo-WingetterSearchText -Values @($Query)) -split '\s+' | Where-Object { $_ })
+    if ($tokens.Count -eq 0) { return 1 }
+
+    $publisher = ""
+    if ($WingetId -match '^(?<publisher>[^.]+)\.') { $publisher = $matches.publisher }
+    $stateTerms = @()
+    if ($IsInstalled) { $stateTerms += "installed" }
+    if ($IsPinned) { $stateTerms += "pinned pin" }
+    if ($IsUpdateAvailable) { $stateTerms += "update available upgrade" }
+
+    $nameText = ConvertTo-WingetterSearchText -Values @($Name)
+    $idText = ConvertTo-WingetterSearchText -Values @($WingetId, ($WingetId -replace '[.\-_]', ' '))
+    $categoryText = ConvertTo-WingetterSearchText -Values @($Category)
+    $groupText = ConvertTo-WingetterSearchText -Values $Groups
+    $publisherText = ConvertTo-WingetterSearchText -Values @($publisher)
+    $stateText = ConvertTo-WingetterSearchText -Values @($Source, $Scope, $stateTerms)
+    $allText = ConvertTo-WingetterSearchText -Values @($nameText, $idText, $categoryText, $groupText, $publisherText, $stateText)
+
+    $score = 0
+    foreach ($token in $tokens) {
+        if (!$allText.Contains($token)) { return 0 }
+        if ($nameText -eq $token) { $score += 90; continue }
+        if ($nameText.StartsWith($token)) { $score += 70; continue }
+        if ($nameText.Contains($token)) { $score += 50; continue }
+        if ($idText.Contains($token)) { $score += 42; continue }
+        if ($publisherText.Contains($token)) { $score += 34; continue }
+        if ($categoryText.Contains($token)) { $score += 28; continue }
+        if ($groupText.Contains($token)) { $score += 24; continue }
+        if ($stateText.Contains($token)) { $score += 16; continue }
+        $score += 5
+    }
+
+    return $score
+}
+
 $Script:SoftwareDatabase = [ordered]@{
 
     "Web Browsers" = @(

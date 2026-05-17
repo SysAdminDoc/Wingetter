@@ -27,6 +27,10 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps1
 
+      - name: Validate search metadata scoring
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SearchMetadata.ps1
+
       - name: Validate WPF XAML
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1

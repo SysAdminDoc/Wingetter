@@ -1055,6 +1055,15 @@ function Show-WinGetInstallerGUI {
     foreach ($cat in $Script:SoftwareDatabase.Keys) { $totalApps += $Script:SoftwareDatabase[$cat].Count }
     $ui["TotalApps"] = $totalApps
     $ui["SidebarSubtitle"].Text = "$($Script:SoftwareDatabase.Keys.Count) categories ready to browse."
+    $ui["SearchGroupsById"] = @{}
+    foreach ($groupName in $ui["BuiltInGroups"].Keys) {
+        foreach ($packageId in @($ui["BuiltInGroups"][$groupName])) {
+            if (!$ui["SearchGroupsById"].ContainsKey($packageId)) {
+                $ui["SearchGroupsById"][$packageId] = [System.Collections.ArrayList]::new()
+            }
+            [void]$ui["SearchGroupsById"][$packageId].Add($groupName)
+        }
+    }
 
     $CountPill = $Window.FindName("CountPill")
     $UpdateGroupActionState = {
@@ -1136,22 +1145,48 @@ function Show-WinGetInstallerGUI {
     # FILTER LOGIC - search
     # ========================================================
     $ApplyFilter = {
-        $searchText = $SearchBox.Text.Trim().ToLower()
+        $searchText = $SearchBox.Text.Trim()
         $visCount = 0
         $inUpdateMode = $ui["IsUpdateMode"]
 
         foreach ($cat in $ui["Categories"]) {
             $catVisible = 0
             foreach ($appEntry in $cat["Apps"]) {
-                $nameMatch = ($searchText -eq "") -or ($appEntry["Name"].ToLower().Contains($searchText)) -or ($appEntry["WingetId"].ToLower().Contains($searchText))
+                $packageId = [string]$appEntry["WingetId"]
+                $installedRecord = if ($ui["InstalledIds"].ContainsKey($packageId)) { $ui["InstalledIds"][$packageId] } else { $null }
+                $groups = if ($ui["SearchGroupsById"].ContainsKey($packageId)) { [string[]]$ui["SearchGroupsById"][$packageId].ToArray([string]) } else { @() }
+                $score = Get-WingetterSearchScore `
+                    -Query $searchText `
+                    -Name ([string]$appEntry["Name"]) `
+                    -WingetId $packageId `
+                    -Category ([string]$appEntry["Category"]) `
+                    -Groups $groups `
+                    -Source $(if ($installedRecord) { [string]$installedRecord.Source } else { "" }) `
+                    -Scope $(if ($installedRecord) { [string]$installedRecord.Scope } else { "" }) `
+                    -IsInstalled ([bool]$installedRecord) `
+                    -IsPinned ($ui["PinnedIds"].ContainsKey($packageId)) `
+                    -IsUpdateAvailable $(if ($installedRecord) { [bool]$installedRecord.IsUpdateAvailable } else { $false })
+                $appEntry["SearchScore"] = $score
+                $nameMatch = ($searchText -eq "") -or ($score -gt 0)
                 # In update mode, also require the app to be installed
-                if ($inUpdateMode -and -not $ui["InstalledIds"].ContainsKey($appEntry["WingetId"])) { $nameMatch = $false }
+                if ($inUpdateMode -and -not $ui["InstalledIds"].ContainsKey($packageId)) { $nameMatch = $false }
                 if ($nameMatch) {
                     $appEntry["Border"].Visibility = [System.Windows.Visibility]::Visible
                     $catVisible++
                     $visCount++
                 } else {
                     $appEntry["Border"].Visibility = [System.Windows.Visibility]::Collapsed
+                }
+            }
+            if ($cat["AppsStack"]) {
+                $orderedEntries = if ($searchText -ne "") {
+                    @($cat["Apps"] | Sort-Object @{ Expression = { -[int]$_["SearchScore"] } }, @{ Expression = { [int]$_["OriginalIndex"] } })
+                } else {
+                    @($cat["Apps"] | Sort-Object @{ Expression = { [int]$_["OriginalIndex"] } })
+                }
+                $cat["AppsStack"].Children.Clear()
+                foreach ($entry in $orderedEntries) {
+                    [void]$cat["AppsStack"].Children.Add($entry["Border"])
                 }
             }
             if ($inUpdateMode) {
@@ -1574,6 +1609,7 @@ function Show-WinGetInstallerGUI {
 
         $appsStack = New-Object System.Windows.Controls.StackPanel
         $appsStack.Margin = [System.Windows.Thickness]::new(8, 6, 8, 8)
+        $catData["AppsStack"] = $appsStack
         $categoryCheckboxList = [System.Collections.ArrayList]::new()
 
         foreach ($app in $Script:SoftwareDatabase[$category]) {
@@ -1719,7 +1755,7 @@ function Show-WinGetInstallerGUI {
 
             # Track for filtering
             [void]$catData["Apps"].Add(@{
-                Border = $appBorder; Name = $app.Name; WingetId = $app.WingetId
+                Border = $appBorder; Name = $app.Name; WingetId = $app.WingetId; Category = $category; OriginalIndex = $appNum; SearchScore = 0
             })
         }
 
