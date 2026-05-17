@@ -41,7 +41,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Favicon icons** -- parallel-fetched from app domains with colored letter fallbacks and local caching
 - **Bulk install** -- select any combination and install them all in sequence via winget
 - **Update mode** -- toggle between Install and Update mode to upgrade already-installed apps
-- **Installed app detection** -- background scan via `winget list` with green dot indicators
+- **Installed app detection** -- background scan prefers `Microsoft.WinGet.Client`, falls back to `winget list`, and caches detected versions under `%APPDATA%\Wingetter`
 - **Package trust details** -- click an app to inspect source, publisher, installed/latest version, installer type, URL, SHA256, and metadata warnings
 - **WinGet pin controls** -- inspect pin state, add standard/blocking/installed-version pins, remove pins, and opt into pinned updates
 - **Silent install & auto-accept agreements** -- toggleable checkboxes for hands-free deployment

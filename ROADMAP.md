@@ -84,12 +84,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: E02, E05, L20.
 - Completed 2026-05-17: added WinGet pin lookup helpers, pin-output parsing tests, package detail pin state, standard/blocking/installed-version pin buttons, remove-pin action, row-level pinned badges after lookup, and an "Include pinned updates" checkbox that adds `--include-pinned` to update operations.
 
-### [ ] R-010 - Improve installed-app detection
+### [x] R-010 - Improve installed-app detection
 
 - Problem: current detection parses `winget list --source winget` table output with regex and can miss wrapped/truncated or localized rows.
 - Build: evaluate `Microsoft.WinGet.Client` PowerShell cmdlets for object-based installed package data; otherwise use machine-readable output if available and cache scan results with timestamps.
 - Acceptance: installed detection includes package ID, installed version, available version, source, scope when available, and scan timestamp.
 - Sources: L08, E22.
+- Completed 2026-05-17: added `Microsoft.WinGet.Client` `Get-WinGetPackage` object-based detection with `winget list` fallback, installed package cache JSON under `%APPDATA%\Wingetter\installed-cache.json`, richer records for package ID, installed/available version, source, optional scope, detection method, and scan timestamp, UI consumption of those records, and parser tests for object and fallback paths.
 
 ### [ ] R-011 - Add profile lifecycle and migration reports
 

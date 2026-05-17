@@ -43,7 +43,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 - Installs and updates run serially by launching `winget install` or `winget upgrade` with `--id`, `--exact`, and optional `--silent` / agreement flags.
 - Install/update execution writes per-package stdout, stderr, and JSON result files under `%APPDATA%\Wingetter\logs\<timestamp>-<action>`, passes `--verbose-logs`, and records command, action, package ID, exit code, status, stdout/stderr excerpts, cancellation state, run log directory, and WinGet diagnostic log directory when available.
 - WinGet bootstrap/repair now tries documented App Installer registration, then the `Microsoft.WinGet.Client` PowerShell module with `Repair-WinGetPackageManager -Force -Latest`, logs JSONL audit entries under `%APPDATA%\Wingetter\logs`, and falls back to the Microsoft Store App Installer page for manual follow-up.
-- Installed app detection runs in a background runspace using `winget list --source winget` and regex parsing.
+- Installed app detection runs in a background runspace using `Microsoft.WinGet.Client` `Get-WinGetPackage` object data when available, falls back to `winget list --source winget`, and writes `%APPDATA%\Wingetter\installed-cache.json` with package ID, installed version, available version, source, scope when available, detection method, and scan timestamp.
 - Icons are loaded lazily across a 4-worker runspace pool from Google favicon URLs, with letter placeholders before network fetches complete.
 - Profile import/export helpers now support the official WinGet JSON hierarchy: `Sources`, `Packages`, `PackageIdentifier`, and optional `Version` fields are accepted on import; exports generate a `https://aka.ms/winget-packages.schema.2.0.json` file with the `winget` source details.
 - Clicking an app row opens a package detail panel that uses `winget show --id <id> --exact` plus `winget list --id <id> --exact` to surface source, publisher, installed/latest version, installer type, installer URL, SHA256, homepage fallback, and metadata warnings.
@@ -65,6 +65,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 - Catalog JSON, embedded module fallback sync, validation tooling, and CI now exist.
 - CI now covers catalog sync/counts, profile JSON helpers imported from modules, WinGet runner helpers imported from modules, and XAML loading. There is still no release build script or full GUI automation.
 - Install/update result records now capture stderr and exit codes, but status and pin classification still use some English WinGet output phrases for "already current" and pin-type cases.
+- Fallback installed-app parsing still depends on text output when `Microsoft.WinGet.Client` is unavailable.
 - WinGet bootstrap no longer downloads GitHub/AppX assets directly, but still depends on PowerShell Gallery availability when the `Microsoft.WinGet.Client` repair path is needed.
 - Several GUI elements still use fully rounded `CornerRadius="999"` or `CornerRadius = 999`, which conflicts with the project-wide visual rule against pill backdrops.
 - PSScriptAnalyzer reports warning-level issues: automatic variable shadowing, empty catch blocks, stale encoding assumptions, and other maintainability warnings.
@@ -73,7 +74,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 The next phase should move Wingetter from "modularized WinGet GUI" to "trustworthy setup cockpit":
 
-1. Improve installed-app detection with object-based WinGet data or more reliable cached parsing.
+1. Add profile lifecycle and migration reports using the richer run/install state now available.
 2. Add deeper tests for import/export edge cases, install-result fixtures, pin-output fixtures, and installed-app parsing.
 3. Continue moving UI-heavy workflow code behind smaller functions now that the source is split into modules.
 4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the WinGet execution layer is separated behind a package-source interface.

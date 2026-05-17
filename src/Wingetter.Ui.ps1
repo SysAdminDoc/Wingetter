@@ -1429,8 +1429,18 @@ function Show-WinGetInstallerGUI {
         $pinStatus = Get-WinGetPinStatus -PackageId $App.WingetId
         & $SetDetailText $ui["DetailSource"] $details.Source
         & $SetDetailText $ui["DetailPublisher"] $details.Publisher
-        $installedText = if ($details.InstalledVersion) { $details.InstalledVersion } elseif ($ui["InstalledIds"].ContainsKey($App.WingetId)) { "Detected" } else { "Not detected" }
-        if ($details.LatestVersion) { $installedText = "$installedText / latest $($details.LatestVersion)" }
+        $installedRecord = if ($ui["InstalledIds"].ContainsKey($App.WingetId)) { $ui["InstalledIds"][$App.WingetId] } else { $null }
+        $installedText = if ($details.InstalledVersion) {
+            $details.InstalledVersion
+        } elseif ($installedRecord -and $installedRecord.InstalledVersion) {
+            $installedRecord.InstalledVersion
+        } elseif ($installedRecord) {
+            "Detected"
+        } else {
+            "Not detected"
+        }
+        $latestVersion = if ($details.LatestVersion) { $details.LatestVersion } elseif ($installedRecord -and $installedRecord.AvailableVersion) { $installedRecord.AvailableVersion } else { "" }
+        if ($latestVersion) { $installedText = "$installedText / latest $latestVersion" }
         & $SetDetailText $ui["DetailInstalledVersion"] $installedText
         & $SetDetailText $ui["DetailInstallerType"] $details.InstallerType
         & $SetDetailText $ui["DetailInstallerUrl"] $(if ($details.InstallerUrl) { "URL: $($details.InstallerUrl)" } elseif ($details.Homepage) { "Homepage: $($details.Homepage)" } else { "" })
@@ -2465,26 +2475,46 @@ function Show-WinGetInstallerGUI {
     $splash.Window.Close()
 
     # ==============================================================
-    # ASYNC INSTALLED APP DETECTION - background winget list scan
+    # ASYNC INSTALLED APP DETECTION - prefer Microsoft.WinGet.Client, fallback to winget list
     # ==============================================================
-    $installedQueue = [System.Collections.Concurrent.ConcurrentQueue[string]]::new()
+    $installedQueue = [System.Collections.Concurrent.ConcurrentQueue[object]]::new()
     $installedRunspace = [runspacefactory]::CreateRunspace()
     $installedRunspace.Open()
     $installedPs = [PowerShell]::Create()
     $installedPs.Runspace = $installedRunspace
+    $catalogPackageIds = @()
+    foreach ($cat in $Script:SoftwareDatabase.Keys) {
+        foreach ($app in $Script:SoftwareDatabase[$cat]) { $catalogPackageIds += [string]$app.WingetId }
+    }
+    $winGetModulePath = Join-Path (Join-Path (Get-WingetterRootPath) "src") "Wingetter.WinGet.ps1"
     [void]$installedPs.AddScript({
-        param($queue)
+        param($queue, $packageIds, $modulePath)
         try {
-            $output = & winget list --source winget 2>$null
-            foreach ($line in $output) {
-                if ($line -match '^\s*\S+.*?\s+(\S+\.\S+)\s+') {
-                    $queue.Enqueue($Matches[1])
-                }
+            . $modulePath
+            $scan = Get-WinGetInstalledCatalogPackages -PackageIds $packageIds
+            foreach ($package in @($scan.Packages.Values)) {
+                $queue.Enqueue($package)
             }
-        } catch {}
-        $queue.Enqueue("__DONE__")
+            $queue.Enqueue([PSCustomObject]@{
+                Sentinel        = "__DONE__"
+                ScannedAtUtc    = $scan.ScannedAtUtc
+                DetectionMethod = $scan.DetectionMethod
+                CachePath       = $scan.CachePath
+                Error           = $scan.Error
+            })
+        } catch {
+            $queue.Enqueue([PSCustomObject]@{
+                Sentinel        = "__DONE__"
+                ScannedAtUtc    = (Get-Date).ToUniversalTime().ToString("o")
+                DetectionMethod = "failed"
+                CachePath       = ""
+                Error           = $_.Exception.Message
+            })
+        }
     })
     [void]$installedPs.AddArgument($installedQueue)
+    [void]$installedPs.AddArgument($catalogPackageIds)
+    [void]$installedPs.AddArgument($winGetModulePath)
     $installedHandle = $installedPs.BeginInvoke()
 
     # Build lookup: WingetId -> index in InstalledDots list
@@ -2500,10 +2530,10 @@ function Show-WinGetInstallerGUI {
     $installedTimer = New-Object System.Windows.Threading.DispatcherTimer
     $installedTimer.Interval = [TimeSpan]::FromMilliseconds(200)
     $installedTimer.Add_Tick({
-        $id = $null
+        $item = $null
         $batch = 0
-        while ($batch -lt 50 -and $installedQueue.TryDequeue([ref]$id)) {
-            if ($id -eq "__DONE__") {
+        while ($batch -lt 50 -and $installedQueue.TryDequeue([ref]$item)) {
+            if ($item.Sentinel -eq "__DONE__") {
                 $installedTimer.Stop()
                 try { $installedPs.EndInvoke($installedHandle) } catch {}
                 $installedPs.Dispose(); $installedRunspace.Close()
@@ -2511,15 +2541,17 @@ function Show-WinGetInstallerGUI {
                 $baselineText = "Choose apps to install or load a saved group to get started."
                 if (($ProgressText.Text -eq $baselineText) -or ($ProgressText.Text -eq "Installed-app scan complete.")) {
                     if ($count -gt 0) {
-                        $ProgressText.Text = "$count installed apps detected from the Wingetter catalog. Use Review Updates to focus on them."
+                        $methodText = if ($item.DetectionMethod) { " via $($item.DetectionMethod)" } else { "" }
+                        $ProgressText.Text = "$count installed apps detected$methodText. Use Review Updates to focus on them."
                     } else {
                         $ProgressText.Text = "Installed-app scan complete."
                     }
                 }
                 break
             }
+                $id = [string]$item.PackageId
                 if ($installedDotMap.ContainsKey($id)) {
-                    $ui["InstalledIds"][$id] = $true
+                    $ui["InstalledIds"][$id] = $item
                     $idx = $installedDotMap[$id]
                     try {
                         $ui["Elements"]["InstalledDots"][$idx].Visibility = [System.Windows.Visibility]::Visible
