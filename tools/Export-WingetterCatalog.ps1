@@ -86,7 +86,8 @@ function Convert-AppMatch {
 function Export-CatalogObject {
     param(
         [string]$Text,
-        [string]$Version
+        [string]$Version,
+        [string]$CanonicalPath
     )
 
     $databaseSection = Get-Section `
@@ -123,19 +124,21 @@ function Export-CatalogObject {
     }
 
     return [ordered]@{
-        schemaVersion = 1
-        version       = $Version
-        sourceFile    = Get-RepoRelativePath -Path $ScriptPath
-        appCount      = $appCount
-        categoryCount = $categories.Count
-        categories    = @($categories)
+        schemaVersion        = 1
+        version              = $Version
+        canonicalFile        = Get-RepoRelativePath -Path $CanonicalPath
+        embeddedFallbackFile = Get-RepoRelativePath -Path $ScriptPath
+        appCount             = $appCount
+        categoryCount        = $categories.Count
+        categories           = @($categories)
     }
 }
 
 function Export-GroupsObject {
     param(
         [string]$Text,
-        [string]$Version
+        [string]$Version,
+        [string]$CanonicalPath
     )
 
     $groupsSection = Get-Section `
@@ -167,19 +170,20 @@ function Export-GroupsObject {
     }
 
     return [ordered]@{
-        schemaVersion = 1
-        version       = $Version
-        sourceFile    = Get-RepoRelativePath -Path $ScriptPath
-        groupCount    = $groups.Count
-        groups        = @($groups)
+        schemaVersion        = 1
+        version              = $Version
+        canonicalFile        = Get-RepoRelativePath -Path $CanonicalPath
+        embeddedFallbackFile = Get-RepoRelativePath -Path $ScriptPath
+        groupCount           = $groups.Count
+        groups               = @($groups)
     }
 }
 
 $resolvedScriptPath = (Resolve-Path $ScriptPath).Path
 $scriptText = [System.IO.File]::ReadAllText($resolvedScriptPath)
 $version = Get-ScriptVersions -Text $scriptText
-$catalogObject = Export-CatalogObject -Text $scriptText -Version $version
-$groupsObject = Export-GroupsObject -Text $scriptText -Version $version
+$catalogObject = Export-CatalogObject -Text $scriptText -Version $version -CanonicalPath $CatalogPath
+$groupsObject = Export-GroupsObject -Text $scriptText -Version $version -CanonicalPath $GroupsPath
 
 $catalogJson = ConvertTo-CanonicalJson -InputObject $catalogObject
 $groupsJson = ConvertTo-CanonicalJson -InputObject $groupsObject

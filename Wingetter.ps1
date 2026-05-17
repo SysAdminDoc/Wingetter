@@ -318,11 +318,11 @@ function ConvertFrom-WingetterGroupsJson {
 $Script:SoftwareDatabase = [ordered]@{
 
     "Web Browsers" = @(
-        @{ Name = "Google Chrome"; WingetId = "Google.Chrome"; Icon = "${f}google.com"}
-        @{ Name = "Mozilla Firefox"; WingetId = "Mozilla.Firefox"; Icon = "${f}mozilla.org"}
-        @{ Name = "Microsoft Edge"; WingetId = "Microsoft.Edge"; Icon = "${f}microsoft.com"}
-        @{ Name = "Brave"; WingetId = "Brave.Brave"; Icon = "${f}brave.com"}
-        @{ Name = "Opera"; WingetId = "Opera.Opera"; Icon = "${f}opera.com"}
+        @{ Name = "Google Chrome"; WingetId = "Google.Chrome"; Icon = "${f}google.com" }
+        @{ Name = "Mozilla Firefox"; WingetId = "Mozilla.Firefox"; Icon = "${f}mozilla.org" }
+        @{ Name = "Microsoft Edge"; WingetId = "Microsoft.Edge"; Icon = "${f}microsoft.com" }
+        @{ Name = "Brave"; WingetId = "Brave.Brave"; Icon = "${f}brave.com" }
+        @{ Name = "Opera"; WingetId = "Opera.Opera"; Icon = "${f}opera.com" }
         @{ Name = "Opera GX"; WingetId = "Opera.OperaGX"; Icon = "${f}opera.com" }
         @{ Name = "Vivaldi"; WingetId = "Vivaldi.Vivaldi"; Icon = "${f}vivaldi.com" }
         @{ Name = "Tor Browser"; WingetId = "TorProject.TorBrowser"; Icon = "${f}torproject.org" }
@@ -341,15 +341,15 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Messaging & Email" = @(
-        @{ Name = "Discord"; WingetId = "Discord.Discord"; Icon = "${f}discord.com"}
-        @{ Name = "Zoom"; WingetId = "Zoom.Zoom"; Icon = "${f}zoom.us"}
+        @{ Name = "Discord"; WingetId = "Discord.Discord"; Icon = "${f}discord.com" }
+        @{ Name = "Zoom"; WingetId = "Zoom.Zoom"; Icon = "${f}zoom.us" }
         @{ Name = "Microsoft Teams"; WingetId = "Microsoft.Teams"; Icon = "${f}teams.microsoft.com" }
-        @{ Name = "Slack"; WingetId = "SlackTechnologies.Slack"; Icon = "${f}slack.com"}
+        @{ Name = "Slack"; WingetId = "SlackTechnologies.Slack"; Icon = "${f}slack.com" }
         @{ Name = "WhatsApp"; WingetId = "WhatsApp.WhatsApp"; Icon = "${f}whatsapp.com" }
         @{ Name = "Telegram"; WingetId = "Telegram.TelegramDesktop"; Icon = "${f}telegram.org" }
         @{ Name = "Signal"; WingetId = "OpenWhisperSystems.Signal"; Icon = "${f}signal.org" }
-        @{ Name = "Skype"; WingetId = "Microsoft.Skype"; Icon = "${f}skype.com"}
-        @{ Name = "Thunderbird"; WingetId = "Mozilla.Thunderbird"; Icon = "${f}thunderbird.net"}
+        @{ Name = "Skype"; WingetId = "Microsoft.Skype"; Icon = "${f}skype.com" }
+        @{ Name = "Thunderbird"; WingetId = "Mozilla.Thunderbird"; Icon = "${f}thunderbird.net" }
         @{ Name = "Viber"; WingetId = "Viber.Viber"; Icon = "${f}viber.com" }
         @{ Name = "Element"; WingetId = "Element.Element"; Icon = "${f}element.io" }
         @{ Name = "Guilded"; WingetId = "Guilded.Guilded"; Icon = "${f}guilded.gg" }
@@ -383,14 +383,14 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Media Players" = @(
-        @{ Name = "VLC"; WingetId = "VideoLAN.VLC"; Icon = "${f}videolan.org"}
-        @{ Name = "MPC-HC"; WingetId = "clsid2.mpc-hc"; Icon = "${f}github.com"}
+        @{ Name = "VLC"; WingetId = "VideoLAN.VLC"; Icon = "${f}videolan.org" }
+        @{ Name = "MPC-HC"; WingetId = "clsid2.mpc-hc"; Icon = "${f}github.com" }
         @{ Name = "PotPlayer"; WingetId = "Daum.PotPlayer"; Icon = "${f}potplayer.daum.net" }
         @{ Name = "Kodi"; WingetId = "XBMCFoundation.Kodi"; Icon = "${f}kodi.tv" }
-        @{ Name = "K-Lite Codec Pack"; WingetId = "CodecGuide.K-LiteCodecPack.Full"; Icon = "${f}codecguide.com"}
-        @{ Name = "KMPlayer"; WingetId = "PandoraTV.KMPlayer"; Icon = "${f}kmplayer.com"}
-        @{ Name = "GOM Player"; WingetId = "GOM.GOMPlayer"; Icon = "${f}gomlab.com"}
-        @{ Name = "Plex"; WingetId = "Plex.Plex"; Icon = "${f}plex.tv"}
+        @{ Name = "K-Lite Codec Pack"; WingetId = "CodecGuide.K-LiteCodecPack.Full"; Icon = "${f}codecguide.com" }
+        @{ Name = "KMPlayer"; WingetId = "PandoraTV.KMPlayer"; Icon = "${f}kmplayer.com" }
+        @{ Name = "GOM Player"; WingetId = "GOM.GOMPlayer"; Icon = "${f}gomlab.com" }
+        @{ Name = "Plex"; WingetId = "Plex.Plex"; Icon = "${f}plex.tv" }
         @{ Name = "Stremio"; WingetId = "Stremio.Stremio"; Icon = "${f}stremio.com" }
         @{ Name = "Jellyfin Media Player"; WingetId = "Jellyfin.JellyfinMediaPlayer"; Icon = "${f}jellyfin.org" }
         @{ Name = "SMPlayer"; WingetId = "SMPlayer.SMPlayer"; Icon = "${f}smplayer.info" }
@@ -402,16 +402,15 @@ $Script:SoftwareDatabase = [ordered]@{
         @{ Name = "ImageGlass"; WingetId = "DuongDieuPhap.ImageGlass"; Icon = "${f}imageglass.org" }
     )
 
-
     "Music & Audio" = @(
-        @{ Name = "Spotify"; WingetId = "Spotify.Spotify"; Icon = "${f}spotify.com"}
-        @{ Name = "iTunes"; WingetId = "Apple.iTunes"; Icon = "${f}apple.com"}
-        @{ Name = "foobar2000"; WingetId = "PeterPawlowski.foobar2000"; Icon = "${f}foobar2000.org"}
-        @{ Name = "AIMP"; WingetId = "AIMP.AIMP"; Icon = "${f}aimp.ru"}
+        @{ Name = "Spotify"; WingetId = "Spotify.Spotify"; Icon = "${f}spotify.com" }
+        @{ Name = "iTunes"; WingetId = "Apple.iTunes"; Icon = "${f}apple.com" }
+        @{ Name = "foobar2000"; WingetId = "PeterPawlowski.foobar2000"; Icon = "${f}foobar2000.org" }
+        @{ Name = "AIMP"; WingetId = "AIMP.AIMP"; Icon = "${f}aimp.ru" }
         @{ Name = "MusicBee"; WingetId = "MusicBee.MusicBee"; Icon = "${f}getmusicbee.com" }
-        @{ Name = "Audacity"; WingetId = "Audacity.Audacity"; Icon = "${f}audacityteam.org"}
-        @{ Name = "Winamp"; WingetId = "Winamp.Winamp"; Icon = "${f}winamp.com"}
-        @{ Name = "MediaMonkey"; WingetId = "MediaMonkey.MediaMonkey"; Icon = "${f}mediamonkey.com"}
+        @{ Name = "Audacity"; WingetId = "Audacity.Audacity"; Icon = "${f}audacityteam.org" }
+        @{ Name = "Winamp"; WingetId = "Winamp.Winamp"; Icon = "${f}winamp.com" }
+        @{ Name = "MediaMonkey"; WingetId = "MediaMonkey.MediaMonkey"; Icon = "${f}mediamonkey.com" }
         @{ Name = "Tidal"; WingetId = "Tidal.Tidal"; Icon = "${f}tidal.com" }
         @{ Name = "Amazon Music"; WingetId = "Amazon.Music"; Icon = "${f}music.amazon.com" }
         @{ Name = "Deezer"; WingetId = "Deezer.Deezer"; Icon = "${f}deezer.com" }
@@ -425,7 +424,7 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Video Tools" = @(
-        @{ Name = "HandBrake"; WingetId = "HandBrake.HandBrake"; Icon = "${f}handbrake.fr"}
+        @{ Name = "HandBrake"; WingetId = "HandBrake.HandBrake"; Icon = "${f}handbrake.fr" }
         @{ Name = "OBS Studio"; WingetId = "OBSProject.OBSStudio"; Icon = "${f}obsproject.com" }
         @{ Name = "Shotcut"; WingetId = "Meltytech.Shotcut"; Icon = "${f}shotcut.org" }
         @{ Name = "Kdenlive"; WingetId = "KDE.Kdenlive"; Icon = "${f}kdenlive.org" }
@@ -447,19 +446,18 @@ $Script:SoftwareDatabase = [ordered]@{
         @{ Name = "Videomass"; WingetId = "GianlucaPernigotto.Videomass"; Icon = "${f}jeanslack.github.io" }
         @{ Name = "ImgBurn"; WingetId = "LIGHTNINGUK.ImgBurn"; Icon = "${f}imgburn.com" }
         @{ Name = "NDI Tools"; WingetId = "NDI.NDITools"; Icon = "${f}ndi.video" }
-
         @{ Name = "Shutter Encoder"; WingetId = "PaulPacifico.ShutterEncoder"; Icon = "${f}shutterencoder.com" }
     )
 
     "Imaging & Design" = @(
-        @{ Name = "GIMP"; WingetId = "GIMP.GIMP"; Icon = "${f}gimp.org"}
-        @{ Name = "Paint.NET"; WingetId = "dotPDN.PaintDotNet"; Icon = "${f}getpaint.net"}
+        @{ Name = "GIMP"; WingetId = "GIMP.GIMP"; Icon = "${f}gimp.org" }
+        @{ Name = "Paint.NET"; WingetId = "dotPDN.PaintDotNet"; Icon = "${f}getpaint.net" }
         @{ Name = "Krita"; WingetId = "KDE.Krita"; Icon = "${f}krita.org" }
-        @{ Name = "Inkscape"; WingetId = "Inkscape.Inkscape"; Icon = "${f}inkscape.org"}
-        @{ Name = "Blender"; WingetId = "BlenderFoundation.Blender"; Icon = "${f}blender.org"}
-        @{ Name = "IrfanView"; WingetId = "IrfanSkiljan.IrfanView"; Icon = "${f}irfanview.com"}
-        @{ Name = "XnView MP"; WingetId = "XnSoft.XnViewMP"; Icon = "${f}xnview.com"}
-        @{ Name = "FastStone Viewer"; WingetId = "FastStone.Viewer"; Icon = "${f}faststone.org"}
+        @{ Name = "Inkscape"; WingetId = "Inkscape.Inkscape"; Icon = "${f}inkscape.org" }
+        @{ Name = "Blender"; WingetId = "BlenderFoundation.Blender"; Icon = "${f}blender.org" }
+        @{ Name = "IrfanView"; WingetId = "IrfanSkiljan.IrfanView"; Icon = "${f}irfanview.com" }
+        @{ Name = "XnView MP"; WingetId = "XnSoft.XnViewMP"; Icon = "${f}xnview.com" }
+        @{ Name = "FastStone Viewer"; WingetId = "FastStone.Viewer"; Icon = "${f}faststone.org" }
         @{ Name = "Figma"; WingetId = "Figma.Figma"; Icon = "${f}figma.com" }
         @{ Name = "darktable"; WingetId = "darktable.darktable"; Icon = "${f}darktable.org" }
         @{ Name = "RawTherapee"; WingetId = "RawTherapee.RawTherapee"; Icon = "${f}rawtherapee.com" }
@@ -477,8 +475,8 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Screenshot & Recording" = @(
-        @{ Name = "ShareX"; WingetId = "ShareX.ShareX"; Icon = "${f}getsharex.com"}
-        @{ Name = "Greenshot"; WingetId = "Greenshot.Greenshot"; Icon = "${f}getgreenshot.org"}
+        @{ Name = "ShareX"; WingetId = "ShareX.ShareX"; Icon = "${f}getsharex.com" }
+        @{ Name = "Greenshot"; WingetId = "Greenshot.Greenshot"; Icon = "${f}getgreenshot.org" }
         @{ Name = "Flameshot"; WingetId = "Flameshot.Flameshot"; Icon = "${f}flameshot.org" }
         @{ Name = "ScreenToGif"; WingetId = "NickeManarin.ScreenToGif"; Icon = "${f}screentogif.com" }
         @{ Name = "LightShot"; WingetId = "Skillbrains.Lightshot"; Icon = "${f}app.prntscr.com" }
@@ -490,8 +488,8 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Documents & Office" = @(
-        @{ Name = "LibreOffice"; WingetId = "TheDocumentFoundation.LibreOffice"; Icon = "${f}libreoffice.org"}
-        @{ Name = "OpenOffice"; WingetId = "Apache.OpenOffice"; Icon = "${f}openoffice.org"}
+        @{ Name = "LibreOffice"; WingetId = "TheDocumentFoundation.LibreOffice"; Icon = "${f}libreoffice.org" }
+        @{ Name = "OpenOffice"; WingetId = "Apache.OpenOffice"; Icon = "${f}openoffice.org" }
         @{ Name = "OnlyOffice"; WingetId = "ONLYOFFICE.DesktopEditors"; Icon = "${f}onlyoffice.com" }
         @{ Name = "WPS Office"; WingetId = "Kingsoft.WPSOffice"; Icon = "${f}wps.com" }
         @{ Name = "FreeOffice"; WingetId = "SoftMaker.FreeOffice"; Icon = "${f}freeoffice.com" }
@@ -507,9 +505,9 @@ $Script:SoftwareDatabase = [ordered]@{
 
     "PDF & E-Books" = @(
         @{ Name = "Adobe Acrobat Reader"; WingetId = "Adobe.Acrobat.Reader.64-bit"; Icon = "${f}adobe.com" }
-        @{ Name = "Foxit PDF Reader"; WingetId = "Foxit.FoxitReader"; Icon = "${f}foxit.com"}
-        @{ Name = "SumatraPDF"; WingetId = "SumatraPDF.SumatraPDF"; Icon = "${f}sumatrapdfreader.org"}
-        @{ Name = "CutePDF Writer"; WingetId = "AcroSoftware.CutePDF.Writer"; Icon = "${f}cutepdf.com"}
+        @{ Name = "Foxit PDF Reader"; WingetId = "Foxit.FoxitReader"; Icon = "${f}foxit.com" }
+        @{ Name = "SumatraPDF"; WingetId = "SumatraPDF.SumatraPDF"; Icon = "${f}sumatrapdfreader.org" }
+        @{ Name = "CutePDF Writer"; WingetId = "AcroSoftware.CutePDF.Writer"; Icon = "${f}cutepdf.com" }
         @{ Name = "Calibre"; WingetId = "calibre.calibre"; Icon = "${f}calibre-ebook.com" }
         @{ Name = "Okular"; WingetId = "KDE.Okular"; Icon = "${f}okular.kde.org" }
         @{ Name = "PDFsam Basic"; WingetId = "PDFsam.PDFsamBasic"; Icon = "${f}pdfsam.org" }
@@ -525,7 +523,7 @@ $Script:SoftwareDatabase = [ordered]@{
     "Note-Taking" = @(
         @{ Name = "Notion"; WingetId = "Notion.Notion"; Icon = "${f}notion.so" }
         @{ Name = "Obsidian"; WingetId = "Obsidian.Obsidian"; Icon = "${f}obsidian.md" }
-        @{ Name = "Evernote"; WingetId = "Evernote.Evernote"; Icon = "${f}evernote.com"}
+        @{ Name = "Evernote"; WingetId = "Evernote.Evernote"; Icon = "${f}evernote.com" }
         @{ Name = "Joplin"; WingetId = "Joplin.Joplin"; Icon = "${f}joplinapp.org" }
         @{ Name = "Logseq"; WingetId = "Logseq.Logseq"; Icon = "${f}logseq.com" }
         @{ Name = "Standard Notes"; WingetId = "StandardNotes.StandardNotes"; Icon = "${f}standardnotes.com" }
@@ -546,9 +544,9 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Cloud Storage" = @(
-        @{ Name = "Google Drive"; WingetId = "Google.GoogleDrive"; Icon = "${f}drive.google.com"}
-        @{ Name = "Dropbox"; WingetId = "Dropbox.Dropbox"; Icon = "${f}dropbox.com"}
-        @{ Name = "OneDrive"; WingetId = "Microsoft.OneDrive"; Icon = "${f}onedrive.com"}
+        @{ Name = "Google Drive"; WingetId = "Google.GoogleDrive"; Icon = "${f}drive.google.com" }
+        @{ Name = "Dropbox"; WingetId = "Dropbox.Dropbox"; Icon = "${f}dropbox.com" }
+        @{ Name = "OneDrive"; WingetId = "Microsoft.OneDrive"; Icon = "${f}onedrive.com" }
         @{ Name = "MEGA"; WingetId = "Mega.MEGASync"; Icon = "${f}mega.io" }
         @{ Name = "pCloud"; WingetId = "pCloud.pCloud"; Icon = "${f}pcloud.com" }
         @{ Name = "Nextcloud"; WingetId = "Nextcloud.NextcloudDesktop"; Icon = "${f}nextcloud.com" }
@@ -560,15 +558,15 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Compression" = @(
-        @{ Name = "7-Zip"; WingetId = "7zip.7zip"; Icon = "${f}7-zip.org"}
-        @{ Name = "WinRAR"; WingetId = "RARLab.WinRAR"; Icon = "${f}rarlab.com"}
-        @{ Name = "PeaZip"; WingetId = "Giorgiotani.Peazip"; Icon = "${f}peazip.github.io"}
+        @{ Name = "7-Zip"; WingetId = "7zip.7zip"; Icon = "${f}7-zip.org" }
+        @{ Name = "WinRAR"; WingetId = "RARLab.WinRAR"; Icon = "${f}rarlab.com" }
+        @{ Name = "PeaZip"; WingetId = "Giorgiotani.Peazip"; Icon = "${f}peazip.github.io" }
         @{ Name = "NanaZip"; WingetId = "M2Team.NanaZip"; Icon = "${f}github.com" }
         @{ Name = "Bandizip"; WingetId = "Bandisoft.Bandizip"; Icon = "${f}bandisoft.com" }
     )
 
     "File Management" = @(
-        @{ Name = "Everything"; WingetId = "voidtools.Everything"; Icon = "${f}voidtools.com"}
+        @{ Name = "Everything"; WingetId = "voidtools.Everything"; Icon = "${f}voidtools.com" }
         @{ Name = "TeraCopy"; WingetId = "CodeSector.TeraCopy"; Icon = "${f}codesector.com" }
         @{ Name = "Total Commander"; WingetId = "Ghisler.TotalCommander"; Icon = "${f}ghisler.com" }
         @{ Name = "Double Commander"; WingetId = "doublecmd.doublecmd"; Icon = "${f}doublecmd.sourceforge.io" }
@@ -602,11 +600,11 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Security" = @(
-        @{ Name = "Malwarebytes"; WingetId = "Malwarebytes.Malwarebytes"; Icon = "${f}malwarebytes.com"}
-        @{ Name = "Avast Free"; WingetId = "Avast.AvastFreeAntivirus"; Icon = "${f}avast.com"}
-        @{ Name = "AVG Free"; WingetId = "AVG.AVGFreeAntivirus"; Icon = "${f}avg.com"}
-        @{ Name = "Avira Free"; WingetId = "Avira.Avira"; Icon = "${f}avira.com"}
-        @{ Name = "SUPERAntiSpyware"; WingetId = "SUPERAntiSpyware.SUPERAntiSpyware"; Icon = "${f}superantispyware.com"}
+        @{ Name = "Malwarebytes"; WingetId = "Malwarebytes.Malwarebytes"; Icon = "${f}malwarebytes.com" }
+        @{ Name = "Avast Free"; WingetId = "Avast.AvastFreeAntivirus"; Icon = "${f}avast.com" }
+        @{ Name = "AVG Free"; WingetId = "AVG.AVGFreeAntivirus"; Icon = "${f}avg.com" }
+        @{ Name = "Avira Free"; WingetId = "Avira.Avira"; Icon = "${f}avira.com" }
+        @{ Name = "SUPERAntiSpyware"; WingetId = "SUPERAntiSpyware.SUPERAntiSpyware"; Icon = "${f}superantispyware.com" }
         @{ Name = "AdwCleaner"; WingetId = "Malwarebytes.AdwCleaner"; Icon = "${f}malwarebytes.com" }
         @{ Name = "GlassWire"; WingetId = "GlassWire.GlassWire"; Icon = "${f}glasswire.com" }
         @{ Name = "simplewall"; WingetId = "henrypp.simplewall"; Icon = "${f}henrypp.org" }
@@ -654,13 +652,13 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Networking & Remote" = @(
-        @{ Name = "TeamViewer"; WingetId = "TeamViewer.TeamViewer"; Icon = "${f}teamviewer.com"}
+        @{ Name = "TeamViewer"; WingetId = "TeamViewer.TeamViewer"; Icon = "${f}teamviewer.com" }
         @{ Name = "AnyDesk"; WingetId = "AnyDeskSoftwareGmbH.AnyDesk"; Icon = "${f}anydesk.com" }
         @{ Name = "RustDesk"; WingetId = "RustDesk.RustDesk"; Icon = "${f}rustdesk.com" }
         @{ Name = "Parsec"; WingetId = "Parsec.Parsec"; Icon = "${f}parsec.app" }
-        @{ Name = "PuTTY"; WingetId = "PuTTY.PuTTY"; Icon = "${f}putty.org"}
-        @{ Name = "WinSCP"; WingetId = "WinSCP.WinSCP"; Icon = "${f}winscp.net"}
-        @{ Name = "FileZilla"; WingetId = "TimKosse.FileZilla.Client"; Icon = "${f}filezilla-project.org"}
+        @{ Name = "PuTTY"; WingetId = "PuTTY.PuTTY"; Icon = "${f}putty.org" }
+        @{ Name = "WinSCP"; WingetId = "WinSCP.WinSCP"; Icon = "${f}winscp.net" }
+        @{ Name = "FileZilla"; WingetId = "TimKosse.FileZilla.Client"; Icon = "${f}filezilla-project.org" }
         @{ Name = "Wireshark"; WingetId = "WiresharkFoundation.Wireshark"; Icon = "${f}wireshark.org" }
         @{ Name = "Advanced IP Scanner"; WingetId = "Famatech.AdvancedIPScanner"; Icon = "${f}advanced-ip-scanner.com" }
         @{ Name = "Angry IP Scanner"; WingetId = "angryip.ipscan"; Icon = "${f}angryip.org" }
@@ -693,7 +691,7 @@ $Script:SoftwareDatabase = [ordered]@{
         @{ Name = "VS Code"; WingetId = "Microsoft.VisualStudioCode"; Icon = "${f}code.visualstudio.com" }
         @{ Name = "Cursor"; WingetId = "Anysphere.Cursor"; Icon = "${f}cursor.com" }
         @{ Name = "Sublime Text 4"; WingetId = "SublimeHQ.SublimeText.4"; Icon = "${f}sublimetext.com" }
-        @{ Name = "Notepad++"; WingetId = "Notepad++.Notepad++"; Icon = "${f}notepad-plus-plus.org"}
+        @{ Name = "Notepad++"; WingetId = "Notepad++.Notepad++"; Icon = "${f}notepad-plus-plus.org" }
         @{ Name = "Visual Studio 2022 Community"; WingetId = "Microsoft.VisualStudio.2022.Community"; Icon = "${f}visualstudio.microsoft.com" }
         @{ Name = "JetBrains IntelliJ IDEA CE"; WingetId = "JetBrains.IntelliJIDEA.Community"; Icon = "${f}jetbrains.com" }
         @{ Name = "JetBrains PyCharm CE"; WingetId = "JetBrains.PyCharm.Community"; Icon = "${f}jetbrains.com" }
@@ -739,7 +737,7 @@ $Script:SoftwareDatabase = [ordered]@{
         @{ Name = "DBeaver"; WingetId = "dbeaver.dbeaver"; Icon = "${f}dbeaver.io" }
         @{ Name = "HeidiSQL"; WingetId = "HeidiSQL.HeidiSQL"; Icon = "${f}heidisql.com" }
         @{ Name = "Azure Data Studio"; WingetId = "Microsoft.AzureDataStudio"; Icon = "${f}azure.microsoft.com" }
-        @{ Name = "WinMerge"; WingetId = "WinMerge.WinMerge"; Icon = "${f}winmerge.org"}
+        @{ Name = "WinMerge"; WingetId = "WinMerge.WinMerge"; Icon = "${f}winmerge.org" }
         @{ Name = "Beyond Compare"; WingetId = "ScooterSoftware.BeyondCompare4"; Icon = "${f}scootersoftware.com" }
         @{ Name = "Sourcetree"; WingetId = "Atlassian.Sourcetree"; Icon = "${f}sourcetreeapp.com" }
         @{ Name = "GitKraken"; WingetId = "Axosoft.GitKraken"; Icon = "${f}gitkraken.com" }
@@ -842,14 +840,14 @@ $Script:SoftwareDatabase = [ordered]@{
 
     "Runtimes & SDKs" = @(
         @{ Name = "Python 3.13"; WingetId = "Python.Python.3.13"; Icon = "${f}python.org" }
-        @{ Name = "Python 3.12"; WingetId = "Python.Python.3.12"; Icon = "${f}python.org"}
-        @{ Name = "Node.js LTS"; WingetId = "OpenJS.NodeJS.LTS"; Icon = "${f}nodejs.org"}
+        @{ Name = "Python 3.12"; WingetId = "Python.Python.3.12"; Icon = "${f}python.org" }
+        @{ Name = "Node.js LTS"; WingetId = "OpenJS.NodeJS.LTS"; Icon = "${f}nodejs.org" }
         @{ Name = "Node.js Current"; WingetId = "OpenJS.NodeJS"; Icon = "${f}nodejs.org" }
-        @{ Name = "Java 21 JRE"; WingetId = "EclipseAdoptium.Temurin.21.JRE"; Icon = "${f}adoptium.net"}
-        @{ Name = "Java 21 JDK"; WingetId = "EclipseAdoptium.Temurin.21.JDK"; Icon = "${f}adoptium.net"}
+        @{ Name = "Java 21 JRE"; WingetId = "EclipseAdoptium.Temurin.21.JRE"; Icon = "${f}adoptium.net" }
+        @{ Name = "Java 21 JDK"; WingetId = "EclipseAdoptium.Temurin.21.JDK"; Icon = "${f}adoptium.net" }
         @{ Name = "Java 17 JDK"; WingetId = "EclipseAdoptium.Temurin.17.JDK"; Icon = "${f}adoptium.net" }
-        @{ Name = ".NET 8 Desktop Runtime"; WingetId = "Microsoft.DotNet.DesktopRuntime.8"; Icon = "${f}dotnet.microsoft.com"}
-        @{ Name = ".NET 8 SDK"; WingetId = "Microsoft.DotNet.SDK.8"; Icon = "${f}dotnet.microsoft.com"}
+        @{ Name = ".NET 8 Desktop Runtime"; WingetId = "Microsoft.DotNet.DesktopRuntime.8"; Icon = "${f}dotnet.microsoft.com" }
+        @{ Name = ".NET 8 SDK"; WingetId = "Microsoft.DotNet.SDK.8"; Icon = "${f}dotnet.microsoft.com" }
         @{ Name = ".NET 9 Desktop Runtime"; WingetId = "Microsoft.DotNet.DesktopRuntime.9"; Icon = "${f}dotnet.microsoft.com" }
         @{ Name = ".NET 9 SDK"; WingetId = "Microsoft.DotNet.SDK.9"; Icon = "${f}dotnet.microsoft.com" }
         @{ Name = "Go"; WingetId = "GoLang.Go"; Icon = "${f}go.dev" }
@@ -908,13 +906,13 @@ $Script:SoftwareDatabase = [ordered]@{
 
     "System Utilities" = @(
         @{ Name = "PowerToys"; WingetId = "Microsoft.PowerToys"; Icon = "${f}learn.microsoft.com" }
-        @{ Name = "CCleaner"; WingetId = "Piriform.CCleaner"; Icon = "${f}ccleaner.com"}
-        @{ Name = "Revo Uninstaller"; WingetId = "RevoUninstaller.RevoUninstaller"; Icon = "${f}revouninstaller.com"}
+        @{ Name = "CCleaner"; WingetId = "Piriform.CCleaner"; Icon = "${f}ccleaner.com" }
+        @{ Name = "Revo Uninstaller"; WingetId = "RevoUninstaller.RevoUninstaller"; Icon = "${f}revouninstaller.com" }
         @{ Name = "Bulk Crap Uninstaller"; WingetId = "Klocman.BulkCrapUninstaller"; Icon = "${f}bcuninstaller.com" }
         @{ Name = "IObit Uninstaller"; WingetId = "IObit.Uninstaller"; Icon = "${f}iobit.com" }
-        @{ Name = "Glary Utilities"; WingetId = "Glarysoft.GlaryUtilities"; Icon = "${f}glarysoft.com"}
+        @{ Name = "Glary Utilities"; WingetId = "Glarysoft.GlaryUtilities"; Icon = "${f}glarysoft.com" }
         @{ Name = "BleachBit"; WingetId = "BleachBit.BleachBit"; Icon = "${f}bleachbit.org" }
-        @{ Name = "WinDirStat"; WingetId = "WinDirStat.WinDirStat"; Icon = "${f}windirstat.net"}
+        @{ Name = "WinDirStat"; WingetId = "WinDirStat.WinDirStat"; Icon = "${f}windirstat.net" }
         @{ Name = "WizTree"; WingetId = "AntibodySoftware.WizTree"; Icon = "${f}diskanalyzer.com" }
         @{ Name = "TreeSize Free"; WingetId = "JAMSoftware.TreeSize.Free"; Icon = "${f}jam-software.com" }
         @{ Name = "AutoHotkey"; WingetId = "AutoHotkey.AutoHotkey"; Icon = "${f}autohotkey.com" }
@@ -1009,7 +1007,7 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Gaming" = @(
-        @{ Name = "Steam"; WingetId = "Valve.Steam"; Icon = "${f}steampowered.com"}
+        @{ Name = "Steam"; WingetId = "Valve.Steam"; Icon = "${f}steampowered.com" }
         @{ Name = "Epic Games Launcher"; WingetId = "EpicGames.EpicGamesLauncher"; Icon = "${f}epicgames.com" }
         @{ Name = "GOG Galaxy"; WingetId = "GOG.Galaxy"; Icon = "${f}gog.com" }
         @{ Name = "EA App"; WingetId = "ElectronicArts.EADesktop"; Icon = "${f}ea.com" }
@@ -1186,7 +1184,7 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 
     "Other" = @(
-        @{ Name = "Google Earth Pro"; WingetId = "Google.EarthPro"; Icon = "${f}earth.google.com"}
+        @{ Name = "Google Earth Pro"; WingetId = "Google.EarthPro"; Icon = "${f}earth.google.com" }
         @{ Name = "Raspberry Pi Imager"; WingetId = "RaspberryPiFoundation.RaspberryPiImager"; Icon = "${f}raspberrypi.com" }
         @{ Name = "Arduino IDE"; WingetId = "ArduinoSA.IDE.stable"; Icon = "${f}arduino.cc" }
         @{ Name = "Unity Hub"; WingetId = "Unity.UnityHub"; Icon = "${f}unity.com" }
@@ -1201,7 +1199,6 @@ $Script:SoftwareDatabase = [ordered]@{
         @{ Name = "Xtreme Download Manager"; WingetId = "subhra74.XtremeDownloadManager"; Icon = "${f}xtremedownloadmanager.com" }
     )
 }
-
 if (![string]::IsNullOrWhiteSpace($PSScriptRoot)) {
     $catalogPath = Join-Path $PSScriptRoot "catalog\winget.json"
     $externalCatalog = ConvertFrom-WingetterCatalogJson -Path $catalogPath
@@ -1367,56 +1364,49 @@ function Export-GroupAsJSON {
 $Script:BuiltInGroups = [ordered]@{
     "Essential PC Setup" = @(
         "Google.Chrome","Mozilla.Firefox","7zip.7zip","VideoLAN.VLC","Notepad++.Notepad++",
-        "voidtools.Everything","Adobe.Acrobat.Reader.64-bit","GIMP.GIMP","dotPDN.PaintDotNet",
-        "Microsoft.PowerToys","ShareX.ShareX"
+        "voidtools.Everything","Adobe.Acrobat.Reader.64-bit","GIMP.GIMP","dotPDN.PaintDotNet","Microsoft.PowerToys",
+        "ShareX.ShareX"
     )
     "Web Developer" = @(
-        "Microsoft.VisualStudioCode","Git.Git","OpenJS.NodeJS.LTS","Docker.DockerDesktop",
-        "Postman.Postman","Mozilla.Firefox","Google.Chrome","GitHub.GitHubDesktop","GitHub.cli",
-        "Microsoft.WindowsTerminal","Starship.Starship","ajeetdsouza.zoxide"
+        "Microsoft.VisualStudioCode","Git.Git","OpenJS.NodeJS.LTS","Docker.DockerDesktop","Postman.Postman",
+        "Mozilla.Firefox","Google.Chrome","GitHub.GitHubDesktop","GitHub.cli","Microsoft.WindowsTerminal",
+        "Starship.Starship","ajeetdsouza.zoxide"
     )
     "Python Developer" = @(
-        "Microsoft.VisualStudioCode","Git.Git","Python.Python.3.13","Anaconda.Miniconda3",
-        "Docker.DockerDesktop","Postman.Postman","JetBrains.PyCharm.Community",
-        "Microsoft.WindowsTerminal","DBeaver.DBeaver"
+        "Microsoft.VisualStudioCode","Git.Git","Python.Python.3.13","Anaconda.Miniconda3","Docker.DockerDesktop",
+        "Postman.Postman","JetBrains.PyCharm.Community","Microsoft.WindowsTerminal","DBeaver.DBeaver"
     )
     "Creative Suite" = @(
         "GIMP.GIMP","KDE.Krita","Inkscape.Inkscape","BlenderFoundation.Blender","OBSProject.OBSStudio",
-        "HandBrake.HandBrake","Audacity.Audacity","KDE.Kdenlive","Meltytech.Shotcut",
-        "ShareX.ShareX","BlackmagicDesign.DaVinciResolve"
+        "HandBrake.HandBrake","Audacity.Audacity","KDE.Kdenlive","Meltytech.Shotcut","ShareX.ShareX",
+        "BlackmagicDesign.DaVinciResolve"
     )
     "Gaming PC" = @(
-        "Valve.Steam","EpicGames.EpicGamesLauncher","GOG.Galaxy","Discord.Discord",
-        "Playnite.Playnite","MoonlightGameStreamingProject.Moonlight","LizardByte.Sunshine",
-        "7zip.7zip","Guru3D.Afterburner","TechPowerUp.NVCleanstall"
+        "Valve.Steam","EpicGames.EpicGamesLauncher","GOG.Galaxy","Discord.Discord","Playnite.Playnite",
+        "MoonlightGameStreamingProject.Moonlight","LizardByte.Sunshine","7zip.7zip","Guru3D.Afterburner","TechPowerUp.NVCleanstall"
     )
     "Privacy & Security" = @(
-        "Mozilla.Firefox","MullvadVPN.MullvadBrowser","Bitwarden.Bitwarden","ProtonTechnologies.ProtonVPN",
-        "LibreWolf.LibreWolf","OpenWhisperSystems.Signal","IDRIX.VeraCrypt","Cryptomator.Cryptomator",
-        "henrypp.simplewall","MullvadVPN.MullvadVPN"
+        "Mozilla.Firefox","MullvadVPN.MullvadBrowser","Bitwarden.Bitwarden","ProtonTechnologies.ProtonVPN","LibreWolf.LibreWolf",
+        "OpenWhisperSystems.Signal","IDRIX.VeraCrypt","Cryptomator.Cryptomator","henrypp.simplewall","MullvadVPN.MullvadVPN"
     )
     "System Admin" = @(
-        "PuTTY.PuTTY","WinSCP.WinSCP","Mobatek.MobaXterm","WiresharkFoundation.Wireshark",
-        "Insecure.Nmap","Microsoft.WindowsTerminal","Microsoft.PowerShell",
-        "voidtools.Everything","Notepad++.Notepad++","mRemoteNG.mRemoteNG",
+        "PuTTY.PuTTY","WinSCP.WinSCP","Mobatek.MobaXterm","WiresharkFoundation.Wireshark","Insecure.Nmap",
+        "Microsoft.WindowsTerminal","Microsoft.PowerShell","voidtools.Everything","Notepad++.Notepad++","mRemoteNG.mRemoteNG",
         "angryip.ipscan","Microsoft.Sysinternals.ProcessExplorer"
     )
     "Streaming Setup" = @(
-        "OBSProject.OBSStudio","Streamlabs.Streamlabs","VB-Audio.Voicemeeter.Banana",
-        "VB-Audio.VBVirtualCable","Discord.Discord","ShareX.ShareX",
-        "HandBrake.HandBrake","Gyan.FFmpeg","File-New-Project.EarTrumpet"
+        "OBSProject.OBSStudio","Streamlabs.Streamlabs","VB-Audio.Voicemeeter.Banana","VB-Audio.VBVirtualCable","Discord.Discord",
+        "ShareX.ShareX","HandBrake.HandBrake","Gyan.FFmpeg","File-New-Project.EarTrumpet"
     )
     "Office & Productivity" = @(
-        "TheDocumentFoundation.LibreOffice","Mozilla.Thunderbird","Bitwarden.Bitwarden",
-        "Doist.Todoist","Obsidian.Obsidian","7zip.7zip","Adobe.Acrobat.Reader.64-bit",
-        "geek.PDF24Creator","Notion.Notion","VideoLAN.VLC"
+        "TheDocumentFoundation.LibreOffice","Mozilla.Thunderbird","Bitwarden.Bitwarden","Doist.Todoist","Obsidian.Obsidian",
+        "7zip.7zip","Adobe.Acrobat.Reader.64-bit","geek.PDF24Creator","Notion.Notion","VideoLAN.VLC"
     )
     "3D Printing Workshop" = @(
-        "UltiMaker.Cura","Prusa3D.PrusaSlicer","Bambulab.Bambustudio","SoftFever.OrcaSlicer",
-        "FreeCAD.FreeCAD","OpenSCAD.OpenSCAD","BlenderFoundation.Blender"
+        "UltiMaker.Cura","Prusa3D.PrusaSlicer","Bambulab.Bambustudio","SoftFever.OrcaSlicer","FreeCAD.FreeCAD",
+        "OpenSCAD.OpenSCAD","BlenderFoundation.Blender"
     )
 }
-
 if (![string]::IsNullOrWhiteSpace($PSScriptRoot)) {
     $groupsPath = Join-Path $PSScriptRoot "catalog\groups.json"
     $externalGroups = ConvertFrom-WingetterGroupsJson -Path $groupsPath

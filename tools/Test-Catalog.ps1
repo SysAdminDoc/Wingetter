@@ -190,6 +190,12 @@ if ([int]$groups.groupCount -ne @($groups.groups).Count) {
 }
 
 $exportScript = Join-Path $PSScriptRoot "Export-WingetterCatalog.ps1"
+$syncScript = Join-Path $PSScriptRoot "Sync-EmbeddedCatalog.ps1"
+& $syncScript -ScriptPath $ScriptPath -CatalogPath $CatalogPath -GroupsPath $GroupsPath -Check
+if ($LASTEXITCODE -ne 0) {
+    Add-Failure "Embedded catalog fallback is stale."
+}
+
 & $exportScript -ScriptPath $ScriptPath -CatalogPath $CatalogPath -GroupsPath $GroupsPath -Check
 if ($LASTEXITCODE -ne 0) {
     Add-Failure "Generated catalog snapshots are stale."

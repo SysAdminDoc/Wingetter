@@ -140,15 +140,15 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 The repo includes generated catalog snapshots in `catalog/` and validation tools in `tools/`:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Export-WingetterCatalog.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
 ```
 
-`Test-Catalog.ps1` checks script parse health, version agreement, unique package IDs, built-in group references, generated JSON freshness, README counts, and changelog formatting.
+`catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded one-file fallback in `Wingetter.ps1`, and `Test-Catalog.ps1` checks script parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
 
 ## Contributing
 
-Contributions are welcome. To add applications to the database, edit the `$Script:SoftwareDatabase` hashtable in `Wingetter.ps1`, regenerate the catalog snapshots, and run validation. Each entry follows this format:
+Contributions are welcome. To add applications to the database, edit `catalog/winget.json`, run `tools\Sync-EmbeddedCatalog.ps1`, and then run `tools\Test-Catalog.ps1`. Each embedded fallback entry follows this format:
 
 ```powershell
 @{ Name = "App Name"; WingetId = "Publisher.PackageName"; Icon = "${f}domain.com" }
