@@ -42,6 +42,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Bulk install** -- select any combination and install them all in sequence via winget
 - **Update mode** -- toggle between Install and Update mode to upgrade already-installed apps
 - **Installed app detection** -- background scan via `winget list` with green dot indicators
+- **Package trust details** -- click an app to inspect source, publisher, installed/latest version, installer type, URL, SHA256, and metadata warnings
 - **Silent install & auto-accept agreements** -- toggleable checkboxes for hands-free deployment
 - **Copy command** -- grab the raw `winget install` commands to clipboard
 - **Save / Load groups** -- persist custom selections as named groups for reuse

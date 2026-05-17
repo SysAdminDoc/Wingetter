@@ -42,12 +42,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L07, E01, E02.
 - Completed 2026-05-17: added `Invoke-WinGetPackageOperation` with structured argument handling, stdout/stderr capture, per-package log files, `--verbose-logs`, JSON result records, cancellation state, status classification, run log directory surfacing, WinGet diagnostic log directory hints, and `tools\Test-WinGetRunner.ps1` for non-installing runner smoke coverage.
 
-### [ ] R-005 - Add source, manifest, and trust detail panels
+### [x] R-005 - Add source, manifest, and trust detail panels
 
 - Problem: users select names and package IDs but cannot inspect source, publisher, installer type, URL, hash, scope, or source trust before installing.
 - Build: add a package detail drawer backed by `winget show`, manifest metadata, and source list data; show default sources, explicit sources, installer hash, local manifest warnings, and whether the package comes from `winget`, `msstore`, or another source.
 - Acceptance: selecting a package displays source, publisher, installer type, installer URL when available, SHA256 when available, current installed version when present, and warnings for missing metadata.
 - Sources: E01, E07, E08, E09, L20.
+- Completed 2026-05-17: added a package detail panel above the activity log. App-row clicks now show source, publisher, installed/latest version, installer type, installer URL or homepage fallback, SHA256, and metadata warnings from `winget show` / `winget list`; XAML loading and detail parsing were verified.
 
 ### [ ] R-006 - Replace risky WinGet bootstrap flow
 
