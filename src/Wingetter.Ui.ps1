@@ -670,10 +670,11 @@ function Show-WinGetInstallerGUI {
                         <Button x:Name="SaveGroupBtn" Style="{StaticResource ToolBtn}" Content="Save Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="DeleteGroupBtn" Style="{StaticResource ToolBtn}" Content="Delete" Margin="0,0,12,0" FontSize="11.5" Cursor="Hand" ToolTip="Delete the selected saved group"/>
                         <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="0,2,12,2"/>
-                        <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON or a PowerShell install script"/>
+                        <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON, PowerShell, or WinGet Configuration"/>
                         <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and winget source commands"/>
                         <Button x:Name="DownloadCacheBtn" Style="{StaticResource ToolBtn}" Content="Download Cache" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Download selected installers and write an offline cache manifest"/>
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
+                        <Button x:Name="GalleryBtn" Style="{StaticResource ToolBtn}" Content="Profile Gallery" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Browse hashed public profiles and review every package before import"/>
                         <Button x:Name="CopyCommandBtn" Style="{StaticResource ToolBtn}" Content="Copy Commands" FontSize="11.5" Cursor="Hand"/>
                         <Border x:Name="Divider2" Visibility="Collapsed" Width="0"/>
                     </StackPanel>
@@ -926,6 +927,7 @@ function Show-WinGetInstallerGUI {
     $ExportSourcesBtn = $Window.FindName("ExportSourcesBtn")
     $DownloadCacheBtn = $Window.FindName("DownloadCacheBtn")
     $ImportBtn        = $Window.FindName("ImportBtn")
+    $GalleryBtn       = $Window.FindName("GalleryBtn")
     $CopyCommandBtn   = $Window.FindName("CopyCommandBtn")
     $InstallWinGetBtn = $Window.FindName("InstallWinGetBtn")
     $GroupCombo       = $Window.FindName("GroupCombo")
@@ -984,6 +986,7 @@ function Show-WinGetInstallerGUI {
     $ui["GroupCombo"]          = $GroupCombo
     $ui["ExportSourcesBtn"]    = $ExportSourcesBtn
     $ui["DownloadCacheBtn"]    = $DownloadCacheBtn
+    $ui["GalleryBtn"]          = $GalleryBtn
     $ui["SidebarPanel"]        = $SidebarPanel
     $ui["SidebarBorder"]       = $Window.FindName("SidebarBorder")
     $ui["SidebarTitle"]        = $Window.FindName("SidebarTitle")
@@ -1054,7 +1057,7 @@ function Show-WinGetInstallerGUI {
     $ui["SourcePolicy"]        = Get-WingetterSourcePolicy
     $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
     foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck, $CorporateModeCheck)) {
@@ -2220,8 +2223,131 @@ function Show-WinGetInstallerGUI {
     }.GetNewClosure())
 
     # ========================================================
-    # IMPORT (WinGet JSON, Wingetter JSON, or simple package ID arrays)
+    # PROFILE GALLERY / IMPORT
     # ========================================================
+    $GalleryBtn.Add_Click({
+        try {
+            $profiles = @(Get-WingetterProfileGalleryIndex)
+            if ($profiles.Count -eq 0) {
+                $ProgressText.Text = "No profile gallery index was found in this checkout."
+                return
+            }
+
+            $galleryXaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Wingetter Profile Gallery" Height="640" Width="900" MinHeight="520" MinWidth="780"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize" Background="#071018"
+        FontFamily="Segoe UI" SnapsToDevicePixels="True" UseLayoutRounding="True">
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Profile Gallery" Foreground="#f0f6fb" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="Profiles are read-only, hash-verified, and imported only after package review." Foreground="#90a4b8" FontSize="12.5" Margin="0,4,0,0"/>
+        </StackPanel>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="270"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ListBox x:Name="ProfilesList" Grid.Column="0" Background="#08131f" Foreground="#dbe7f1" BorderBrush="#24374a" BorderThickness="1" Padding="4"/>
+            <Border Grid.Column="2" Background="#08131f" BorderBrush="#24374a" BorderThickness="1" CornerRadius="8" Padding="14">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="ProfileTitle" Text="Choose a profile" Foreground="#f0f6fb" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <TextBox x:Name="PreviewBox" Grid.Row="1" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="#071018" Foreground="#dbe7f1" BorderBrush="#1d2a3a" FontFamily="Consolas" FontSize="12.5" Padding="10"/>
+                </Grid>
+            </Border>
+        </Grid>
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="GalleryStatus" Grid.Column="0" Text="Select a profile to verify its hash and review package IDs." Foreground="#90a4b8" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button x:Name="ImportProfileBtn" Content="Import Reviewed Profile" IsEnabled="False" Padding="18,8" Margin="0,0,8,0" Background="#1fb879" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                <Button x:Name="CancelGalleryBtn" Content="Cancel" Padding="18,8" Background="#102133" Foreground="#dbe7f1" BorderBrush="#24374a" BorderThickness="1" Cursor="Hand" IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
+"@
+            $galleryReader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($galleryXaml))
+            $galleryWin = [Windows.Markup.XamlReader]::Load($galleryReader)
+            $galleryWin.Owner = $ui["Window"]
+            $profilesList = $galleryWin.FindName("ProfilesList")
+            $profileTitle = $galleryWin.FindName("ProfileTitle")
+            $previewBox = $galleryWin.FindName("PreviewBox")
+            $galleryStatus = $galleryWin.FindName("GalleryStatus")
+            $importProfileBtn = $galleryWin.FindName("ImportProfileBtn")
+            $cancelGalleryBtn = $galleryWin.FindName("CancelGalleryBtn")
+            $gallerySelection = @{ Item = $null }
+
+            foreach ($profile in $profiles) {
+                $item = New-Object System.Windows.Controls.ListBoxItem
+                $item.Content = "$($profile.Name) ($($profile.PackageCount))"
+                $item.Tag = $profile
+                $item.ToolTip = $profile.Description
+                $profilesList.Items.Add($item) | Out-Null
+            }
+
+            $profilesList.Add_SelectionChanged({
+                $selected = $profilesList.SelectedItem
+                $gallerySelection["Item"] = $null
+                $importProfileBtn.IsEnabled = $false
+                if ($null -eq $selected -or $null -eq $selected.Tag) { return }
+
+                try {
+                    $galleryItem = Get-WingetterProfileGalleryItem -Profile $selected.Tag
+                    $gallerySelection["Item"] = $galleryItem
+                    $profileTitle.Text = "$($galleryItem.Name) - $(@($galleryItem.PackageEntries).Count) packages"
+                    $previewBox.Text = ConvertTo-WingetterProfileGalleryPreviewText -GalleryItem $galleryItem
+                    $galleryStatus.Text = "SHA256 verified. Review the package IDs and sources before importing."
+                    $importProfileBtn.IsEnabled = $true
+                } catch {
+                    $profileTitle.Text = "Profile failed validation"
+                    $previewBox.Text = $_.Exception.Message
+                    $galleryStatus.Text = "This profile cannot be imported."
+                }
+            }.GetNewClosure())
+
+            $importProfileBtn.Add_Click({
+                if ($null -ne $gallerySelection["Item"]) {
+                    $galleryWin.Tag = $gallerySelection["Item"]
+                    $galleryWin.DialogResult = $true
+                    $galleryWin.Close()
+                }
+            }.GetNewClosure())
+            $cancelGalleryBtn.Add_Click({ $galleryWin.DialogResult = $false; $galleryWin.Close() }.GetNewClosure())
+
+            if ($profilesList.Items.Count -gt 0) { $profilesList.SelectedIndex = 0 }
+            if ($galleryWin.ShowDialog() -eq $true -and $null -ne $galleryWin.Tag) {
+                $imported = $galleryWin.Tag
+                $ids = [string[]]@($imported.PackageIds)
+                $loaded = & $ApplyPackageList $ids
+                $missing = $ids.Count - $loaded
+                $ui["LastImportWarnings"] = @("Profile gallery import '$($imported.Name)' was SHA256 verified and selected packages only; no install was run.")
+                if ($missing -gt 0) {
+                    $ProgressText.Text = "Imported gallery profile '$($imported.Name)' and selected $loaded of $($ids.Count) apps; $missing are not in the Wingetter catalog."
+                } else {
+                    $ProgressText.Text = "Imported gallery profile '$($imported.Name)' and selected all $loaded apps. Review the selection before installing."
+                }
+            }
+        } catch {
+            $ProgressText.Text = "Profile gallery failed: $($_.Exception.Message)"
+        }
+    }.GetNewClosure())
+
+    # IMPORT (WinGet JSON, Wingetter JSON, or simple package ID arrays)
     $ImportBtn.Add_Click({
         $dlg = New-Object Microsoft.Win32.OpenFileDialog
         $dlg.Filter = "JSON Config (*.json;*.wingetter.json)|*.json;*.wingetter.json|All Files (*.*)|*.*"
@@ -2361,7 +2487,7 @@ function Show-WinGetInstallerGUI {
         $LogToggleBtn.Content = "Hide"
         $ui["Cancelled"] = $false
 
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
             $ctl.IsEnabled = $false
         }
         $CancelBtn.IsEnabled = $true
@@ -2398,7 +2524,7 @@ function Show-WinGetInstallerGUI {
         $manifest = New-WingetterOfflineCacheManifest -CacheDirectory $cacheDir -SelectedPackages $selected -DownloadResults $downloadResults.ToArray() -SourcePolicy $ui["SourcePolicy"]
         $paths = Export-WingetterOfflineCacheManifest -Manifest $manifest -ManifestPath (Join-Path $cacheDir "offline-manifest.json")
 
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
             $ctl.IsEnabled = $true
         }
         $CancelBtn.IsEnabled = $false
@@ -2434,7 +2560,7 @@ function Show-WinGetInstallerGUI {
         if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }
 
         $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true; $SelectAllBtn.IsEnabled = $false; $DeselectAllBtn.IsEnabled = $false
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
             $ctl.IsEnabled = $false
         }
         $ui["Cancelled"] = $false
@@ -2514,7 +2640,7 @@ function Show-WinGetInstallerGUI {
         try { Export-WingetterMigrationReport -Report $report -FilePath $reportPath } catch {}
 
         $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false; $SelectAllBtn.IsEnabled = $true; $DeselectAllBtn.IsEnabled = $true
-        foreach ($ctl in @($ImportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
+        foreach ($ctl in @($ImportBtn, $GalleryBtn, $ExportSourcesBtn, $DownloadCacheBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
             $ctl.IsEnabled = $true
         }
         $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
@@ -2565,6 +2691,7 @@ function Show-WinGetInstallerGUI {
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ImportBtn.Visibility = [System.Windows.Visibility]::Collapsed
+        $GalleryBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $CopyCommandBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $Divider1.Visibility = [System.Windows.Visibility]::Collapsed
         $Divider2.Visibility = [System.Windows.Visibility]::Collapsed
@@ -2645,6 +2772,7 @@ function Show-WinGetInstallerGUI {
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Visible
         $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Visible
         $ImportBtn.Visibility = [System.Windows.Visibility]::Visible
+        $GalleryBtn.Visibility = [System.Windows.Visibility]::Visible
         $CopyCommandBtn.Visibility = [System.Windows.Visibility]::Visible
         $Divider1.Visibility = [System.Windows.Visibility]::Visible
         $Divider2.Visibility = [System.Windows.Visibility]::Visible

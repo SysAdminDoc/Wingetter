@@ -158,12 +158,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: E06, E24, L22.
 - Completed 2026-05-17: added `src\Wingetter.Configuration.ps1` for WinGet Configuration YAML generation, GUI export as `*.winget`, `tools\Export-WinGetConfiguration.ps1` for CLI export, `tools\Test-ConfigurationExport.ps1` for static validation, and local `winget configure validate -f <file> --disable-interactivity` coverage against a generated `Microsoft.WinGet.DSC/WinGetPackage` configuration.
 
-### [ ] R-019 - Public profile gallery with strict trust boundaries
+### [x] R-019 - Public profile gallery with strict trust boundaries
 
 - Problem: curated setup profiles are a differentiator, but public profiles can become supply-chain risk if they hide sources or override arguments.
 - Build: read-only profile index using plain JSON and signed/hashed profile files; show every package ID and source before import; never auto-run imported profiles.
 - Acceptance: gallery profiles are browseable and importable only after visible review and validation.
 - Sources: E03, E04, E06, E12, E13.
+- Completed 2026-05-17: added `profiles\gallery.json` plus hashed profile files under `profiles\gallery\`, `src\Wingetter.ProfileGallery.ps1` for strict schema/hash/package-source validation and review text, a GUI Profile Gallery dialog that verifies SHA256 and previews every package before selection-only import, and `tools\Test-ProfileGallery.ps1` plus CI coverage.
 
 ## Rejected Or Deferred
 

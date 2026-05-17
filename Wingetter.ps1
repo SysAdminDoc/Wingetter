@@ -21,6 +21,7 @@ $Script:WingetterModuleFiles = @(
     "Wingetter.Catalog.ps1",
     "Wingetter.WinGet.ps1",
     "Wingetter.Groups.ps1",
+    "Wingetter.ProfileGallery.ps1",
     "Wingetter.Sources.ps1",
     "Wingetter.OfflineCache.ps1",
     "Wingetter.Configuration.ps1",

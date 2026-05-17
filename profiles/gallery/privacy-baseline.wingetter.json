@@ -1,0 +1,54 @@
+{
+  "Schema": "Wingetter.PublicProfile.v1",
+  "ProfileId": "privacy-baseline",
+  "Name": "Privacy Baseline",
+  "Description": "Browser, password manager, VPN, encrypted storage, secure messaging, and firewall-oriented tools for privacy-minded setups.",
+  "Publisher": "Wingetter maintainers",
+  "Generated": "2026-05-17T00:00:00Z",
+  "Tags": [
+    "privacy",
+    "security"
+  ],
+  "Packages": [
+    {
+      "Name": "Mozilla Firefox",
+      "PackageIdentifier": "Mozilla.Firefox",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Bitwarden",
+      "PackageIdentifier": "Bitwarden.Bitwarden",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Proton VPN",
+      "PackageIdentifier": "ProtonTechnologies.ProtonVPN",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "LibreWolf",
+      "PackageIdentifier": "LibreWolf.LibreWolf",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Signal",
+      "PackageIdentifier": "OpenWhisperSystems.Signal",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "VeraCrypt",
+      "PackageIdentifier": "IDRIX.VeraCrypt",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Cryptomator",
+      "PackageIdentifier": "Cryptomator.Cryptomator",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Mullvad VPN",
+      "PackageIdentifier": "MullvadVPN.MullvadVPN",
+      "SourceName": "winget"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "Schema": "Wingetter.PublicProfile.v1",
+  "ProfileId": "developer-workstation",
+  "Name": "Developer Workstation",
+  "Description": "Core developer tools for source control, terminals, editors, scripting, containers, API testing, and common runtime work.",
+  "Publisher": "Wingetter maintainers",
+  "Generated": "2026-05-17T00:00:00Z",
+  "Tags": [
+    "developer",
+    "workstation"
+  ],
+  "Packages": [
+    {
+      "Name": "Visual Studio Code",
+      "PackageIdentifier": "Microsoft.VisualStudioCode",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Git",
+      "PackageIdentifier": "Git.Git",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Node.js LTS",
+      "PackageIdentifier": "OpenJS.NodeJS.LTS",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Python 3.13",
+      "PackageIdentifier": "Python.Python.3.13",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Docker Desktop",
+      "PackageIdentifier": "Docker.DockerDesktop",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Postman",
+      "PackageIdentifier": "Postman.Postman",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "GitHub CLI",
+      "PackageIdentifier": "GitHub.cli",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Windows Terminal",
+      "PackageIdentifier": "Microsoft.WindowsTerminal",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "PowerShell",
+      "PackageIdentifier": "Microsoft.PowerShell",
+      "SourceName": "winget"
+    }
+  ]
+}

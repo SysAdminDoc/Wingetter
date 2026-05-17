@@ -1,0 +1,59 @@
+{
+  "Schema": "Wingetter.PublicProfile.v1",
+  "ProfileId": "essential-pc",
+  "Name": "Essential PC Setup",
+  "Description": "Baseline browser, archive, media, search, PDF, screenshot, and Windows utility tools for a fresh personal or work PC.",
+  "Publisher": "Wingetter maintainers",
+  "Generated": "2026-05-17T00:00:00Z",
+  "Tags": [
+    "baseline",
+    "productivity"
+  ],
+  "Packages": [
+    {
+      "Name": "Google Chrome",
+      "PackageIdentifier": "Google.Chrome",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Mozilla Firefox",
+      "PackageIdentifier": "Mozilla.Firefox",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "7-Zip",
+      "PackageIdentifier": "7zip.7zip",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "VLC",
+      "PackageIdentifier": "VideoLAN.VLC",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Notepad++",
+      "PackageIdentifier": "Notepad++.Notepad++",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Everything",
+      "PackageIdentifier": "voidtools.Everything",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Adobe Acrobat Reader",
+      "PackageIdentifier": "Adobe.Acrobat.Reader.64-bit",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "Microsoft PowerToys",
+      "PackageIdentifier": "Microsoft.PowerToys",
+      "SourceName": "winget"
+    },
+    {
+      "Name": "ShareX",
+      "PackageIdentifier": "ShareX.ShareX",
+      "SourceName": "winget"
+    }
+  ]
+}

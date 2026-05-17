@@ -48,6 +48,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Silent install & auto-accept agreements** -- toggleable checkboxes for hands-free deployment
 - **Copy command** -- grab the raw `winget install` commands to clipboard
 - **Save / Load groups** -- persist custom selections as named groups for reuse
+- **Profile Gallery** -- browse checked-in public profiles, verify SHA256 hashes, review every package ID/source, and import only as a selection
 - **Export as PS1, Wingetter JSON, official WinGet JSON, or WinGet Configuration** -- generate standalone installer scripts, reusable Wingetter group profiles, files usable with `winget import`, or declarative `.winget` configuration files
 - **Import JSON profiles** -- load official WinGet export/import JSON, Wingetter group JSON, or simple package ID arrays
 - **10 built-in quick-select groups** -- one-click presets for common setups
@@ -151,6 +152,8 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 
 **Import JSON** accepts official WinGet import/export JSON, Wingetter group JSON, or a simple JSON array of package IDs. Packages not present in the Wingetter catalog are reported and skipped during selection.
 
+**Profile Gallery** opens the read-only checked-in profile index from `profiles/gallery.json`. Each profile file under `profiles/gallery/` must match its SHA256 hash, may contain only package IDs/names/sources, and is imported only after the package review dialog is accepted. Gallery import selects packages in Wingetter; it never starts install or update.
+
 **Corporate source policy** is stored at `%APPDATA%\Wingetter\source-policy.json`. Enable **Corporate policy** in the footer to refuse selected packages whose source is not listed in that policy. **Export Sources** writes the current policy plus reproducible `winget source add` commands for allowed and private sources.
 
 ### Scheduled Update Checks
@@ -187,6 +190,7 @@ The repo includes generated catalog snapshots in `catalog/` and validation tools
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileJson.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileGallery.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SearchMetadata.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-PackageSources.ps1
@@ -198,7 +202,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibi
 powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
 ```
 
-`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.OfflineCache.ps1`, `src/Wingetter.Configuration.ps1`, `src/Wingetter.UpdateWatcher.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
+`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.ProfileGallery.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.OfflineCache.ps1`, `src/Wingetter.Configuration.ps1`, `src/Wingetter.UpdateWatcher.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
 
 `catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback data in the catalog and group modules, and `Test-Catalog.ps1` checks launcher/module parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
 

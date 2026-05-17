@@ -318,3 +318,29 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ConfigurationExport.ps1 -ValidateWithWinget`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+
+## Development Follow-up: 2026-05-17 Public Profile Gallery Batch
+
+### Files Created
+
+- `src/Wingetter.ProfileGallery.ps1` - added profile gallery index loading, SHA256 verification, strict public profile parsing, review text generation, and validation helpers.
+- `profiles\gallery.json` - added the read-only checked-in public profile index.
+- `profiles\gallery\essential-pc.wingetter.json` - added a hashed baseline PC profile.
+- `profiles\gallery\developer-workstation.wingetter.json` - added a hashed developer workstation profile.
+- `profiles\gallery\privacy-baseline.wingetter.json` - added a hashed privacy/security profile.
+- `tools\Test-ProfileGallery.ps1` - validates gallery hashes, catalog references, preview text, and rejection of unsupported install-argument fields.
+- `.gitattributes` - pins gallery profile files to LF line endings so SHA256 verification is stable across Windows checkouts.
+
+### Files Modified
+
+- `Wingetter.ps1` and `tools\Test-Catalog.ps1` - added the profile gallery module to the module set.
+- `src\Wingetter.Ui.ps1` and `tools\Test-Xaml.ps1` - added a Profile Gallery toolbar action and a hash-verified package review/import dialog.
+- `.github/workflows/validate.yml` - added profile gallery validation to CI.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, `ROADMAP.md`, and `SOURCE_REGISTER.md` - documented the gallery, trust boundaries, evidence IDs, and marked R-019 complete.
+
+### Verification Performed
+
+- `Get-FileHash -Algorithm SHA256 .\profiles\gallery\*.wingetter.json`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileGallery.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
