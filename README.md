@@ -59,6 +59,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Splash screen** -- loading progress indicator while icons are fetched
 - **Select All / Deselect All** per category or globally
 - **WinGet auto-detection** -- checks for winget on launch and offers to install it if missing
+- **Audited WinGet repair** -- uses App Installer registration and `Microsoft.WinGet.Client` repair with JSONL bootstrap logs instead of raw package downloads
 
 ## Built-in Groups
 

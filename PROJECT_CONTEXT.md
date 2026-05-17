@@ -35,6 +35,7 @@ Wingetter is currently monolithic:
 - Search filters app name and WinGet ID only.
 - Installs and updates run serially by launching `winget install` or `winget upgrade` with `--id`, `--exact`, and optional `--silent` / agreement flags.
 - Install/update execution writes per-package stdout, stderr, and JSON result files under `%APPDATA%\Wingetter\logs\<timestamp>-<action>`, passes `--verbose-logs`, and records command, action, package ID, exit code, status, stdout/stderr excerpts, cancellation state, run log directory, and WinGet diagnostic log directory when available.
+- WinGet bootstrap/repair now tries documented App Installer registration, then the `Microsoft.WinGet.Client` PowerShell module with `Repair-WinGetPackageManager -Force -Latest`, logs JSONL audit entries under `%APPDATA%\Wingetter\logs`, and falls back to the Microsoft Store App Installer page for manual follow-up.
 - Installed app detection runs in a background runspace using `winget list --source winget` and regex parsing.
 - Icons are loaded lazily across a 4-worker runspace pool from Google favicon URLs, with letter placeholders before network fetches complete.
 - Profile import/export helpers now support the official WinGet JSON hierarchy: `Sources`, `Packages`, `PackageIdentifier`, and optional `Version` fields are accepted on import; exports generate a `https://aka.ms/winget-packages.schema.2.0.json` file with the `winget` source details.
@@ -56,7 +57,7 @@ Wingetter is currently monolithic:
 - Catalog JSON, embedded fallback sync, and validation tooling now exist. The remaining catalog risk is that there is no CI job enforcing those checks yet.
 - No CI, Pester tests, release build script, or GitHub Actions validation exists yet.
 - Install/update result records now capture stderr and exit codes, but status classification still uses some English WinGet output phrases for "already current" cases.
-- WinGet bootstrap downloads dependencies and the latest WinGet release without a recorded checksum verification path.
+- WinGet bootstrap no longer downloads GitHub/AppX assets directly, but still depends on PowerShell Gallery availability when the `Microsoft.WinGet.Client` repair path is needed.
 - Several GUI elements still use fully rounded `CornerRadius="999"` or `CornerRadius = 999`, which conflicts with the project-wide visual rule against pill backdrops.
 - PSScriptAnalyzer reports warning-level issues: automatic variable shadowing, empty catch blocks, stale encoding assumptions, and other maintainability warnings.
 
@@ -66,7 +67,7 @@ The next phase should move Wingetter from "large polished script" to "trustworth
 
 1. Add CI so catalog validation and embedded fallback freshness cannot drift silently.
 2. Extend trust visibility with scope, source policy, and pin state.
-3. Add CI checks so counts, package IDs, embedded fallback sync, profile JSON behavior, runner helpers, and XAML loading cannot drift silently.
+3. Add CI checks so counts, package IDs, embedded fallback sync, profile JSON behavior, runner helpers, bootstrap logging, and XAML loading cannot drift silently.
 4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the catalog and execution layers are separated behind a package-source interface.
 
 ## Source Trail

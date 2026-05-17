@@ -1222,36 +1222,105 @@ function Test-WinGet {
     return @{ Installed = $false; Version = $null; Path = $null }
 }
 
+function New-WinGetBootstrapLogPath {
+    $root = Join-Path $env:APPDATA "Wingetter\logs"
+    if (!(Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+    $path = Join-Path $root ("winget-bootstrap-" + (Get-Date -Format "yyyyMMdd-HHmmss") + ".jsonl")
+    $Script:LastBootstrapLogPath = $path
+    return $path
+}
+
+function Write-WinGetBootstrapLog {
+    param(
+        [string]$Path,
+        [string]$Step,
+        [string]$Status,
+        [string]$Message,
+        [hashtable]$Data = @{}
+    )
+    $entry = [ordered]@{
+        TimestampUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Step         = $Step
+        Status       = $Status
+        Message      = $Message
+        Data         = $Data
+    }
+    $entry | ConvertTo-Json -Depth 6 -Compress | Add-Content -Path $Path -Encoding UTF8
+}
+
 function Install-WinGet {
     $wingetStatus = Test-WinGet
     if ($wingetStatus.Installed) { return $true }
+
+    $logPath = New-WinGetBootstrapLogPath
+    Write-WinGetBootstrapLog -Path $logPath -Step "start" -Status "info" -Message "Starting WinGet bootstrap." -Data @{
+        Method = "App Installer registration, then Microsoft.WinGet.Client Repair-WinGetPackageManager fallback"
+        ManualDownloads = "none"
+    }
+
     try {
-        $tempDir = "$env:TEMP\WinGetInstall"
-        if (!(Test-Path $tempDir)) { New-Item -ItemType Directory -Path $tempDir -Force | Out-Null }
-        $vcLibsPath = "$tempDir\VCLibs.appx"
-        $uiXamlPath = "$tempDir\UIXaml.appx"
-        Invoke-WebRequest -Uri "https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx" -OutFile $vcLibsPath -UseBasicParsing
-        Invoke-WebRequest -Uri "https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx" -OutFile $uiXamlPath -UseBasicParsing
-        $headers = @{ "User-Agent" = "PowerShell" }
-        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/microsoft/winget-cli/releases/latest" -Headers $headers -ErrorAction Stop
-        $wingetUrl = ($release.assets | Where-Object { $_.name -match "\.msixbundle$" }).browser_download_url
-        $licenseUrl = ($release.assets | Where-Object { $_.name -match "License.*\.xml$" }).browser_download_url
-        $wingetPath = "$tempDir\WinGet.msixbundle"
-        $licensePath = "$tempDir\License.xml"
-        Invoke-WebRequest -Uri $wingetUrl -OutFile $wingetPath -UseBasicParsing
-        if ($licenseUrl) { Invoke-WebRequest -Uri $licenseUrl -OutFile $licensePath -UseBasicParsing }
-        Add-AppxPackage -Path $vcLibsPath -ErrorAction SilentlyContinue
-        Add-AppxPackage -Path $uiXamlPath -ErrorAction SilentlyContinue
-        if (Test-Path $licensePath) {
-            Add-AppxProvisionedPackage -Online -PackagePath $wingetPath -LicensePath $licensePath -ErrorAction Stop | Out-Null
-        } else { Add-AppxPackage -Path $wingetPath -ErrorAction Stop }
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        Start-Sleep -Seconds 3
-        $wingetStatus = Test-WinGet
-        if ($wingetStatus.Installed) { return $true }
+        Write-WinGetBootstrapLog -Path $logPath -Step "register-app-installer" -Status "start" -Message "Requesting App Installer package registration by family name." -Data @{
+            Command = "Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe"
+            Source = "Windows App Installer registration"
+        }
+        Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe -ErrorAction Stop
+        Write-WinGetBootstrapLog -Path $logPath -Step "register-app-installer" -Status "ok" -Message "App Installer registration command completed."
+    } catch {
+        Write-WinGetBootstrapLog -Path $logPath -Step "register-app-installer" -Status "error" -Message $_.Exception.Message
+    }
+
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    Start-Sleep -Seconds 2
+    $wingetStatus = Test-WinGet
+    if ($wingetStatus.Installed) {
+        Write-WinGetBootstrapLog -Path $logPath -Step "verify" -Status "ok" -Message "WinGet is available after App Installer registration." -Data $wingetStatus
+        return $true
+    }
+
+    try {
+        Write-WinGetBootstrapLog -Path $logPath -Step "install-module" -Status "start" -Message "Ensuring Microsoft.WinGet.Client module from PowerShell Gallery." -Data @{
+            Module = "Microsoft.WinGet.Client"
+            Repository = "PSGallery"
+            Verification = "Import-Module and Repair-WinGetPackageManager availability"
+        }
+        if (!(Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+            Install-PackageProvider -Name NuGet -Force -ErrorAction Stop | Out-Null
+        }
+        if (!(Get-Module -ListAvailable -Name Microsoft.WinGet.Client)) {
+            Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery -Scope CurrentUser -AllowClobber -ErrorAction Stop | Out-Null
+        }
+        Import-Module Microsoft.WinGet.Client -Force -ErrorAction Stop
+        $repair = Get-Command Repair-WinGetPackageManager -ErrorAction Stop
+        Write-WinGetBootstrapLog -Path $logPath -Step "install-module" -Status "ok" -Message "Microsoft.WinGet.Client module is available." -Data @{
+            RepairCommand = $repair.Source
+        }
+
+        Write-WinGetBootstrapLog -Path $logPath -Step "repair-winget" -Status "start" -Message "Running Repair-WinGetPackageManager -Force -Latest."
+        Repair-WinGetPackageManager -Force -Latest -ErrorAction Stop
+        Write-WinGetBootstrapLog -Path $logPath -Step "repair-winget" -Status "ok" -Message "Repair-WinGetPackageManager completed."
+    } catch {
+        Write-WinGetBootstrapLog -Path $logPath -Step "repair-winget" -Status "error" -Message $_.Exception.Message
+    }
+
+    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    Start-Sleep -Seconds 2
+    $wingetStatus = Test-WinGet
+    if ($wingetStatus.Installed) {
+        Write-WinGetBootstrapLog -Path $logPath -Step "verify" -Status "ok" -Message "WinGet is available after repair." -Data $wingetStatus
+        return $true
+    }
+
+    try {
+        Write-WinGetBootstrapLog -Path $logPath -Step "store-fallback" -Status "start" -Message "Opening Microsoft Store App Installer page as final manual fallback." -Data @{
+            Uri = "ms-windows-store://pdp/?ProductId=9NBLGGH4NNS1"
+        }
         Start-Process "ms-windows-store://pdp/?ProductId=9NBLGGH4NNS1"
-        return $false
-    } catch { return $false }
+    } catch {
+        Write-WinGetBootstrapLog -Path $logPath -Step "store-fallback" -Status "error" -Message $_.Exception.Message
+    }
+
+    Write-WinGetBootstrapLog -Path $logPath -Step "verify" -Status "failed" -Message "WinGet was not available after bootstrap attempts."
+    return $false
 }
 
 function Join-ProcessArguments {
@@ -3424,7 +3493,13 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
-    $InstallWinGetBtn.Add_Click({ $ProgressText.Text = "Installing WinGet..."; $null = Install-WinGet; & $checkWinGet; $ProgressText.Text = "WinGet check complete." }.GetNewClosure())
+    $InstallWinGetBtn.Add_Click({
+        $ProgressText.Text = "Repairing WinGet/App Installer..."
+        $installed = Install-WinGet
+        & $checkWinGet
+        $logSuffix = if ($Script:LastBootstrapLogPath) { " Log: $Script:LastBootstrapLogPath" } else { "" }
+        $ProgressText.Text = if ($installed) { "WinGet is ready.$logSuffix" } else { "WinGet repair needs manual follow-up.$logSuffix" }
+    }.GetNewClosure())
 
     # ========================================================
     # GROUP HANDLERS
