@@ -38,6 +38,7 @@ Wingetter is currently monolithic:
 - Installed app detection runs in a background runspace using `winget list --source winget` and regex parsing.
 - Icons are loaded lazily across a 4-worker runspace pool from Google favicon URLs, with letter placeholders before network fetches complete.
 - Profile import/export helpers now support the official WinGet JSON hierarchy: `Sources`, `Packages`, `PackageIdentifier`, and optional `Version` fields are accepted on import; exports generate a `https://aka.ms/winget-packages.schema.2.0.json` file with the `winget` source details.
+- Clicking an app row opens a package detail panel that uses `winget show --id <id> --exact` plus `winget list --id <id> --exact` to surface source, publisher, installed/latest version, installer type, installer URL, SHA256, homepage fallback, and metadata warnings.
 
 ## Verified Strengths
 
@@ -64,8 +65,8 @@ Wingetter is currently monolithic:
 The next phase should move Wingetter from "large polished script" to "trustworthy setup cockpit":
 
 1. Add CI so catalog validation and embedded fallback freshness cannot drift silently.
-2. Add source and manifest trust visibility: source, publisher, installer URL, hash, scope, installer type, and pin state.
-3. Add CI checks so counts, package IDs, embedded fallback sync, profile JSON behavior, and runner helpers cannot drift silently.
+2. Extend trust visibility with scope, source policy, and pin state.
+3. Add CI checks so counts, package IDs, embedded fallback sync, profile JSON behavior, runner helpers, and XAML loading cannot drift silently.
 4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the catalog and execution layers are separated behind a package-source interface.
 
 ## Source Trail

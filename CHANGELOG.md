@@ -10,6 +10,7 @@ All notable changes to Wingetter will be documented in this file.
 - Added: Profile JSON smoke tests for official WinGet JSON, Wingetter group JSON, and simple package ID arrays.
 - Added: Structured install/update run logging with per-package stdout, stderr, JSON result records, command capture, exit code capture, and WinGet verbose log directory hints.
 - Added: WinGet runner smoke tests for process argument handling and status classification.
+- Added: Package detail panel backed by `winget show` and `winget list` for source, publisher, version, installer type, installer URL, SHA256, and metadata warnings.
 - Changed: Local repo runs now prefer the generated catalog and group JSON when present, while retaining embedded data as the one-file fallback.
 - Changed: `catalog/winget.json` and `catalog/groups.json` are now the curation source files; `tools/Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback.
 - Changed: Install/update execution now uses structured process arguments where available, captures stderr, passes `--verbose-logs`, and surfaces the run log directory after completion or cancellation.

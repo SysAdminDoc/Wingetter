@@ -54,11 +54,11 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 
 ### Files Modified
 
-- `Wingetter.ps1` - added local JSON catalog/group loading with embedded fallback; added missing icon metadata for four package records; normalized the embedded fallback through the sync tool; added official WinGet import/export JSON helpers and UI wiring; replaced install/update process execution with structured run logging and result capture.
+- `Wingetter.ps1` - added local JSON catalog/group loading with embedded fallback; added missing icon metadata for four package records; normalized the embedded fallback through the sync tool; added official WinGet import/export JSON helpers and UI wiring; replaced install/update process execution with structured run logging and result capture; added a package trust detail panel backed by `winget show` and `winget list`.
 - `README.md` - synced the version badge, built-in group list, category counts, and catalog validation instructions.
 - `CHANGELOG.md` - replaced malformed historical header with `Unreleased`, `v6.1.0`, and `v6.0.0` entries.
 - `PROJECT_CONTEXT.md` - recorded current catalog validation state and remaining source-of-truth gap.
-- `ROADMAP.md` - converted roadmap entries to checklist headings and marked R-001/R-002/R-003/R-004 complete.
+- `ROADMAP.md` - converted roadmap entries to checklist headings and marked R-001/R-002/R-003/R-004/R-005 complete.
 - GitHub repository description - synced app count from 734 to 765 through `gh repo edit`.
 
 ### Verification Performed
@@ -68,4 +68,6 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
+- XAML load smoke command confirming `PackageDetailsBorder` exists.
+- Live package detail extraction for `Google.Chrome` using the new helper functions.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1 -CheckWingetAvailability -AvailabilitySampleSize 5`

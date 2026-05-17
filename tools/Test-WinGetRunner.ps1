@@ -27,7 +27,8 @@ $requiredFunctions = @(
     "Set-ProcessArguments",
     "Get-SafeFileName",
     "Get-TextExcerpt",
-    "Get-WinGetOperationStatus"
+    "Get-WinGetOperationStatus",
+    "Get-WinGetShowField"
 )
 
 foreach ($functionName in $requiredFunctions) {
@@ -82,6 +83,21 @@ if ($failures.Count -eq 0) {
     }
     if ((Get-WinGetOperationStatus -ExitCode 42 -StdOut "" -StdErr "boom" -Cancelled $false) -ne "FAILED") {
         Add-Failure "Status classifier did not classify failure."
+    }
+
+    $showSample = @"
+Version: 1.2.3
+Publisher: Example Publisher
+Installer:
+  Installer Type: wix
+  Installer Url: https://example.com/app.msi
+  Installer SHA256: abcdef
+"@
+    if ((Get-WinGetShowField -Text $showSample -Label "Publisher") -ne "Example Publisher") {
+        Add-Failure "Get-WinGetShowField did not parse Publisher."
+    }
+    if ((Get-WinGetShowField -Text $showSample -Label "Installer Url") -ne "https://example.com/app.msi") {
+        Add-Failure "Get-WinGetShowField did not parse indented Installer Url."
     }
 }
 

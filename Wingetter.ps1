@@ -1281,6 +1281,49 @@ function Set-ProcessArguments {
     }
 }
 
+function Invoke-WinGetCapture {
+    param(
+        [string[]]$Arguments,
+        [int]$TimeoutSeconds = 20
+    )
+
+    $stdout = ""
+    $stderr = ""
+    $exitCode = -1
+    $timedOut = $false
+
+    try {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "winget"
+        Set-ProcessArguments -ProcessStartInfo $psi -Arguments $Arguments
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+        $stderrTask = $proc.StandardError.ReadToEndAsync()
+        if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
+            $timedOut = $true
+            try { $proc.Kill() } catch {}
+            try { $proc.WaitForExit() } catch {}
+        }
+        $stdout = $stdoutTask.GetAwaiter().GetResult()
+        $stderr = $stderrTask.GetAwaiter().GetResult()
+        $exitCode = if ($timedOut) { -1 } else { $proc.ExitCode }
+    } catch {
+        $stderr = $_.Exception.Message
+    }
+
+    return [PSCustomObject]@{
+        StdOut   = $stdout
+        StdErr   = $stderr
+        ExitCode = $exitCode
+        TimedOut = $timedOut
+    }
+}
+
 function Get-SafeFileName {
     param([string]$Value)
     $safe = $Value
@@ -1414,6 +1457,80 @@ function Invoke-WinGetPackageOperation {
     $result | ConvertTo-Json -Depth 5 | Set-Content -Path $resultPath -Encoding UTF8
 
     return [PSCustomObject]$result
+}
+
+function Get-WinGetShowField {
+    param([string]$Text, [string]$Label)
+    $pattern = "(?im)^\s*$([regex]::Escape($Label)):\s*(?<value>.+?)\s*$"
+    $match = [regex]::Match($Text, $pattern)
+    if ($match.Success) { return $match.Groups["value"].Value.Trim() }
+    return ""
+}
+
+function Get-WinGetInstalledVersion {
+    param([string]$PackageId)
+
+    $capture = Invoke-WinGetCapture -Arguments @("list", "--id", $PackageId, "--exact", "--disable-interactivity") -TimeoutSeconds 15
+    if ($capture.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($capture.StdOut)) { return "" }
+
+    foreach ($line in ($capture.StdOut -split "`r?`n")) {
+        $index = $line.IndexOf($PackageId, [System.StringComparison]::OrdinalIgnoreCase)
+        if ($index -ge 0) {
+            $afterId = $line.Substring($index + $PackageId.Length).Trim()
+            if ($afterId) {
+                $parts = $afterId -split '\s+'
+                if ($parts.Count -gt 0 -and $parts[0] -notmatch '^-+$') { return $parts[0] }
+            }
+        }
+    }
+
+    return ""
+}
+
+function Get-WinGetPackageDetails {
+    param([string]$PackageId)
+
+    $capture = Invoke-WinGetCapture -Arguments @("show", "--id", $PackageId, "--exact", "--disable-interactivity", "--accept-source-agreements") -TimeoutSeconds 20
+    $combined = "$($capture.StdOut)`n$($capture.StdErr)"
+    $warnings = [System.Collections.ArrayList]::new()
+    if ($capture.TimedOut) { [void]$warnings.Add("winget show timed out.") }
+    if ($capture.ExitCode -ne 0) { [void]$warnings.Add("winget show exited with code $($capture.ExitCode).") }
+
+    $publisher = Get-WinGetShowField -Text $combined -Label "Publisher"
+    $source = Get-WinGetShowField -Text $combined -Label "Source"
+    if (!$source) { $source = "winget" }
+    $installerType = Get-WinGetShowField -Text $combined -Label "Installer Type"
+    $installerUrl = Get-WinGetShowField -Text $combined -Label "Installer Url"
+    if (!$installerUrl) { $installerUrl = Get-WinGetShowField -Text $combined -Label "Installer URL" }
+    $sha256 = Get-WinGetShowField -Text $combined -Label "Installer SHA256"
+    $homepage = Get-WinGetShowField -Text $combined -Label "Homepage"
+    $version = Get-WinGetShowField -Text $combined -Label "Version"
+    $installedVersion = Get-WinGetInstalledVersion -PackageId $PackageId
+
+    foreach ($required in @(
+        @{ Name = "publisher"; Value = $publisher },
+        @{ Name = "installer type"; Value = $installerType },
+        @{ Name = "installer URL"; Value = $installerUrl },
+        @{ Name = "installer SHA256"; Value = $sha256 }
+    )) {
+        if ([string]::IsNullOrWhiteSpace($required.Value)) {
+            [void]$warnings.Add("Missing $($required.Name) metadata.")
+        }
+    }
+
+    [PSCustomObject]@{
+        PackageId        = $PackageId
+        Publisher        = $publisher
+        Source           = $source
+        LatestVersion    = $version
+        InstalledVersion = $installedVersion
+        InstallerType    = $installerType
+        InstallerUrl     = $installerUrl
+        InstallerSha256  = $sha256
+        Homepage         = $homepage
+        Warnings         = [string[]]$warnings.ToArray([string])
+        ExitCode         = $capture.ExitCode
+    }
 }
 
 # ============================================================================
@@ -2027,6 +2144,7 @@ function Show-WinGetInstallerGUI {
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <!-- Top gradient accent bar -->
         <Border Grid.Row="0" Height="4">
@@ -2193,8 +2311,56 @@ function Show-WinGetInstallerGUI {
                 </Border>
             </Grid>
         </Grid>
+        <!-- Package Detail Panel -->
+        <Border x:Name="PackageDetailsBorder" Grid.Row="4" Background="#071019" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Visibility="Collapsed" MaxHeight="240" Padding="20,14">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock x:Name="PackageDetailsTitle" Text="Package details" FontSize="13" FontWeight="SemiBold" Foreground="#8cd2ff"/>
+                        <TextBlock x:Name="PackageDetailsSubtitle" Text="Click a package to inspect source and installer metadata." FontSize="11.5" Foreground="#94a7bc" Margin="0,3,0,0"/>
+                    </StackPanel>
+                    <Button x:Name="PackageDetailsCloseBtn" Grid.Column="1" Style="{StaticResource ToolBtn}" Content="Close" Padding="10,5" FontSize="10.5" Cursor="Hand"/>
+                </Grid>
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="DetailSourceLabel" Grid.Row="0" Grid.Column="0" Text="Source" FontSize="11" Foreground="#94a7bc" Margin="0,0,8,6"/>
+                    <TextBlock x:Name="DetailSource" Grid.Row="0" Grid.Column="1" Text="-" FontSize="11.5" Foreground="#dbe7f2" Margin="0,0,20,6" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="DetailPublisherLabel" Grid.Row="0" Grid.Column="2" Text="Publisher" FontSize="11" Foreground="#94a7bc" Margin="0,0,8,6"/>
+                    <TextBlock x:Name="DetailPublisher" Grid.Row="0" Grid.Column="3" Text="-" FontSize="11.5" Foreground="#dbe7f2" Margin="0,0,0,6" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="DetailInstalledLabel" Grid.Row="1" Grid.Column="0" Text="Installed" FontSize="11" Foreground="#94a7bc" Margin="0,0,8,6"/>
+                    <TextBlock x:Name="DetailInstalledVersion" Grid.Row="1" Grid.Column="1" Text="-" FontSize="11.5" Foreground="#dbe7f2" Margin="0,0,20,6" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="DetailInstallerLabel" Grid.Row="1" Grid.Column="2" Text="Installer" FontSize="11" Foreground="#94a7bc" Margin="0,0,8,6"/>
+                    <TextBlock x:Name="DetailInstallerType" Grid.Row="1" Grid.Column="3" Text="-" FontSize="11.5" Foreground="#dbe7f2" Margin="0,0,0,6" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="DetailShaLabel" Grid.Row="2" Grid.Column="0" Text="SHA256" FontSize="11" Foreground="#94a7bc" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="DetailSha256" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="-" FontSize="11.5" Foreground="#dbe7f2" TextTrimming="CharacterEllipsis"/>
+                </Grid>
+                <StackPanel Grid.Row="2" Margin="0,10,0,0">
+                    <TextBlock x:Name="DetailInstallerUrl" Text="-" FontSize="11.5" Foreground="#94a7bc" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="DetailWarnings" Text="" FontSize="11" Foreground="#ffbf69" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
         <!-- Log Panel (shown during install) -->
-        <Border x:Name="LogPanelBorder" Grid.Row="4" Background="#071019" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Visibility="Collapsed" MaxHeight="210">
+        <Border x:Name="LogPanelBorder" Grid.Row="5" Background="#071019" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Visibility="Collapsed" MaxHeight="210">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -2216,7 +2382,7 @@ function Show-WinGetInstallerGUI {
                 </ScrollViewer>
             </Grid>
         </Border>
-        <Border x:Name="FooterBorder" Grid.Row="5" Background="#0b1725" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Padding="28,16">
+        <Border x:Name="FooterBorder" Grid.Row="6" Background="#0b1725" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Padding="28,16">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -2357,6 +2523,8 @@ function Show-WinGetInstallerGUI {
     $LogScrollViewer  = $Window.FindName("LogScrollViewer")
     $LogToggleBtn     = $Window.FindName("LogToggleBtn")
     $LogTitle         = $Window.FindName("LogTitle")
+    $PackageDetailsBorder = $Window.FindName("PackageDetailsBorder")
+    $PackageDetailsCloseBtn = $Window.FindName("PackageDetailsCloseBtn")
     $EmptyStateBorder = $Window.FindName("EmptyStateBorder")
     $EmptyStateTitle  = $Window.FindName("EmptyStateTitle")
     $EmptyStateBody   = $Window.FindName("EmptyStateBody")
@@ -2396,6 +2564,32 @@ function Show-WinGetInstallerGUI {
     $ui["LogToggleBtn"]        = $LogToggleBtn
     $ui["LogTitle"]            = $LogTitle
     $ui["LogSubtitle"]         = $Window.FindName("LogSubtitle")
+    $ui["PackageDetailsBorder"] = $PackageDetailsBorder
+    $ui["PackageDetailsTitle"] = $Window.FindName("PackageDetailsTitle")
+    $ui["PackageDetailsSubtitle"] = $Window.FindName("PackageDetailsSubtitle")
+    $ui["PackageDetailsCloseBtn"] = $PackageDetailsCloseBtn
+    $ui["DetailSource"] = $Window.FindName("DetailSource")
+    $ui["DetailPublisher"] = $Window.FindName("DetailPublisher")
+    $ui["DetailInstalledVersion"] = $Window.FindName("DetailInstalledVersion")
+    $ui["DetailInstallerType"] = $Window.FindName("DetailInstallerType")
+    $ui["DetailInstallerUrl"] = $Window.FindName("DetailInstallerUrl")
+    $ui["DetailSha256"] = $Window.FindName("DetailSha256")
+    $ui["DetailWarnings"] = $Window.FindName("DetailWarnings")
+    $ui["DetailLabels"] = @(
+        $Window.FindName("DetailSourceLabel"),
+        $Window.FindName("DetailPublisherLabel"),
+        $Window.FindName("DetailInstalledLabel"),
+        $Window.FindName("DetailInstallerLabel"),
+        $Window.FindName("DetailShaLabel")
+    )
+    $ui["DetailValues"] = @(
+        $ui["DetailSource"],
+        $ui["DetailPublisher"],
+        $ui["DetailInstalledVersion"],
+        $ui["DetailInstallerType"],
+        $ui["DetailInstallerUrl"],
+        $ui["DetailSha256"]
+    )
     $ui["MainScroll"]          = $MainScroll
     $ui["ToolbarHintBorder"]   = $Window.FindName("ToolbarHintBorder")
     $ui["ToolbarHintText"]     = $Window.FindName("ToolbarHintText")
@@ -2413,7 +2607,7 @@ function Show-WinGetInstallerGUI {
     $ui["CategoryAppsStacks"]  = [System.Collections.ArrayList]::new()
     $ui["BuiltInGroups"]       = $Script:BuiltInGroups
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ImportBtn, $InstallWinGetBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn)) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ImportBtn, $InstallWinGetBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn)) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
     foreach ($chk in @($SilentCheck, $AcceptCheck)) {
@@ -2711,6 +2905,17 @@ function Show-WinGetInstallerGUI {
             $ui["LogSubtitle"].Foreground = $bc.ConvertFromString($t["FooterText"])
         } catch {}
 
+        # Package detail panel theming
+        try {
+            $ui["PackageDetailsBorder"].Background = $bc.ConvertFromString($t["LogBg"])
+            $ui["PackageDetailsBorder"].BorderBrush = $bc.ConvertFromString($t["LogBorder"])
+            $ui["PackageDetailsTitle"].Foreground = $bc.ConvertFromString($t["CategoryTitle"])
+            $ui["PackageDetailsSubtitle"].Foreground = $bc.ConvertFromString($t["FooterText"])
+            foreach ($label in $ui["DetailLabels"]) { if ($label) { $label.Foreground = $bc.ConvertFromString($t["FooterText"]) } }
+            foreach ($value in $ui["DetailValues"]) { if ($value) { $value.Foreground = $bc.ConvertFromString($t["LogText"]) } }
+            $ui["DetailWarnings"].Foreground = $bc.ConvertFromString($t["LogSkip"])
+        } catch {}
+
         try {
             $ui["EmptyStateBorder"].Background = $bc.ConvertFromString($t["EmptyStateBg"])
             $ui["EmptyStateBorder"].BorderBrush = $bc.ConvertFromString($t["EmptyStateBorder"])
@@ -2732,6 +2937,44 @@ function Show-WinGetInstallerGUI {
     Update-Splash $splash "Building interface..." 50
 
     $toBrush = { param([string]$hex) [System.Windows.Media.BrushConverter]::new().ConvertFromString($hex) }
+    $SetDetailText = {
+        param([object]$TextBlock, [string]$Value)
+        if ($TextBlock) {
+            $TextBlock.Text = if ([string]::IsNullOrWhiteSpace($Value)) { "-" } else { $Value }
+        }
+    }
+    $ShowPackageDetails = {
+        param([object]$App)
+
+        $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Visible
+        $ui["PackageDetailsTitle"].Text = $App.Name
+        $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - loading source and installer metadata..."
+        & $SetDetailText $ui["DetailSource"] "-"
+        & $SetDetailText $ui["DetailPublisher"] "-"
+        & $SetDetailText $ui["DetailInstalledVersion"] "-"
+        & $SetDetailText $ui["DetailInstallerType"] "-"
+        & $SetDetailText $ui["DetailInstallerUrl"] "-"
+        & $SetDetailText $ui["DetailSha256"] "-"
+        $ui["DetailWarnings"].Text = ""
+        [System.Windows.Forms.Application]::DoEvents()
+
+        $details = Get-WinGetPackageDetails -PackageId $App.WingetId
+        & $SetDetailText $ui["DetailSource"] $details.Source
+        & $SetDetailText $ui["DetailPublisher"] $details.Publisher
+        $installedText = if ($details.InstalledVersion) { $details.InstalledVersion } elseif ($ui["InstalledIds"].ContainsKey($App.WingetId)) { "Detected" } else { "Not detected" }
+        if ($details.LatestVersion) { $installedText = "$installedText / latest $($details.LatestVersion)" }
+        & $SetDetailText $ui["DetailInstalledVersion"] $installedText
+        & $SetDetailText $ui["DetailInstallerType"] $details.InstallerType
+        & $SetDetailText $ui["DetailInstallerUrl"] $(if ($details.InstallerUrl) { "URL: $($details.InstallerUrl)" } elseif ($details.Homepage) { "Homepage: $($details.Homepage)" } else { "" })
+        & $SetDetailText $ui["DetailSha256"] $details.InstallerSha256
+        if ($details.Warnings.Count -gt 0) {
+            $ui["DetailWarnings"].Text = "Warnings: $($details.Warnings -join ' ')"
+        } else {
+            $ui["DetailWarnings"].Text = ""
+        }
+        $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - metadata from winget show"
+    }
+    $PackageDetailsCloseBtn.Add_Click({ $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Collapsed }.GetNewClosure())
     $appNum = 0
 
     foreach ($category in $Script:SoftwareDatabase.Keys) {
@@ -2904,6 +3147,7 @@ function Show-WinGetInstallerGUI {
 
             # Shift-click support: track app index for range selection
             $localAppNum = $appNum
+            $localApp = $app
             $appBorder.Add_MouseLeftButtonDown({
                 param($s,$e)
                 $cb = $s.Child.Children[0]
@@ -2925,6 +3169,7 @@ function Show-WinGetInstallerGUI {
                     $cb.IsChecked = -not $cb.IsChecked
                 }
                 $ui["LastClickedIndex"] = $localAppNum
+                & $ShowPackageDetails $localApp
                 $e.Handled = $true
             }.GetNewClosure())
             $appBorder.Add_MouseEnter({ param($s,$e); $hc=$ui["HoverBg"]; if($hc){ $s.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($hc) } }.GetNewClosure())
