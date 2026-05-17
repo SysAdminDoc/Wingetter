@@ -28,7 +28,8 @@ $requiredFunctions = @(
     "Get-SafeFileName",
     "Get-TextExcerpt",
     "Get-WinGetOperationStatus",
-    "Get-WinGetShowField"
+    "Get-WinGetShowField",
+    "Write-WinGetBootstrapLog"
 )
 
 foreach ($functionName in $requiredFunctions) {
@@ -98,6 +99,17 @@ Installer:
     }
     if ((Get-WinGetShowField -Text $showSample -Label "Installer Url") -ne "https://example.com/app.msi") {
         Add-Failure "Get-WinGetShowField did not parse indented Installer Url."
+    }
+
+    $bootstrapLogPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-bootstrap-test-" + [System.Guid]::NewGuid().ToString("N") + ".jsonl")
+    try {
+        Write-WinGetBootstrapLog -Path $bootstrapLogPath -Step "test" -Status "ok" -Message "bootstrap log smoke" -Data @{ ManualDownloads = "none" }
+        $entry = Get-Content -Path $bootstrapLogPath -Raw | ConvertFrom-Json
+        if ($entry.Step -ne "test" -or $entry.Data.ManualDownloads -ne "none") {
+            Add-Failure "Write-WinGetBootstrapLog did not write the expected JSONL entry."
+        }
+    } finally {
+        Remove-Item -Path $bootstrapLogPath -Force -ErrorAction SilentlyContinue
     }
 }
 

@@ -50,12 +50,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: E01, E07, E08, E09, L20.
 - Completed 2026-05-17: added a package detail panel above the activity log. App-row clicks now show source, publisher, installed/latest version, installer type, installer URL or homepage fallback, SHA256, and metadata warnings from `winget show` / `winget list`; XAML loading and detail parsing were verified.
 
-### [ ] R-006 - Replace risky WinGet bootstrap flow
+### [x] R-006 - Replace risky WinGet bootstrap flow
 
 - Problem: `Install-WinGet` downloads VCLibs, Microsoft.UI.Xaml, and latest WinGet assets, then installs them without an internal verification/audit path. This is a sensitive bootstrap path.
 - Build: prefer documented Microsoft bootstrap paths such as App Installer registration and `Microsoft.WinGet.Client` `Repair-WinGetPackageManager`; if downloads remain, record source URL, expected signature/hash strategy, and clear error reporting.
 - Acceptance: bootstrap has a documented path, does not silently swallow errors, and logs every downloaded file, source, size, and verification result.
 - Sources: L03, E10, E22.
+- Completed 2026-05-17: replaced direct VCLibs/UI.Xaml/GitHub asset downloads with App Installer registration, `Microsoft.WinGet.Client` module repair through `Repair-WinGetPackageManager -Force -Latest`, JSONL bootstrap logs, explicit error logging, verification steps, and Microsoft Store fallback. Manual file downloads are no longer performed by Wingetter bootstrap.
 
 ## P1 - Reliability, Workflow, And Maintainability
 
