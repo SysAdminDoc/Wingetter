@@ -1254,6 +1254,168 @@ function Install-WinGet {
     } catch { return $false }
 }
 
+function Join-ProcessArguments {
+    param([string[]]$Arguments)
+    @($Arguments | ForEach-Object {
+        $arg = [string]$_
+        if ($arg -match '[\s"]') {
+            '"' + ($arg -replace '\\(?=")', '\\' -replace '"', '\"') + '"'
+        } else {
+            $arg
+        }
+    }) -join " "
+}
+
+function Set-ProcessArguments {
+    param(
+        [System.Diagnostics.ProcessStartInfo]$ProcessStartInfo,
+        [string[]]$Arguments
+    )
+    $argumentListProperty = [System.Diagnostics.ProcessStartInfo].GetProperty("ArgumentList")
+    if ($argumentListProperty) {
+        foreach ($argument in $Arguments) {
+            [void]$ProcessStartInfo.ArgumentList.Add($argument)
+        }
+    } else {
+        $ProcessStartInfo.Arguments = Join-ProcessArguments -Arguments $Arguments
+    }
+}
+
+function Get-SafeFileName {
+    param([string]$Value)
+    $safe = $Value
+    foreach ($char in [System.IO.Path]::GetInvalidFileNameChars()) {
+        $safe = $safe.Replace([string]$char, "_")
+    }
+    return ($safe -replace '[^\w\.-]', '_')
+}
+
+function New-WingetterRunLogDirectory {
+    param([string]$Action)
+    $root = Join-Path $env:APPDATA "Wingetter\logs"
+    if (!(Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $path = Join-Path $root "$stamp-$Action"
+    New-Item -ItemType Directory -Path $path -Force | Out-Null
+    return $path
+}
+
+function Get-WinGetLogDirectory {
+    $path = Join-Path $env:LOCALAPPDATA "Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\DiagOutputDir"
+    if (Test-Path $path) { return $path }
+    return $null
+}
+
+function Get-TextExcerpt {
+    param([string]$Text, [int]$MaxLength = 1000)
+    if ([string]::IsNullOrWhiteSpace($Text)) { return "" }
+    $clean = ($Text -replace '\s+', ' ').Trim()
+    if ($clean.Length -le $MaxLength) { return $clean }
+    return $clean.Substring(0, $MaxLength)
+}
+
+function Get-WinGetOperationStatus {
+    param(
+        [int]$ExitCode,
+        [string]$StdOut,
+        [string]$StdErr,
+        [bool]$Cancelled
+    )
+    if ($Cancelled) { return "CANCELLED" }
+    $combined = "$StdOut`n$StdErr"
+    if ($combined -match "already installed|No available upgrade|No newer package|No applicable update") { return "UP TO DATE" }
+    if ($ExitCode -eq 0) { return "SUCCESS" }
+    return "FAILED"
+}
+
+function Invoke-WinGetPackageOperation {
+    param(
+        [string]$Action,
+        [string]$PackageId,
+        [string]$PackageName,
+        [bool]$Silent,
+        [bool]$AcceptAgreements,
+        [string]$RunLogDir,
+        [scriptblock]$ShouldCancel = { $false },
+        [scriptblock]$PumpUi = {}
+    )
+
+    $arguments = @($Action, "--id", $PackageId, "--exact", "--verbose-logs", "--disable-interactivity")
+    if ($Silent) { $arguments += "--silent" }
+    if ($AcceptAgreements) {
+        $arguments += "--accept-package-agreements"
+        $arguments += "--accept-source-agreements"
+    }
+
+    $safeId = Get-SafeFileName -Value $PackageId
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmssfff"
+    $stdoutPath = Join-Path $RunLogDir "$stamp-$safeId.stdout.log"
+    $stderrPath = Join-Path $RunLogDir "$stamp-$safeId.stderr.log"
+    $resultPath = Join-Path $RunLogDir "$stamp-$safeId.result.json"
+
+    $stdout = ""
+    $stderr = ""
+    $exitCode = $null
+    $cancelled = $false
+
+    try {
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "winget"
+        Set-ProcessArguments -ProcessStartInfo $psi -Arguments $arguments
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+        $stderrTask = $proc.StandardError.ReadToEndAsync()
+
+        while (-not $proc.HasExited) {
+            & $PumpUi
+            Start-Sleep -Milliseconds 100
+            if (& $ShouldCancel) {
+                $cancelled = $true
+                try { $proc.Kill() } catch {}
+                break
+            }
+        }
+
+        try { $proc.WaitForExit() } catch {}
+        $stdout = $stdoutTask.GetAwaiter().GetResult()
+        $stderr = $stderrTask.GetAwaiter().GetResult()
+        $exitCode = if ($cancelled) { -1 } else { $proc.ExitCode }
+    } catch {
+        $stderr = $_.Exception.Message
+        $exitCode = -1
+    }
+
+    Set-Content -Path $stdoutPath -Value $stdout -Encoding UTF8
+    Set-Content -Path $stderrPath -Value $stderr -Encoding UTF8
+
+    $status = Get-WinGetOperationStatus -ExitCode ([int]$exitCode) -StdOut $stdout -StdErr $stderr -Cancelled $cancelled
+    $result = [ordered]@{
+        TimestampUtc  = (Get-Date).ToUniversalTime().ToString("o")
+        Action        = $Action
+        PackageName   = $PackageName
+        PackageId     = $PackageId
+        Command       = "winget " + (Join-ProcessArguments -Arguments $arguments)
+        ExitCode      = $exitCode
+        Status        = $status
+        Cancelled     = $cancelled
+        StdOutPath    = $stdoutPath
+        StdErrPath    = $stderrPath
+        StdOutExcerpt = Get-TextExcerpt -Text $stdout
+        StdErrExcerpt = Get-TextExcerpt -Text $stderr
+        RunLogDir     = $RunLogDir
+        WinGetLogDir  = Get-WinGetLogDirectory
+        ResultPath    = $resultPath
+    }
+    $result | ConvertTo-Json -Depth 5 | Set-Content -Path $resultPath -Encoding UTF8
+
+    return [PSCustomObject]$result
+}
+
 # ============================================================================
 # PACKAGE GROUPS SYSTEM
 # ============================================================================
@@ -3287,6 +3449,9 @@ function Show-WinGetInstallerGUI {
 
         $isUpdate = $ui["IsUpdateMode"]
         $actionVerb = if ($isUpdate) { "Updating" } else { "Installing" }
+        $operation = if ($isUpdate) { "upgrade" } else { "install" }
+        $runLogDir = New-WingetterRunLogDirectory -Action $operation
+        $runResults = [System.Collections.ArrayList]::new()
         $total = $selected.Count; $current = 0; $ok = 0; $fail = 0; $skip = 0
 
         foreach ($app in $selected) {
@@ -3296,33 +3461,29 @@ function Show-WinGetInstallerGUI {
             $ProgressText.Text = "$actionVerb $($app.Name) ($current of $total)..."
             [System.Windows.Forms.Application]::DoEvents()
 
-            $wargs = if ($isUpdate) { @("upgrade", "--id", $app.WingetId, "--exact") } else { @("install", "--id", $app.WingetId, "--exact") }
-            if ($SilentCheck.IsChecked) { $wargs += "--silent" }
-            if ($AcceptCheck.IsChecked) { $wargs += "--accept-package-agreements"; $wargs += "--accept-source-agreements" }
-            try {
-                $psi = New-Object System.Diagnostics.ProcessStartInfo
-                $psi.FileName = "winget"; $psi.Arguments = $wargs -join " "
-                $psi.UseShellExecute = $false; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.CreateNoWindow = $true
-                $proc = [System.Diagnostics.Process]::Start($psi)
-                # Read stdout/stderr asynchronously to prevent buffer deadlock
-                $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
-                $null = $proc.StandardError.ReadToEndAsync()
-                while (-not $proc.HasExited) { [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 100; if ($ui["Cancelled"]) { try { $proc.Kill() } catch {}; break } }
-                if (-not $ui["Cancelled"]) {
-                    $out = $stdoutTask.GetAwaiter().GetResult()
-                    if ($out -match "already installed|No available upgrade|No newer package|No applicable update") {
-                        $skip++; & $AddLogEntry $app.Name "UP TO DATE" "#f39c12"
-                    } elseif ($out -match "Successfully installed|Successfully updated") {
-                        $ok++; & $AddLogEntry $app.Name "SUCCESS" "#2ecc71"
-                    } elseif ($proc.ExitCode -eq 0) {
-                        $ok++; & $AddLogEntry $app.Name "SUCCESS" "#2ecc71"
-                    } else {
-                        $fail++; & $AddLogEntry $app.Name "FAILED" "#e74c3c"
-                    }
-                }
-            } catch { $fail++; & $AddLogEntry $app.Name "ERROR" "#e74c3c" }
+            $result = Invoke-WinGetPackageOperation `
+                -Action $operation `
+                -PackageId $app.WingetId `
+                -PackageName $app.Name `
+                -Silent ([bool]$SilentCheck.IsChecked) `
+                -AcceptAgreements ([bool]$AcceptCheck.IsChecked) `
+                -RunLogDir $runLogDir `
+                -ShouldCancel { $ui["Cancelled"] } `
+                -PumpUi { [System.Windows.Forms.Application]::DoEvents() }
+
+            [void]$runResults.Add($result)
+            switch ($result.Status) {
+                "SUCCESS" { $ok++; & $AddLogEntry $app.Name "SUCCESS" "#2ecc71" }
+                "UP TO DATE" { $skip++; & $AddLogEntry $app.Name "UP TO DATE" "#f39c12" }
+                "CANCELLED" { $ui["Cancelled"] = $true; & $AddLogEntry $app.Name "CANCELLED" "#f39c12" }
+                default { $fail++; & $AddLogEntry $app.Name "FAILED" "#e74c3c" }
+            }
+            if ($ui["Cancelled"]) { break }
             [System.Windows.Forms.Application]::DoEvents()
         }
+
+        $ui["LastRunLogDir"] = $runLogDir
+        $ui["LastRunResults"] = $runResults.ToArray()
 
         $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false; $SelectAllBtn.IsEnabled = $true; $DeselectAllBtn.IsEnabled = $true
         foreach ($ctl in @($ImportBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn)) {
@@ -3333,7 +3494,7 @@ function Show-WinGetInstallerGUI {
         $doneVerb = if ($isUpdate) { "updated" } else { "installed" }
         if (-not $ui["Cancelled"]) {
             $ProgressBar.Value = 100; $ProgressPercent.Text = "100%"
-            $ProgressText.Text = "Finished: $ok $doneVerb, $skip already current, $fail failed."
+            $ProgressText.Text = "Finished: $ok $doneVerb, $skip already current, $fail failed. Logs: $runLogDir"
 
             # Windows Toast notification
             try {
@@ -3351,6 +3512,8 @@ function Show-WinGetInstallerGUI {
                 & $ExitUpdateView
                 $ProgressText.Text = $doneMsg
             }
+        } else {
+            $ProgressText.Text = "Stopped before completing the full list. Logs: $runLogDir"
         }
     }.GetNewClosure())
 

@@ -53,6 +53,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Shift-click range selection** -- hold Shift to select a range of apps at once
 - **Enhanced tooltips** -- hover to see app name and WingetId
 - **Install log panel** -- color-coded per-app results (success/skipped/failed) with summary
+- **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`
 - **Toast notifications** -- Windows notification when batch install completes
 - **Splash screen** -- loading progress indicator while icons are fetched
 - **Select All / Deselect All** per category or globally
@@ -147,6 +148,7 @@ The repo includes generated catalog snapshots in `catalog/` and validation tools
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileJson.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps1
 ```
 
 `catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded one-file fallback in `Wingetter.ps1`, and `Test-Catalog.ps1` checks script parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
