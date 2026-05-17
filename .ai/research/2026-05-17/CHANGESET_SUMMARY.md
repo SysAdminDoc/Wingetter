@@ -220,6 +220,26 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-PackageSources.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
 
+## Development Follow-up: 2026-05-17 Scheduled Update Watcher Batch
+
+### Files Created
+
+- `src/Wingetter.UpdateWatcher.ps1` - added check-only update watcher helpers, metered-network detection, JSON log writing/rotation, toast summaries, and scheduled-task registration.
+- `tools\Invoke-UpdateCheck.ps1` - runs a one-time update check from the local checkout without installing updates.
+- `tools\Register-UpdateWatcher.ps1` - registers or unregisters a current-user daily scheduled update check.
+- `tools\Test-UpdateWatcher.ps1` - validates update classification, scheduled-task action arguments, metered skip state, result persistence, and log rotation.
+
+### Files Modified
+
+- `Wingetter.ps1` and `tools\Test-Catalog.ps1` - added the update watcher module to the module set.
+- `.github/workflows/validate.yml` - added update watcher validation to CI.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented scheduled update checks and marked R-016 complete.
+
+### Verification Performed
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-UpdateWatcher.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+
 ## Development Follow-up: 2026-05-17 Modularization Batch
 
 ### Files Created

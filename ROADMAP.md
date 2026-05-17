@@ -134,12 +134,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: E07, E23, E15, E17.
 - Completed 2026-05-17: added `Wingetter.SourcePolicy.v1` support under `%APPDATA%\Wingetter\source-policy.json`, a footer Corporate policy toggle, source trust summaries in package details, explicit `--source` command generation, policy refusal before install/update execution, `Microsoft.Rest` private source definitions with `--explicit` source-add command export, GUI Export Sources, and `tools\Test-SourcePolicy.ps1` plus CI coverage.
 
-### [ ] R-016 - Scheduled update watcher and tray/status workflow
+### [x] R-016 - Scheduled update watcher and tray/status workflow
 
 - Problem: Wingetter is launch-driven, while adjacent tools compete on scheduled update checks and notifications.
 - Build: optional scheduled task or tray companion that checks updates, respects pins/allowlists/blocklists, rotates logs, handles metered networks, and notifies with a concise summary.
 - Acceptance: users can enable a local scheduled update check without forced auto-upgrades.
 - Sources: E12, E15.
+- Completed 2026-05-17: added `src/Wingetter.UpdateWatcher.ps1`, one-time update check and scheduled-task registration scripts, check-only update classification that respects pins/source policy/allowlists/blocklists, metered-network skip support, JSON log writing and rotation under `%APPDATA%\Wingetter\logs\update-checks`, toast summaries, and `tools\Test-UpdateWatcher.ps1` plus CI coverage.
 
 ### [ ] R-017 - Offline download/cache mode
 

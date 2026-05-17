@@ -24,6 +24,7 @@ All notable changes to Wingetter will be documented in this file.
 - Added: Package-source adapter contract with WinGet as the first registered backend and validation for the adapter/UI boundary.
 - Added: Corporate source policy profile at `%APPDATA%\Wingetter\source-policy.json`, including allowed-source enforcement, explicit-source command generation, and `Microsoft.Rest` private source support.
 - Added: Source policy export from the GUI and source policy validation coverage.
+- Added: Scheduled update-check workflow with no auto-upgrades, metered-network skip support, pin/source-policy classification, JSON logs, log rotation, toast summaries, and scheduled-task registration scripts.
 - Changed: Local repo runs now prefer the generated catalog and group JSON when present, while retaining embedded module data as fallback.
 - Changed: `Wingetter.ps1` is now a thin launcher that loads local modules or downloads the module set for raw GitHub quick-launch runs.
 - Changed: `catalog/winget.json` and `catalog/groups.json` are now the curation source files; `tools/Sync-EmbeddedCatalog.ps1` regenerates the embedded module fallbacks.
@@ -35,6 +36,7 @@ All notable changes to Wingetter will be documented in this file.
 - Changed: Replaced remaining pill-style text-bearing UI radii with bounded rectangular radii and added accessible names to the theme toggle and search box.
 - Changed: GUI package details, official source profile import/export, install/update execution, installed scans, pin controls, and copied install commands now route through the package-source adapter instead of calling WinGet helpers directly.
 - Changed: WinGet install/update/detail helpers can pass explicit `--source` values from catalog/source policy metadata.
+- Changed: CI now validates update watcher summary classification, scheduled-task action arguments, and update-check log rotation.
 - Changed: Install/update execution now uses structured process arguments where available, captures stderr, passes `--verbose-logs`, and surfaces the run log directory after completion or cancellation.
 - Changed: WinGet repair now prefers App Installer registration and `Microsoft.WinGet.Client` `Repair-WinGetPackageManager` instead of downloading GitHub/AppX assets directly.
 - Changed: Synced README version badge, built-in groups, and category counts with the v6.1.0 script catalog.

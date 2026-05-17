@@ -58,6 +58,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Install log panel** -- color-coded per-app results (success/skipped/failed) with summary
 - **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`
 - **Migration reports** -- completed install/update runs create exportable Markdown or JSON reports with summary counts, commands, result paths, versions, and sources
+- **Scheduled update checks** -- optional Windows scheduled task checks for available updates, respects pins/source policy, can skip metered networks, rotates logs, and never auto-installs
 - **Toast notifications** -- Windows notification when batch install completes
 - **Splash screen** -- loading progress indicator while icons are fetched
 - **Select All / Deselect All** per category or globally
@@ -149,6 +150,22 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 
 **Corporate source policy** is stored at `%APPDATA%\Wingetter\source-policy.json`. Enable **Corporate policy** in the footer to refuse selected packages whose source is not listed in that policy. **Export Sources** writes the current policy plus reproducible `winget source add` commands for allowed and private sources.
 
+### Scheduled Update Checks
+
+Run a one-time check without installing updates:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-UpdateCheck.ps1 -SkipMeteredNetwork -Toast
+```
+
+Register a daily current-user scheduled task:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Register-UpdateWatcher.ps1 -DailyAt 09:00
+```
+
+Update-check logs are written under `%APPDATA%\Wingetter\logs\update-checks`.
+
 ## Catalog Validation
 
 The repo includes generated catalog snapshots in `catalog/` and validation tools in `tools/`:
@@ -161,11 +178,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SearchMetadata.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-PackageSources.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SourcePolicy.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-UpdateWatcher.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibility.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
 ```
 
-`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
+`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.UpdateWatcher.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
 
 `catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback data in the catalog and group modules, and `Test-Catalog.ps1` checks launcher/module parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
 

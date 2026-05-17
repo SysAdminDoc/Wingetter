@@ -39,6 +39,10 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SourcePolicy.ps1
 
+      - name: Validate update watcher
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-UpdateWatcher.ps1
+
       - name: Validate visual and accessibility rules
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibility.ps1
