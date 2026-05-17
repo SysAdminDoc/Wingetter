@@ -15,6 +15,7 @@ Wingetter is a Windows-first PowerShell/WPF GUI for discovering, selecting, grou
 - Generated catalog snapshots: `catalog/winget.json` and `catalog/groups.json`.
 - Embedded fallback sync command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1`.
 - Validation command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1`.
+- CI workflow: `.github/workflows/validate.yml` runs catalog sync/count validation, profile JSON tests, WinGet runner helper tests, and WPF XAML load validation on Windows.
 - Built-in groups in code: Essential PC Setup, Web Developer, Python Developer, Creative Suite, Gaming PC, Privacy & Security, System Admin, Streaming Setup, Office & Productivity, and 3D Printing Workshop.
 - Persisted user groups: `%APPDATA%\Wingetter\groups.json`.
 - Icon cache: `%TEMP%\WingetterIcons`.
@@ -55,7 +56,7 @@ Wingetter is currently monolithic:
 - The repo README is now synced to 765 apps and 39 categories, but GitHub repo metadata may still need to be checked if it drifts outside git.
 - `ROADMAP.md` previously included good ideas but lacked prioritization, source IDs, saturation notes, and live repo reconciliation.
 - Catalog JSON, embedded fallback sync, and validation tooling now exist. The remaining catalog risk is that there is no CI job enforcing those checks yet.
-- No CI, Pester tests, release build script, or GitHub Actions validation exists yet.
+- CI now covers catalog sync/counts, profile JSON helpers, WinGet runner helpers, and XAML loading. There is still no release build script or full GUI automation.
 - Install/update result records now capture stderr and exit codes, but status classification still uses some English WinGet output phrases for "already current" cases.
 - WinGet bootstrap no longer downloads GitHub/AppX assets directly, but still depends on PowerShell Gallery availability when the `Microsoft.WinGet.Client` repair path is needed.
 - Several GUI elements still use fully rounded `CornerRadius="999"` or `CornerRadius = 999`, which conflicts with the project-wide visual rule against pill backdrops.
@@ -67,7 +68,7 @@ The next phase should move Wingetter from "large polished script" to "trustworth
 
 1. Add CI so catalog validation and embedded fallback freshness cannot drift silently.
 2. Extend trust visibility with scope, source policy, and pin state.
-3. Add CI checks so counts, package IDs, embedded fallback sync, profile JSON behavior, runner helpers, bootstrap logging, and XAML loading cannot drift silently.
+3. Add deeper tests for import/export edge cases, install-result fixtures, and installed-app parsing.
 4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the catalog and execution layers are separated behind a package-source interface.
 
 ## Source Trail

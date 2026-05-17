@@ -51,6 +51,8 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `tools/Test-Catalog.ps1` - validation command for script parse health, generated JSON freshness, README count drift, duplicate IDs, group references, and changelog formatting.
 - `tools/Test-ProfileJson.ps1` - non-UI smoke test for official WinGet JSON, Wingetter group JSON, and simple package ID array import/export helpers.
 - `tools/Test-WinGetRunner.ps1` - non-installing smoke test for WinGet runner argument handling, safe log names, excerpts, and status classification.
+- `tools/Test-Xaml.ps1` - WPF XAML load smoke test for named controls.
+- `.github/workflows/validate.yml` - GitHub Actions workflow for catalog, profile JSON, runner, and XAML validation on Windows.
 
 ### Files Modified
 
@@ -58,7 +60,7 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `README.md` - synced the version badge, built-in group list, category counts, and catalog validation instructions.
 - `CHANGELOG.md` - replaced malformed historical header with `Unreleased`, `v6.1.0`, and `v6.0.0` entries.
 - `PROJECT_CONTEXT.md` - recorded current catalog validation state and remaining source-of-truth gap.
-- `ROADMAP.md` - converted roadmap entries to checklist headings and marked R-001/R-002/R-003/R-004/R-005/R-006 complete.
+- `ROADMAP.md` - converted roadmap entries to checklist headings and marked R-001/R-002/R-003/R-004/R-005/R-006/R-007 complete.
 - GitHub repository description - synced app count from 734 to 765 through `gh repo edit`.
 
 ### Verification Performed
@@ -68,6 +70,7 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
 - XAML load smoke command confirming `PackageDetailsBorder` exists.
 - Live package detail extraction for `Google.Chrome` using the new helper functions.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1 -CheckWingetAvailability -AvailabilitySampleSize 5`

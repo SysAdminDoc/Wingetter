@@ -12,6 +12,7 @@ All notable changes to Wingetter will be documented in this file.
 - Added: WinGet runner smoke tests for process argument handling and status classification.
 - Added: Package detail panel backed by `winget show` and `winget list` for source, publisher, version, installer type, installer URL, SHA256, and metadata warnings.
 - Added: Audited WinGet bootstrap logging under `%APPDATA%\Wingetter\logs`.
+- Added: GitHub Actions validation for catalog, profile JSON, WinGet runner helpers, and WPF XAML loading.
 - Changed: Local repo runs now prefer the generated catalog and group JSON when present, while retaining embedded data as the one-file fallback.
 - Changed: `catalog/winget.json` and `catalog/groups.json` are now the curation source files; `tools/Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback.
 - Changed: Install/update execution now uses structured process arguments where available, captures stderr, passes `--verbose-logs`, and surfaces the run log directory after completion or cancellation.
