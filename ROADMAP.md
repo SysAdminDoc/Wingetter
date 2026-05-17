@@ -1,75 +1,159 @@
 # Wingetter Roadmap
 
-Forward-looking scope for the 765-app winget GUI. "Ninite, but with full winget coverage."
+Last updated: 2026-05-17.
 
-## Planned Features
+This roadmap is based on local repo reconnaissance plus external package-manager research captured in `.ai/research/2026-05-17/`. Evidence IDs refer to `.ai/research/2026-05-17/SOURCE_REGISTER.md`.
 
-### Catalog
-- Pull catalog from the live winget manifest index (winget-pkgs repo) on first launch so app list stays current without script releases.
-- Bucket second data source: Scoop main/extras buckets, Chocolatey community, PowerShell Gallery modules.
-- Auto-detect duplicate packages across sources and prefer the one with the fewest install prompts.
-- User-contributed catalog entries stored in `%LOCALAPPDATA%\Wingetter\custom.json` and merged at runtime.
+## Product Thesis
 
-### Install Pipeline
-- Parallel install up to N concurrent sessions (winget 1.11+ `--parallel`) with per-app live log tails in expandable rows.
-- Pre-flight dependency resolution: warn about missing VC++ redistributables before installing apps that need them, then batch-install.
-- Post-install smoke test: verify the app's registered exe path resolves and launches `--version` (configurable per-app).
-- Install queue pause/resume/skip and drag-to-reorder.
-- Rollback last session: capture winget transaction log and offer one-click uninstall of everything Wingetter just installed.
+Wingetter should become the simplest trustworthy Windows setup cockpit for power users and sysadmins: Ninite-like batch selection, WinGet-native fidelity, transparent source/manifest trust, reusable local profiles, and export formats that survive machine rebuilds.
 
-### Profiles & Sharing
-- Cloud-free profile sync via OneDrive/Dropbox/Google Drive folder (store JSON group, optional encrypted with user password).
-- Public profile gallery: browse curated groups by category (streamer kit, homelab kit) via read-only GitHub Gist index.
-- Corporate mode: lock the catalog to an internal manifest URL (signed JSON) for MSP/IT deployments.
+## P0 - Foundation And Trust
 
-### UX
-- Fuzzy search across name, Winget ID, tags, description (currently name only).
-- Per-app "last installed" timestamp and version pin indicator.
-- Keyboard nav: arrow keys to move, Space to toggle, Enter to install selected (keeps existing "no keyboard shortcut" rule for commands, this is list nav).
-- Compact/dense mode toggle that shows 2x the apps per viewport.
-- Icon cache versioning: purge the favicon cache after 30 days so rebrands (e.g., X/Twitter) resolve.
+### R-001 - Externalize the catalog and add validation
 
-## Competitive Research
-- **UniGetUI (ex-WingetUI)** — multi-source (winget/scoop/choco/pip/npm) + bundle import/export + auto-update daemon. Wingetter's catalog size is a differentiator; its UX and multi-source are gaps.
-- **Ninite** — web-picker + silent installer; the moat is simplicity. Wingetter's "Export as PS1" already covers this; ship curated "one-click" presets that fit on a single tile.
-- **RuckZuck** — ~600 apps, CM integration; steal the "update all installed" continuous-scan mode.
-- **winstall.app** — browser-based winget bundle builder; mirror its shareable URL schema so a Wingetter preset can be linked from docs/README.
+- Problem: the 765-app catalog is embedded directly inside `Wingetter.ps1`, making curation, review, counting, and stale package detection risky. Evidence: L02, L18.
+- Build: move catalog data to a repo-owned data file such as `catalog/winget.json`; add a generator/validator script that checks unique IDs, category counts, built-in group references, JSON schema, and `winget show --id <id> --exact` availability sampling.
+- Acceptance: `pwsh tools/Test-Catalog.ps1` exits nonzero for duplicate IDs, missing group IDs, invalid icon URLs, stale README counts, or malformed category records.
+- Sources: L02, L18, E08, E09, E11.
 
-## Nice-to-Haves
-- Background "update available" tray icon like UniGetUI with Action Center toast on new versions.
-- Install-time integrity: verify the package's SHA256 against the winget manifest before handing off to winget.
-- Offline mode: pre-cache selected installers to a USB drive for air-gapped deployments.
-- Publish as `Install-Module Wingetter` so CLI-only workflows can consume the catalog.
-- Language pack manager tab (winget also installs MUI packs).
-- Category editor so users can reassign apps to their own taxonomy without editing the script.
+### R-002 - Reconcile versioning, README counts, changelog, and release artifacts
 
-## Open-Source Research (Round 2)
+- Problem: script UI says `v6.1.0`, ignored `CLAUDE.md` says `v0.1.0`, README badge says `preview`, CHANGELOG has a malformed date, and GitHub metadata still says 734 apps. Evidence: L01, L09, L11, L14.
+- Build: pick one project version, sync `Wingetter.ps1`, README badge/text, CHANGELOG, GitHub description, release artifact names, and screenshot captions; add a count-sync check.
+- Acceptance: one command reports version/count agreement across script, README, changelog, and generated catalog metadata.
+- Sources: L01, L09, L11, L14, L18.
 
-### Related OSS Projects
-- https://github.com/UniGetUI/UniGetUI — most active multi-backend GUI (winget/scoop/choco/pip/npm/dotnet)
-- https://github.com/ChrisTitusTech/winutil — PowerShell WPF reference with curated app catalog
-- https://github.com/marticliment/WingetUI — historical WingetUI repo (predecessor to UniGetUI)
-- https://github.com/novus-package-manager/novus — Rust-based, auto-elevates, no admin terminal
-- https://github.com/p32929/siin — Rust batch installer, Ninite-style
-- https://github.com/2rf/winGetDebloated — winget bloatware removal, batch
-- https://github.com/microsoft/winget-pkgs — upstream manifest repo (autocompletion source)
-- https://github.com/valinet/ExplorerPatcher — example of a tool shipped via winget with admin manifest caveats
+### R-003 - Support official `winget export` / `winget import` schema
 
-### Features to Borrow
-- Export installed-apps JSON bundle, import on a new PC to re-install (UniGetUI)
-- Multi-backend: same UI lists winget + scoop + choco packages, unified search (UniGetUI)
-- Tray notifications on successful updates with batched summary (UniGetUI)
-- Admin-elevation per package only when required, not globally (Novus)
-- One-click custom-installer exe like Ninite: bundle selected package IDs into a runnable .ps1/.exe (siin)
-- Source metadata panel: show manifest URL, publisher verification, SHA256 per install (winget-pkgs)
-- "Pin" packages to skip updates (winget-native feature — expose in GUI)
-- Dependency tree preview before install (winget supports requires chains)
-- Category curation powered by YAML in the repo so the 765-app list is PR-reviewable
-- Offline catalog: cache manifests locally so airplane-mode browsing works (winget sources local)
+- Problem: Wingetter has custom group JSON, but WinGet already defines import/export JSON with `Sources`, `Packages`, `PackageIdentifier`, and optional versions.
+- Build: import official WinGet JSON; export official WinGet JSON; preserve Wingetter-only metadata in a separate profile format; validate source names and package availability before execution.
+- Acceptance: a file produced by `winget export` can be imported into Wingetter, edited, and exported back to a file usable by `winget import`.
+- Sources: L04, E03, E04.
 
-### Patterns & Architectures Worth Studying
-- UniGetUI splits each backend behind a shared `IPackageManager` interface — new backends drop in
-- Runspace-based background installs (WinUtil pattern) so UI stays responsive on long install lists
-- Manifest autocompletion by pulling winget-pkgs via sparse git checkout or API index.json
-- Per-app install-args override field with a diff against manifest defaults, logged for audit
-- Progress reporting via `winget --verbose-logs` parsing + structured ETW rather than stdout regex
+### R-004 - Harden install/update execution and result capture
+
+- Problem: install/update launches `winget` serially with joined arguments, reads stdout asynchronously, discards stderr, and classifies results with brittle English text matches.
+- Build: use `ProcessStartInfo.ArgumentList` when available, capture stdout and stderr, write per-package log files, pass `--verbose-logs`, store exit code plus parsed result, surface the WinGet log path, and include a retry/skip state.
+- Acceptance: every package operation leaves a structured result record with command, package ID, action, exit code, stdout excerpt, stderr excerpt, WinGet log path, and final status.
+- Sources: L07, E01, E02.
+
+### R-005 - Add source, manifest, and trust detail panels
+
+- Problem: users select names and package IDs but cannot inspect source, publisher, installer type, URL, hash, scope, or source trust before installing.
+- Build: add a package detail drawer backed by `winget show`, manifest metadata, and source list data; show default sources, explicit sources, installer hash, local manifest warnings, and whether the package comes from `winget`, `msstore`, or another source.
+- Acceptance: selecting a package displays source, publisher, installer type, installer URL when available, SHA256 when available, current installed version when present, and warnings for missing metadata.
+- Sources: E01, E07, E08, E09, L20.
+
+### R-006 - Replace risky WinGet bootstrap flow
+
+- Problem: `Install-WinGet` downloads VCLibs, Microsoft.UI.Xaml, and latest WinGet assets, then installs them without an internal verification/audit path. This is a sensitive bootstrap path.
+- Build: prefer documented Microsoft bootstrap paths such as App Installer registration and `Microsoft.WinGet.Client` `Repair-WinGetPackageManager`; if downloads remain, record source URL, expected signature/hash strategy, and clear error reporting.
+- Acceptance: bootstrap has a documented path, does not silently swallow errors, and logs every downloaded file, source, size, and verification result.
+- Sources: L03, E10, E22.
+
+## P1 - Reliability, Workflow, And Maintainability
+
+### R-007 - Add CI and focused PowerShell tests
+
+- Problem: no automated parse, lint, catalog, export/import, or count checks exist. PSScriptAnalyzer already reports warnings.
+- Build: add Pester tests or script-level checks for parse success, package count, duplicate IDs, built-in group IDs, export/import round trip, and README count sync. Add GitHub Actions for `pwsh` validation.
+- Acceptance: CI fails on parse errors, duplicate package IDs, stale counts, broken group references, or malformed JSON exports.
+- Sources: L13, L18.
+
+### R-008 - Modularize without changing behavior
+
+- Problem: a 3,283-line single script makes targeted fixes and reviews difficult.
+- Build: split into `src/Wingetter.App.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Ui.ps1`, and `Wingetter.ps1` as a thin launcher while keeping direct-run behavior.
+- Acceptance: `Wingetter.ps1` still launches the GUI; tests can import non-UI modules independently.
+- Sources: L01, L04, L07, L08.
+
+### R-009 - Add update pins and package lifecycle controls
+
+- Problem: WinGet has first-class pins, but Wingetter only has install and update review primitives.
+- Build: show current pin state; add pin, blocking pin, gating pin, remove pin, and "include pinned" update option with clear warnings.
+- Acceptance: `winget pin list` state is visible and package rows can add/remove pins without leaving the GUI.
+- Sources: E02, E05, L20.
+
+### R-010 - Improve installed-app detection
+
+- Problem: current detection parses `winget list --source winget` table output with regex and can miss wrapped/truncated or localized rows.
+- Build: evaluate `Microsoft.WinGet.Client` PowerShell cmdlets for object-based installed package data; otherwise use machine-readable output if available and cache scan results with timestamps.
+- Acceptance: installed detection includes package ID, installed version, available version, source, scope when available, and scan timestamp.
+- Sources: L08, E22.
+
+### R-011 - Add profile lifecycle and migration reports
+
+- Problem: saved groups are useful but do not capture source, version intent, installed/current state, failures, or machine migration history.
+- Build: add profile metadata, last run date, per-package state, import warnings, missing packages, unavailable packages, and a "migration report" export.
+- Acceptance: after a run, users can export a report showing selected packages, installed/skipped/failed counts, versions, sources, and commands.
+- Sources: L04, E03, E04, E13, E14.
+
+### R-012 - Make search metadata-rich
+
+- Problem: search only checks name and Winget ID.
+- Build: after catalog externalization, index tags, descriptions, publisher, source, install scope, group membership, installed state, and category. Add fuzzy matching with simple local scoring before considering any model dependency.
+- Acceptance: searching for "vpn privacy", "developer python", publisher names, tags, or partial IDs returns useful package rows with ranked matches.
+- Sources: L06, E08, E19.
+
+### R-013 - Fix visual rule violations and accessibility basics
+
+- Problem: several UI elements use pill-style `CornerRadius=999`; dialogs and status badges should use bounded rectangular radii. Some command flows still rely on confirmation dialogs.
+- Build: replace pill backdrops with 8-12px rectangular radii, preserve true circular progress/indicator use only where visually required, review contrast, focus states, text truncation, and button state clarity.
+- Acceptance: no `CornerRadius="999"` or `CornerRadius = ...999` remains on text-bearing backdrops; common flows remain usable with visible focus and no text overlap.
+- Sources: L16.
+
+## P2 - Ecosystem Expansion
+
+### R-014 - Package-source interface for WinGet first, then Scoop/Chocolatey/PowerShell Gallery
+
+- Problem: multi-backend ideas are premature until catalog and execution are abstracted.
+- Build: define a source adapter contract for search, show/details, install, upgrade, uninstall, export, import, and pin/hold equivalents; implement WinGet first; prototype Scoop, Chocolatey, and PowerShell Gallery after the contract stabilizes.
+- Acceptance: WinGet behavior is unchanged behind an adapter; adding a second source does not require editing WPF event handlers directly.
+- Sources: E12, E16, E17, E18.
+
+### R-015 - Corporate/internal source mode
+
+- Problem: sysadmin/MSP use cases need internal manifests, locked source lists, explicit sources, and audit trails.
+- Build: add a settings profile that locks allowed sources, supports `Microsoft.Rest` private sources, shows source trust level, and exports source configuration.
+- Acceptance: Wingetter can run against a private explicit source and refuse packages outside allowed sources when corporate mode is enabled.
+- Sources: E07, E23, E15, E17.
+
+### R-016 - Scheduled update watcher and tray/status workflow
+
+- Problem: Wingetter is launch-driven, while adjacent tools compete on scheduled update checks and notifications.
+- Build: optional scheduled task or tray companion that checks updates, respects pins/allowlists/blocklists, rotates logs, handles metered networks, and notifies with a concise summary.
+- Acceptance: users can enable a local scheduled update check without forced auto-upgrades.
+- Sources: E12, E15.
+
+### R-017 - Offline download/cache mode
+
+- Problem: air-gapped or low-bandwidth rebuild workflows need prefetch and verification, not just live install.
+- Build: expose `winget download` into a "download selected installers" mode, save manifest metadata, and generate an install manifest for later use.
+- Acceptance: selected packages can be downloaded to a folder with package IDs, source metadata, and a replay script/report.
+- Sources: L21, E01, E08.
+
+### R-018 - WinGet Configuration export
+
+- Problem: WinGet Configuration can express packages plus machine configuration as repeatable YAML, which is stronger than a linear PS1 installer for onboarding.
+- Build: export selected packages into a minimal WinGet Configuration file, then later add optional DSC resources for common developer setup assertions.
+- Acceptance: selected packages can be exported to a valid configuration file that `winget configure validate` accepts.
+- Sources: E06.
+
+### R-019 - Public profile gallery with strict trust boundaries
+
+- Problem: curated setup profiles are a differentiator, but public profiles can become supply-chain risk if they hide sources or override arguments.
+- Build: read-only profile index using plain JSON and signed/hashed profile files; show every package ID and source before import; never auto-run imported profiles.
+- Acceptance: gallery profiles are browseable and importable only after visible review and validation.
+- Sources: E03, E04, E06, E12, E13.
+
+## Rejected Or Deferred
+
+- Parallel install as a near-term promise: the local WinGet 1.28.240 help output does not show a `--parallel` install option, so this remains deferred until verified in official docs or local help.
+- Multi-source UI before refactor: UniGetUI proves the value, but adding sources inside the current monolith would increase coupling.
+- Cloud sync by default: keep profiles local-first; optional folder sync can be added later without accounts.
+- AI/package recommendations as a P0 feature: the project has useful catalog/search data, but trust and reliability are higher leverage first.
+
+## Source Appendix
+
+Primary source URLs are enumerated in `.ai/research/2026-05-17/SOURCE_REGISTER.md`; local file evidence is enumerated there with file and line references.
