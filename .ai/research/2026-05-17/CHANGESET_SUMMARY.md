@@ -293,3 +293,28 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+
+## Development Follow-up: 2026-05-17 WinGet Configuration Export Batch
+
+### Files Created
+
+- `src/Wingetter.Configuration.ps1` - added WinGet Configuration YAML generation and `.winget` export helpers.
+- `tools\Export-WinGetConfiguration.ps1` - exports explicit package IDs to a WinGet Configuration file from the command line.
+- `tools\Test-ConfigurationExport.ps1` - validates generated YAML structure and can optionally run `winget configure validate`.
+
+### Files Modified
+
+- `Wingetter.ps1` and `tools\Test-Catalog.ps1` - added the configuration export module to the module set.
+- `src/Wingetter.Ui.ps1` - added `WinGet Configuration (*.winget)` to the Export Selection dialog.
+- `.github/workflows/validate.yml` - added static WinGet Configuration export validation to CI.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, `ROADMAP.md`, and `SOURCE_REGISTER.md` - documented the new export format, validation command, module boundary, evidence IDs, and marked R-018 complete.
+
+### Verification Performed
+
+- `winget configure --help`
+- `winget configure validate --help`
+- Local generated `.winget` file validation with `winget configure validate -f <temp> --disable-interactivity`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ConfigurationExport.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ConfigurationExport.ps1 -ValidateWithWinget`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
