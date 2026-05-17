@@ -671,6 +671,7 @@ function Show-WinGetInstallerGUI {
                         <Button x:Name="DeleteGroupBtn" Style="{StaticResource ToolBtn}" Content="Delete" Margin="0,0,12,0" FontSize="11.5" Cursor="Hand" ToolTip="Delete the selected saved group"/>
                         <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="0,2,12,2"/>
                         <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON or a PowerShell install script"/>
+                        <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and winget source commands"/>
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="CopyCommandBtn" Style="{StaticResource ToolBtn}" Content="Copy Commands" FontSize="11.5" Cursor="Hand"/>
                         <Border x:Name="Divider2" Visibility="Collapsed" Width="0"/>
@@ -825,7 +826,8 @@ function Show-WinGetInstallerGUI {
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <CheckBox x:Name="SilentCheck" Content="Use silent install where available" IsChecked="True" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center"/>
                         <CheckBox x:Name="AcceptCheck" Content="Accept package and source agreements" IsChecked="True" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center"/>
-                        <CheckBox x:Name="IncludePinnedCheck" Content="Include pinned updates" IsChecked="False" FontSize="12.5" VerticalAlignment="Center" ToolTip="Applies --include-pinned to update runs. Blocking pins still cannot be overridden."/>
+                        <CheckBox x:Name="IncludePinnedCheck" Content="Include pinned updates" IsChecked="False" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center" ToolTip="Applies --include-pinned to update runs. Blocking pins still cannot be overridden."/>
+                        <CheckBox x:Name="CorporateModeCheck" Content="Corporate policy" IsChecked="False" FontSize="12.5" VerticalAlignment="Center" ToolTip="Refuse packages whose source is not listed in the Wingetter source policy."/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="InstallWinGetBtn" Style="{StaticResource ToolBtn}" Content="Install WinGet" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" Visibility="Collapsed"/>
@@ -920,6 +922,7 @@ function Show-WinGetInstallerGUI {
     $SelectAllBtn     = $Window.FindName("SelectAllBtn")
     $DeselectAllBtn   = $Window.FindName("DeselectAllBtn")
     $ExportBtn        = $Window.FindName("ExportBtn")
+    $ExportSourcesBtn = $Window.FindName("ExportSourcesBtn")
     $ImportBtn        = $Window.FindName("ImportBtn")
     $CopyCommandBtn   = $Window.FindName("CopyCommandBtn")
     $InstallWinGetBtn = $Window.FindName("InstallWinGetBtn")
@@ -930,6 +933,7 @@ function Show-WinGetInstallerGUI {
     $SilentCheck      = $Window.FindName("SilentCheck")
     $AcceptCheck      = $Window.FindName("AcceptCheck")
     $IncludePinnedCheck = $Window.FindName("IncludePinnedCheck")
+    $CorporateModeCheck = $Window.FindName("CorporateModeCheck")
     $ModeBtn          = $Window.FindName("ModeBtn")
 
     $MainScroll       = $Window.FindName("MainScroll")
@@ -976,6 +980,7 @@ function Show-WinGetInstallerGUI {
     $ui["VisibleCountBorder"] = $Window.FindName("VisibleCountBorder")
     $ui["VisibleCountText"]   = $VisibleCountText
     $ui["GroupCombo"]          = $GroupCombo
+    $ui["ExportSourcesBtn"]    = $ExportSourcesBtn
     $ui["SidebarPanel"]        = $SidebarPanel
     $ui["SidebarBorder"]       = $Window.FindName("SidebarBorder")
     $ui["SidebarTitle"]        = $Window.FindName("SidebarTitle")
@@ -1043,11 +1048,13 @@ function Show-WinGetInstallerGUI {
     $ui["CategoryAppsStacks"]  = [System.Collections.ArrayList]::new()
     $ui["BuiltInGroups"]       = $Script:BuiltInGroups
     $ui["PackageSource"]       = Get-WingetterPackageSourceAdapter -Name "winget"
+    $ui["SourcePolicy"]        = Get-WingetterSourcePolicy
+    $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ImportBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $ImportBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
-    foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck)) {
+    foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck, $CorporateModeCheck)) {
         [void]$ui["Elements"]["FooterChecks"].Add($chk)
     }
 
@@ -1162,7 +1169,7 @@ function Show-WinGetInstallerGUI {
                     -WingetId $packageId `
                     -Category ([string]$appEntry["Category"]) `
                     -Groups $groups `
-                    -Source $(if ($installedRecord) { [string]$installedRecord.Source } else { "" }) `
+                    -Source $(if ($installedRecord) { [string]$installedRecord.Source } else { Get-WingetterPackageCatalogSourceName -App $appEntry -DefaultSource $ui["PackageSource"].Name }) `
                     -Scope $(if ($installedRecord) { [string]$installedRecord.Scope } else { "" }) `
                     -IsInstalled ([bool]$installedRecord) `
                     -IsPinned ($ui["PinnedIds"].ContainsKey($packageId)) `
@@ -1454,6 +1461,8 @@ function Show-WinGetInstallerGUI {
         $ui["SelectedPackage"] = $App
         $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Visible
         $ui["PackageDetailsTitle"].Text = $App.Name
+        $sourceName = Get-WingetterPackageCatalogSourceName -App $App -DefaultSource $ui["PackageSource"].Name
+        $policyCheck = Test-WingetterPackageAllowedBySourcePolicy -Policy $ui["SourcePolicy"] -PackageId $App.WingetId -SourceName $sourceName
         $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - loading source and installer metadata..."
         & $SetDetailText $ui["DetailSource"] "-"
         & $SetDetailText $ui["DetailPublisher"] "-"
@@ -1466,9 +1475,9 @@ function Show-WinGetInstallerGUI {
         & $SetDetailText $ui["DetailPinState"] "Loading..."
         [System.Windows.Forms.Application]::DoEvents()
 
-        $details = Get-WingetterPackageSourceDetails -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId
+        $details = Get-WingetterPackageSourceDetails -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId -SourceName $sourceName
         $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId
-        & $SetDetailText $ui["DetailSource"] $details.Source
+        & $SetDetailText $ui["DetailSource"] (Get-WingetterPackageSourceTrustSummary -Policy $ui["SourcePolicy"] -SourceName $(if ($details.Source) { $details.Source } else { $sourceName }))
         & $SetDetailText $ui["DetailPublisher"] $details.Publisher
         $installedRecord = if ($ui["InstalledIds"].ContainsKey($App.WingetId)) { $ui["InstalledIds"][$App.WingetId] } else { $null }
         $installedText = if ($details.InstalledVersion) {
@@ -1486,8 +1495,10 @@ function Show-WinGetInstallerGUI {
         & $SetDetailText $ui["DetailInstallerType"] $details.InstallerType
         & $SetDetailText $ui["DetailInstallerUrl"] $(if ($details.InstallerUrl) { "URL: $($details.InstallerUrl)" } elseif ($details.Homepage) { "Homepage: $($details.Homepage)" } else { "" })
         & $SetDetailText $ui["DetailSha256"] $details.InstallerSha256
-        if ($details.Warnings.Count -gt 0) {
-            $ui["DetailWarnings"].Text = "Warnings: $($details.Warnings -join ' ')"
+        $warnings = @($details.Warnings)
+        if (!$policyCheck.Allowed) { $warnings += $policyCheck.Reason }
+        if ($warnings.Count -gt 0) {
+            $ui["DetailWarnings"].Text = "Warnings: $($warnings -join ' ')"
         } else {
             $ui["DetailWarnings"].Text = ""
         }
@@ -1755,8 +1766,9 @@ function Show-WinGetInstallerGUI {
             [void]$categoryCheckboxList.Add($checkbox)
 
             # Track for filtering
+            $appSourceName = Get-WingetterPackageCatalogSourceName -App $app -DefaultSource $ui["PackageSource"].Name
             [void]$catData["Apps"].Add(@{
-                Border = $appBorder; Name = $app.Name; WingetId = $app.WingetId; Category = $category; OriginalIndex = $appNum; SearchScore = 0
+                Border = $appBorder; Name = $app.Name; WingetId = $app.WingetId; Source = $appSourceName; Category = $category; OriginalIndex = $appNum; SearchScore = 0
             })
         }
 
@@ -2005,6 +2017,13 @@ function Show-WinGetInstallerGUI {
         $ProgressText.Text = if ($installed) { "WinGet is ready.$logSuffix" } else { "WinGet repair needs manual follow-up.$logSuffix" }
     }.GetNewClosure())
 
+    $CorporateModeCheck.Add_Click({
+        $ui["SourcePolicy"] = Set-WingetterSourcePolicyCorporateMode -Policy $ui["SourcePolicy"] -Enabled ([bool]$CorporateModeCheck.IsChecked)
+        $ui["SourcePolicy"] = Save-WingetterSourcePolicy -Policy $ui["SourcePolicy"]
+        $allowedSources = @((Get-WingetterSourcePolicyDefinitions -Policy $ui["SourcePolicy"]) | ForEach-Object { $_.Name }) -join ", "
+        $ProgressText.Text = if ($ui["SourcePolicy"].CorporateMode) { "Corporate source policy enabled: $allowedSources." } else { "Corporate source policy disabled." }
+    }.GetNewClosure())
+
     # ========================================================
     # GROUP HANDLERS
     # ========================================================
@@ -2170,6 +2189,20 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
+    $ExportSourcesBtn.Add_Click({
+        $dlg = New-Object Microsoft.Win32.SaveFileDialog
+        $dlg.Filter = "Wingetter Source Policy (*.json)|*.json"
+        $dlg.FileName = "Wingetter-Source-Policy.json"
+        if ($dlg.ShowDialog() -eq $true) {
+            try {
+                Export-WingetterSourcePolicy -Policy $ui["SourcePolicy"] -FilePath $dlg.FileName | Out-Null
+                $ProgressText.Text = "Exported source policy to $($dlg.FileName)."
+            } catch {
+                $ProgressText.Text = "Source policy export failed: $($_.Exception.Message)"
+            }
+        }
+    }.GetNewClosure())
+
     # ========================================================
     # IMPORT (WinGet JSON, Wingetter JSON, or simple package ID arrays)
     # ========================================================
@@ -2213,10 +2246,11 @@ function Show-WinGetInstallerGUI {
     }.GetNewClosure())
 
     $CopyCommandBtn.Add_Click({
-        $sel = @(); foreach ($cb in $ui["AllCheckboxes"].Values) { if ($cb.IsChecked) { $sel += $cb.Tag.WingetId } }
+        $sel = @(); foreach ($cb in $ui["AllCheckboxes"].Values) { if ($cb.IsChecked) { $sel += $cb } }
         if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before copying commands."; return }
         $cmds = $sel | ForEach-Object {
-            Get-WingetterPackageSourceInstallCommand -SourceAdapter $ui["PackageSource"] -PackageId $_ -Silent ([bool]$SilentCheck.IsChecked) -AcceptAgreements ([bool]$AcceptCheck.IsChecked)
+            $sourceName = Get-WingetterPackageCatalogSourceName -App $_.Tag -DefaultSource $ui["PackageSource"].Name
+            Get-WingetterPackageSourceInstallCommand -SourceAdapter $ui["PackageSource"] -PackageId $_.Tag.WingetId -SourceName $sourceName -Silent ([bool]$SilentCheck.IsChecked) -AcceptAgreements ([bool]$AcceptCheck.IsChecked)
         }
         [System.Windows.Clipboard]::SetText(($cmds -join "`n")); $ProgressText.Text = "Copied $($sel.Count) winget commands to the clipboard."
     }.GetNewClosure())
@@ -2279,11 +2313,27 @@ function Show-WinGetInstallerGUI {
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can install packages. Use 'Install WinGet' and try again.", "WinGet Required", "OK", "Warning"); return }
         $selected = @()
-        foreach ($cb in $ui["AllCheckboxes"].Values) { if ($cb.IsChecked) { $selected += @{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId } } }
+        $blockedByPolicy = @()
+        foreach ($cb in $ui["AllCheckboxes"].Values) {
+            if ($cb.IsChecked) {
+                $sourceName = Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name
+                $policyCheck = Test-WingetterPackageAllowedBySourcePolicy -Policy $ui["SourcePolicy"] -PackageId $cb.Tag.WingetId -SourceName $sourceName
+                if (!$policyCheck.Allowed) {
+                    $blockedByPolicy += "$($cb.Tag.Name) [$sourceName]"
+                } else {
+                    $selected += @{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName }
+                }
+            }
+        }
+        if ($blockedByPolicy.Count -gt 0) {
+            [System.Windows.MessageBox]::Show("Corporate source policy blocked: $($blockedByPolicy -join ', ')", "Source Policy Blocked", "OK", "Warning")
+            $ProgressText.Text = "Corporate source policy blocked $($blockedByPolicy.Count) selected package(s)."
+            return
+        }
         if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }
 
         $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true; $SelectAllBtn.IsEnabled = $false; $DeselectAllBtn.IsEnabled = $false
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportReportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $ExportReportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
             $ctl.IsEnabled = $false
         }
         $ui["Cancelled"] = $false
@@ -2312,6 +2362,7 @@ function Show-WinGetInstallerGUI {
                 -Action $operation `
                 -PackageId $app.WingetId `
                 -PackageName $app.Name `
+                -SourceName $app.SourceName `
                 -Silent ([bool]$SilentCheck.IsChecked) `
                 -AcceptAgreements ([bool]$AcceptCheck.IsChecked) `
                 -IncludePinned ([bool]$IncludePinnedCheck.IsChecked) `
@@ -2362,7 +2413,7 @@ function Show-WinGetInstallerGUI {
         try { Export-WingetterMigrationReport -Report $report -FilePath $reportPath } catch {}
 
         $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false; $SelectAllBtn.IsEnabled = $true; $DeselectAllBtn.IsEnabled = $true
-        foreach ($ctl in @($ImportBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck)) {
+        foreach ($ctl in @($ImportBtn, $ExportSourcesBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
             $ctl.IsEnabled = $true
         }
         $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
@@ -2410,6 +2461,7 @@ function Show-WinGetInstallerGUI {
         $SaveGroupBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $DeleteGroupBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ExportBtn.Visibility = [System.Windows.Visibility]::Collapsed
+        $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ImportBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $CopyCommandBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $Divider1.Visibility = [System.Windows.Visibility]::Collapsed
@@ -2488,6 +2540,7 @@ function Show-WinGetInstallerGUI {
         $SaveGroupBtn.Visibility = [System.Windows.Visibility]::Visible
         $DeleteGroupBtn.Visibility = [System.Windows.Visibility]::Visible
         $ExportBtn.Visibility = [System.Windows.Visibility]::Visible
+        $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Visible
         $ImportBtn.Visibility = [System.Windows.Visibility]::Visible
         $CopyCommandBtn.Visibility = [System.Windows.Visibility]::Visible
         $Divider1.Visibility = [System.Windows.Visibility]::Visible

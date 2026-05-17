@@ -18,11 +18,23 @@ function ConvertFrom-WingetterCatalogJson {
             $apps = @()
             foreach ($app in @($category.apps)) {
                 $icon = if ($app.iconUrl) { [string]$app.iconUrl } else { "${f}$($app.iconDomain)" }
-                $apps += @{
+                $entry = @{
                     Name     = [string]$app.name
                     WingetId = [string]$app.wingetId
                     Icon     = $icon
                 }
+                foreach ($sourceProperty in @("source", "sourceName", "sourceType", "sourceTrustLevel")) {
+                    $prop = $app.PSObject.Properties[$sourceProperty]
+                    if ($prop -and ![string]::IsNullOrWhiteSpace([string]$prop.Value)) {
+                        switch ($sourceProperty) {
+                            "source" { $entry["Source"] = [string]$prop.Value }
+                            "sourceName" { $entry["Source"] = [string]$prop.Value }
+                            "sourceType" { $entry["SourceType"] = [string]$prop.Value }
+                            "sourceTrustLevel" { $entry["SourceTrustLevel"] = [string]$prop.Value }
+                        }
+                    }
+                }
+                $apps += $entry
             }
             if ($apps.Count -gt 0) {
                 $database[[string]$category.name] = $apps

@@ -81,10 +81,15 @@ function Get-WingetterWinGetSourceAdapter {
         Search = {
             param(
                 [string]$Query,
+                [string]$SourceName = "",
                 [int]$TimeoutSeconds = 20
             )
             $arguments = @("search")
             if (![string]::IsNullOrWhiteSpace($Query)) { $arguments += $Query }
+            if (![string]::IsNullOrWhiteSpace($SourceName)) {
+                $arguments += "--source"
+                $arguments += $SourceName
+            }
             $arguments += "--disable-interactivity"
             $arguments += "--accept-source-agreements"
             $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds $TimeoutSeconds
@@ -99,13 +104,17 @@ function Get-WingetterWinGetSourceAdapter {
             }
         }
         GetDetails = {
-            param([string]$PackageId)
-            Get-WinGetPackageDetails -PackageId $PackageId
+            param(
+                [string]$PackageId,
+                [string]$SourceName = ""
+            )
+            Get-WinGetPackageDetails -PackageId $PackageId -SourceName $SourceName
         }
         Install = {
             param(
                 [string]$PackageId,
                 [string]$PackageName,
+                [string]$SourceName = "",
                 [bool]$Silent,
                 [bool]$AcceptAgreements,
                 [bool]$IncludePinned,
@@ -113,12 +122,13 @@ function Get-WingetterWinGetSourceAdapter {
                 [scriptblock]$ShouldCancel = { $false },
                 [scriptblock]$PumpUi = {}
             )
-            Invoke-WinGetPackageOperation -Action "install" -PackageId $PackageId -PackageName $PackageName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
+            Invoke-WinGetPackageOperation -Action "install" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
         }
         Upgrade = {
             param(
                 [string]$PackageId,
                 [string]$PackageName,
+                [string]$SourceName = "",
                 [bool]$Silent,
                 [bool]$AcceptAgreements,
                 [bool]$IncludePinned,
@@ -126,12 +136,13 @@ function Get-WingetterWinGetSourceAdapter {
                 [scriptblock]$ShouldCancel = { $false },
                 [scriptblock]$PumpUi = {}
             )
-            Invoke-WinGetPackageOperation -Action "upgrade" -PackageId $PackageId -PackageName $PackageName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
+            Invoke-WinGetPackageOperation -Action "upgrade" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
         }
         Uninstall = {
             param(
                 [string]$PackageId,
                 [string]$PackageName,
+                [string]$SourceName = "",
                 [bool]$Silent,
                 [bool]$AcceptAgreements,
                 [bool]$IncludePinned,
@@ -139,7 +150,7 @@ function Get-WingetterWinGetSourceAdapter {
                 [scriptblock]$ShouldCancel = { $false },
                 [scriptblock]$PumpUi = {}
             )
-            Invoke-WinGetPackageOperation -Action "uninstall" -PackageId $PackageId -PackageName $PackageName -Silent $Silent -AcceptAgreements $false -IncludePinned $false -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
+            Invoke-WinGetPackageOperation -Action "uninstall" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $false -IncludePinned $false -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
         }
         ExportProfile = {
             param(
@@ -157,8 +168,11 @@ function Get-WingetterWinGetSourceAdapter {
             Import-PackageIdsFromJSON -Content $Content -FallbackGroupName $FallbackGroupName
         }
         GetInstalledCatalogPackages = {
-            param([string[]]$PackageIds)
-            Get-WinGetInstalledCatalogPackages -PackageIds $PackageIds
+            param(
+                [string[]]$PackageIds,
+                [string]$SourceName = ""
+            )
+            Get-WinGetInstalledCatalogPackages -PackageIds $PackageIds -SourceName $SourceName
         }
         GetPinStatus = {
             param([string]$PackageId)
@@ -174,10 +188,11 @@ function Get-WingetterWinGetSourceAdapter {
         GetInstallCommand = {
             param(
                 [string]$PackageId,
+                [string]$SourceName = "",
                 [bool]$Silent,
                 [bool]$AcceptAgreements
             )
-            $arguments = New-WinGetPackageOperationArguments -Action "install" -PackageId $PackageId -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $false
+            $arguments = New-WinGetPackageOperationArguments -Action "install" -PackageId $PackageId -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $false
             "winget " + (Join-ProcessArguments -Arguments $arguments)
         }
     }
@@ -249,10 +264,12 @@ function Search-WingetterPackageSource {
     param(
         [object]$SourceAdapter,
         [string]$Query,
+        [string]$SourceName = "",
         [int]$TimeoutSeconds = 20
     )
     Invoke-WingetterPackageSourceOperation -SourceAdapter $SourceAdapter -Operation "Search" -Parameters @{
         Query          = $Query
+        SourceName     = $SourceName
         TimeoutSeconds = $TimeoutSeconds
     }
 }
@@ -260,10 +277,12 @@ function Search-WingetterPackageSource {
 function Get-WingetterPackageSourceDetails {
     param(
         [object]$SourceAdapter,
-        [string]$PackageId
+        [string]$PackageId,
+        [string]$SourceName = ""
     )
     Invoke-WingetterPackageSourceOperation -SourceAdapter $SourceAdapter -Operation "GetDetails" -Parameters @{
-        PackageId = $PackageId
+        PackageId  = $PackageId
+        SourceName = $SourceName
     }
 }
 
@@ -274,6 +293,7 @@ function Invoke-WingetterPackageSourcePackageOperation {
         [string]$Action,
         [string]$PackageId,
         [string]$PackageName,
+        [string]$SourceName = "",
         [bool]$Silent,
         [bool]$AcceptAgreements,
         [bool]$IncludePinned,
@@ -291,6 +311,7 @@ function Invoke-WingetterPackageSourcePackageOperation {
     Invoke-WingetterPackageSourceOperation -SourceAdapter $SourceAdapter -Operation $operation -Parameters @{
         PackageId        = $PackageId
         PackageName      = $PackageName
+        SourceName       = $SourceName
         Silent           = $Silent
         AcceptAgreements = $AcceptAgreements
         IncludePinned    = $IncludePinned
@@ -340,7 +361,8 @@ function Get-WingetterPackageSourceInstalledCatalogPackages {
         }
     }
     Invoke-WingetterPackageSourceOperation -SourceAdapter $SourceAdapter -Operation "GetInstalledCatalogPackages" -Parameters @{
-        PackageIds = $PackageIds
+        PackageIds  = $PackageIds
+        SourceName   = $SourceName
     }
 }
 
@@ -370,12 +392,330 @@ function Get-WingetterPackageSourceInstallCommand {
     param(
         [object]$SourceAdapter,
         [string]$PackageId,
+        [string]$SourceName = "",
         [bool]$Silent,
         [bool]$AcceptAgreements
     )
     Invoke-WingetterPackageSourceOperation -SourceAdapter $SourceAdapter -Operation "GetInstallCommand" -Parameters @{
         PackageId        = $PackageId
+        SourceName       = $SourceName
         Silent           = $Silent
         AcceptAgreements = $AcceptAgreements
     }
+}
+
+function Get-WingetterSourcePolicyPath {
+    $root = Join-Path $env:APPDATA "Wingetter"
+    if (!(Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+    return (Join-Path $root "source-policy.json")
+}
+
+function New-WingetterSourceDefinition {
+    param(
+        [string]$Name,
+        [string]$Type = "Microsoft.PreIndexed.Package",
+        [string]$Argument = "",
+        [ValidateSet("Community", "Trusted", "Private", "Unknown")]
+        [string]$TrustLevel = "Community",
+        [bool]$Explicit = $false,
+        [bool]$Private = $false,
+        [string]$Header = ""
+    )
+
+    [PSCustomObject]@{
+        Name       = $Name
+        Type       = $Type
+        Argument   = $Argument
+        TrustLevel = $TrustLevel
+        Explicit   = [bool]$Explicit
+        Private    = [bool]$Private
+        Header     = $Header
+    }
+}
+
+function New-WingetterPrivateRestSourceDefinition {
+    param(
+        [string]$Name,
+        [string]$Argument,
+        [string]$Header = "",
+        [bool]$Explicit = $true
+    )
+
+    New-WingetterSourceDefinition -Name $Name -Type "Microsoft.Rest" -Argument $Argument -TrustLevel "Private" -Explicit $Explicit -Private $true -Header $Header
+}
+
+function New-WingetterDefaultSourcePolicy {
+    $defaultSource = New-WingetterSourceDefinition -Name "winget" -Type "Microsoft.PreIndexed.Package" -Argument "https://cdn.winget.microsoft.com/cache" -TrustLevel "Community" -Explicit $false -Private $false
+    [PSCustomObject]@{
+        Schema                = "Wingetter.SourcePolicy.v1"
+        CorporateMode         = $false
+        RequireAllowedSource  = $true
+        AllowedSources        = @($defaultSource)
+        PrivateSources        = @()
+        Notes                 = "Enable CorporateMode to refuse packages whose source is not listed in AllowedSources or PrivateSources."
+        UpdatedAtUtc          = (Get-Date).ToUniversalTime().ToString("o")
+    }
+}
+
+function Get-WingetterPolicyPropertyValue {
+    param(
+        [object]$InputObject,
+        [string]$PropertyName,
+        [object]$DefaultValue = $null
+    )
+
+    if ($null -eq $InputObject) { return $DefaultValue }
+    if ($InputObject -is [System.Collections.IDictionary] -and $InputObject.Contains($PropertyName)) {
+        return $InputObject[$PropertyName]
+    }
+    $prop = $InputObject.PSObject.Properties[$PropertyName]
+    if ($prop) { return $prop.Value }
+    return $DefaultValue
+}
+
+function ConvertTo-WingetterSourceDefinition {
+    param([object]$Source)
+
+    if ($null -eq $Source) { return $null }
+    $name = [string](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Name" -DefaultValue "")
+    if ([string]::IsNullOrWhiteSpace($name)) { return $null }
+
+    $type = [string](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Type" -DefaultValue "Microsoft.PreIndexed.Package")
+    $argument = [string](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Argument" -DefaultValue "")
+    $trustLevel = [string](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "TrustLevel" -DefaultValue "Unknown")
+    if (@("Community", "Trusted", "Private", "Unknown") -notcontains $trustLevel) { $trustLevel = "Unknown" }
+    $explicit = [bool](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Explicit" -DefaultValue $false)
+    $private = [bool](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Private" -DefaultValue $false)
+    $header = [string](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Header" -DefaultValue "")
+
+    New-WingetterSourceDefinition -Name $name -Type $type -Argument $argument -TrustLevel $trustLevel -Explicit $explicit -Private $private -Header $header
+}
+
+function ConvertTo-WingetterSourcePolicy {
+    param([object]$Policy)
+
+    $defaultPolicy = New-WingetterDefaultSourcePolicy
+    if ($null -eq $Policy) { return $defaultPolicy }
+
+    $allowed = @()
+    foreach ($source in @((Get-WingetterPolicyPropertyValue -InputObject $Policy -PropertyName "AllowedSources" -DefaultValue @()))) {
+        $converted = ConvertTo-WingetterSourceDefinition -Source $source
+        if ($converted) { $allowed += $converted }
+    }
+    if ($allowed.Count -eq 0) { $allowed = @($defaultPolicy.AllowedSources) }
+
+    $private = @()
+    foreach ($source in @((Get-WingetterPolicyPropertyValue -InputObject $Policy -PropertyName "PrivateSources" -DefaultValue @()))) {
+        $converted = ConvertTo-WingetterSourceDefinition -Source $source
+        if ($converted) { $private += $converted }
+    }
+
+    [PSCustomObject]@{
+        Schema                = "Wingetter.SourcePolicy.v1"
+        CorporateMode         = [bool](Get-WingetterPolicyPropertyValue -InputObject $Policy -PropertyName "CorporateMode" -DefaultValue $false)
+        RequireAllowedSource  = [bool](Get-WingetterPolicyPropertyValue -InputObject $Policy -PropertyName "RequireAllowedSource" -DefaultValue $true)
+        AllowedSources        = @($allowed)
+        PrivateSources        = @($private)
+        Notes                 = [string](Get-WingetterPolicyPropertyValue -InputObject $Policy -PropertyName "Notes" -DefaultValue $defaultPolicy.Notes)
+        UpdatedAtUtc          = [string](Get-WingetterPolicyPropertyValue -InputObject $Policy -PropertyName "UpdatedAtUtc" -DefaultValue (Get-Date).ToUniversalTime().ToString("o"))
+    }
+}
+
+function Get-WingetterSourcePolicy {
+    param([string]$Path = (Get-WingetterSourcePolicyPath))
+
+    if (![string]::IsNullOrWhiteSpace($Path) -and (Test-Path $Path)) {
+        try {
+            return ConvertTo-WingetterSourcePolicy -Policy (Get-Content -Path $Path -Raw | ConvertFrom-Json)
+        } catch {
+            return New-WingetterDefaultSourcePolicy
+        }
+    }
+
+    return New-WingetterDefaultSourcePolicy
+}
+
+function Save-WingetterSourcePolicy {
+    param(
+        [object]$Policy,
+        [string]$Path = (Get-WingetterSourcePolicyPath)
+    )
+
+    $normalized = ConvertTo-WingetterSourcePolicy -Policy $Policy
+    $normalized.UpdatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+    $parent = Split-Path -Parent $Path
+    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+    $normalized | ConvertTo-Json -Depth 8 | Set-Content -Path $Path -Encoding UTF8
+    return $normalized
+}
+
+function Set-WingetterSourcePolicyCorporateMode {
+    param(
+        [object]$Policy,
+        [bool]$Enabled
+    )
+
+    $normalized = ConvertTo-WingetterSourcePolicy -Policy $Policy
+    $normalized.CorporateMode = [bool]$Enabled
+    $normalized.UpdatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+    return $normalized
+}
+
+function Get-WingetterSourcePolicyDefinitions {
+    param([object]$Policy)
+
+    $normalized = ConvertTo-WingetterSourcePolicy -Policy $Policy
+    $definitions = @()
+    $seen = @{}
+    foreach ($source in @(@($normalized.AllowedSources) + @($normalized.PrivateSources))) {
+        if ($null -eq $source -or [string]::IsNullOrWhiteSpace([string]$source.Name)) { continue }
+        $key = ([string]$source.Name).ToLowerInvariant()
+        if ($seen.ContainsKey($key)) { continue }
+        $seen[$key] = $true
+        $definitions += $source
+    }
+    return $definitions
+}
+
+function Get-WingetterSourceDefinition {
+    param(
+        [object]$Policy,
+        [string]$Name
+    )
+
+    foreach ($source in @(Get-WingetterSourcePolicyDefinitions -Policy $Policy)) {
+        if ([string]::Equals([string]$source.Name, [string]$Name, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $source
+        }
+    }
+    return $null
+}
+
+function Get-WingetterPackageCatalogSourceName {
+    param(
+        [object]$App,
+        [string]$DefaultSource = "winget"
+    )
+
+    foreach ($propertyName in @("Source", "SourceName", "PackageSource")) {
+        $value = Get-WingetterPolicyPropertyValue -InputObject $App -PropertyName $propertyName -DefaultValue ""
+        if (![string]::IsNullOrWhiteSpace([string]$value)) { return [string]$value }
+    }
+    return $DefaultSource
+}
+
+function Test-WingetterPackageAllowedBySourcePolicy {
+    param(
+        [object]$Policy,
+        [string]$PackageId,
+        [string]$SourceName = "winget"
+    )
+
+    $normalized = ConvertTo-WingetterSourcePolicy -Policy $Policy
+    $resolvedSource = if ([string]::IsNullOrWhiteSpace($SourceName)) { "winget" } else { $SourceName }
+    $definition = Get-WingetterSourceDefinition -Policy $normalized -Name $resolvedSource
+
+    if (!$normalized.CorporateMode) {
+        $trust = if ($definition) { [string]$definition.TrustLevel } else { "Unknown" }
+        $type = if ($definition) { [string]$definition.Type } else { "Unknown" }
+        return [PSCustomObject]@{
+            PackageId  = $PackageId
+            SourceName = $resolvedSource
+            Allowed    = $true
+            TrustLevel = $trust
+            SourceType = $type
+            Reason     = "Corporate mode is disabled."
+        }
+    }
+
+    if ($normalized.RequireAllowedSource -and $null -eq $definition) {
+        return [PSCustomObject]@{
+            PackageId  = $PackageId
+            SourceName = $resolvedSource
+            Allowed    = $false
+            TrustLevel = "Unknown"
+            SourceType = "Unknown"
+            Reason     = "Source '$resolvedSource' is not listed in the corporate source policy."
+        }
+    }
+
+    [PSCustomObject]@{
+        PackageId  = $PackageId
+        SourceName = $resolvedSource
+        Allowed    = $true
+        TrustLevel = if ($definition) { [string]$definition.TrustLevel } else { "Unknown" }
+        SourceType = if ($definition) { [string]$definition.Type } else { "Unknown" }
+        Reason     = "Source '$resolvedSource' is allowed by the corporate source policy."
+    }
+}
+
+function Get-WingetterPackageSourceTrustSummary {
+    param(
+        [object]$Policy,
+        [string]$SourceName = "winget"
+    )
+
+    $check = Test-WingetterPackageAllowedBySourcePolicy -Policy $Policy -PackageId "" -SourceName $SourceName
+    $state = if ($check.Allowed) { "allowed" } else { "blocked" }
+    "$($check.SourceName) / $($check.TrustLevel) / $state"
+}
+
+function New-WingetterWinGetSourceAddArguments {
+    param([object]$Source)
+
+    $definition = ConvertTo-WingetterSourceDefinition -Source $Source
+    if ($null -eq $definition) { throw "Cannot build source command for an empty source definition." }
+    if ([string]::IsNullOrWhiteSpace($definition.Argument)) { throw "Source '$($definition.Name)' is missing an Argument URL/path." }
+
+    $arguments = @("source", "add", "--name", [string]$definition.Name, "--arg", [string]$definition.Argument, "--type", [string]$definition.Type)
+    $trust = if ($definition.TrustLevel -in @("Trusted", "Private")) { "trusted" } else { "none" }
+    $arguments += "--trust-level"
+    $arguments += $trust
+    if ($definition.Explicit) { $arguments += "--explicit" }
+    if (![string]::IsNullOrWhiteSpace($definition.Header)) {
+        $arguments += "--header"
+        $arguments += [string]$definition.Header
+    }
+    $arguments += "--accept-source-agreements"
+    $arguments += "--disable-interactivity"
+    return [string[]]$arguments
+}
+
+function New-WingetterWinGetSourceAddCommand {
+    param([object]$Source)
+    "winget " + (Join-ProcessArguments -Arguments (New-WingetterWinGetSourceAddArguments -Source $Source))
+}
+
+function Export-WingetterSourcePolicy {
+    param(
+        [object]$Policy,
+        [string]$FilePath
+    )
+
+    $normalized = ConvertTo-WingetterSourcePolicy -Policy $Policy
+    $commands = @()
+    foreach ($source in @(Get-WingetterSourcePolicyDefinitions -Policy $normalized)) {
+        if (![string]::IsNullOrWhiteSpace([string]$source.Argument)) {
+            $commands += New-WingetterWinGetSourceAddCommand -Source $source
+        }
+    }
+
+    $export = [ordered]@{
+        Schema            = "Wingetter.SourcePolicyExport.v1"
+        ExportedAtUtc     = (Get-Date).ToUniversalTime().ToString("o")
+        CorporateMode     = [bool]$normalized.CorporateMode
+        RequireAllowedSource = [bool]$normalized.RequireAllowedSource
+        AllowedSources    = @($normalized.AllowedSources)
+        PrivateSources    = @($normalized.PrivateSources)
+        SourceAddCommands = @($commands)
+    }
+
+    $parent = Split-Path -Parent $FilePath
+    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+    $export | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+    return [PSCustomObject]$export
 }

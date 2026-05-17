@@ -194,6 +194,32 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
 
+## Development Follow-up: 2026-05-17 Corporate Source Policy Batch
+
+### Files Created
+
+- `tools/Test-SourcePolicy.ps1` - validates corporate source policy behavior, private `Microsoft.Rest` source definitions, explicit source command generation, save/load, and export.
+
+### Files Modified
+
+- `src/Wingetter.Sources.ps1` - added source policy model helpers, allowed-source checks, source trust summaries, `winget source add` command generation, and source policy export.
+- `src/Wingetter.WinGet.ps1` - added optional explicit source support for package operation arguments, package details, installed-version lookup, and installed scans.
+- `src/Wingetter.Catalog.ps1` - preserves optional source metadata from catalog JSON entries.
+- `src/Wingetter.Ui.ps1` - added Corporate policy toggle, Export Sources action, source trust display, policy refusal before execution, and explicit-source command previews.
+- `.github/workflows/validate.yml`, `tools/Test-WinGetRunner.ps1`, and `tools/Test-Xaml.ps1` - added source policy and explicit-source validation coverage.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented corporate/internal source mode and marked R-015 complete.
+
+### Verification Performed
+
+- `winget source --help`
+- `winget install --help`
+- `winget upgrade --help`
+- `winget source add --help`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-SourcePolicy.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-PackageSources.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+
 ## Development Follow-up: 2026-05-17 Modularization Batch
 
 ### Files Created
