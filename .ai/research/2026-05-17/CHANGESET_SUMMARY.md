@@ -68,6 +68,23 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Export-WingetterCatalog.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Sync-EmbeddedCatalog.ps1 -Check`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+
+## Development Follow-up: 2026-05-17 Metadata Search Batch
+
+### Files Created
+
+- `tools/Test-SearchMetadata.ps1` - smoke tests for local metadata search scoring and ranking behavior.
+
+### Files Modified
+
+- `src/Wingetter.Catalog.ps1` - added pure search text normalization and scoring helpers.
+- `src/Wingetter.Ui.ps1` - search now considers category, group membership, publisher-like ID tokens, installed/update/pin state, source, and scope, then ranks matches inside each category.
+- `.github/workflows/validate.yml` - added search metadata validation to CI.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented metadata-rich search and marked R-012 complete.
+
+### Verification Performed
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-SearchMetadata.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`

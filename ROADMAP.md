@@ -100,12 +100,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L04, E03, E04, E13, E14.
 - Completed 2026-05-17: added `Wingetter.MigrationReport.v1` report generation, automatic `migration-report.json` writing in each run log directory, GUI export to Markdown or JSON after install/update runs, import-warning capture, summary counts, per-package command/result paths, and installed/available version/source/scope state where available.
 
-### [ ] R-012 - Make search metadata-rich
+### [x] R-012 - Make search metadata-rich
 
 - Problem: search only checks name and Winget ID.
 - Build: after catalog externalization, index tags, descriptions, publisher, source, install scope, group membership, installed state, and category. Add fuzzy matching with simple local scoring before considering any model dependency.
 - Acceptance: searching for "vpn privacy", "developer python", publisher names, tags, or partial IDs returns useful package rows with ranked matches.
 - Sources: L06, E08, E19.
+- Completed 2026-05-17: added pure catalog search scoring over names, package IDs, publisher-like ID prefixes, category, built-in group membership, source/scope, installed state, update state, and pin state; the UI now ranks matches within each category during active searches and restores curated order when the search is cleared; CI now covers representative searches like `vpn privacy`, `developer python`, publisher-like tokens, and source/scope/state queries.
 
 ### [ ] R-013 - Fix visual rule violations and accessibility basics
 

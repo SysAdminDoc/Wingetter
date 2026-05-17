@@ -37,7 +37,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 **765 applications** across **39 categories** with a polished WPF interface:
 
 - **Dark / Light mode** -- defaults to dark, toggle with one click
-- **Live search** -- instantly filter across all 765 packages
+- **Metadata-rich search** -- ranked local search across names, package IDs, categories, built-in groups, publisher-like ID tokens, installed state, source, scope, update state, and pin state
 - **Favicon icons** -- parallel-fetched from app domains with colored letter fallbacks and local caching
 - **Bulk install** -- select any combination and install them all in sequence via winget
 - **Update mode** -- toggle between Install and Update mode to upgrade already-installed apps
@@ -155,6 +155,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileJson.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SearchMetadata.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
 ```
 
