@@ -10,13 +10,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 
 ## P0 - Foundation And Trust
 
-### [ ] R-001 - Externalize the catalog and add validation
+### [x] R-001 - Externalize the catalog and add validation
 
 - Problem: the 765-app catalog is embedded directly inside `Wingetter.ps1`, making curation, review, counting, and stale package detection risky. Evidence: L02, L18.
 - Build: move catalog data to a repo-owned data file such as `catalog/winget.json`; add a generator/validator script that checks unique IDs, category counts, built-in group references, JSON schema, and `winget show --id <id> --exact` availability sampling.
 - Acceptance: `pwsh tools/Test-Catalog.ps1` exits nonzero for duplicate IDs, missing group IDs, invalid icon URLs, stale README counts, or malformed category records.
 - Sources: L02, L18, E08, E09, E11.
-- Status 2026-05-17: in progress. Completed the repo-owned catalog and group snapshots, local JSON loader with embedded fallback, README/changelog count validation, duplicate-ID validation, group-reference validation, and optional `winget show` sampling flag. Remaining work before closing: make JSON the durable single source of truth or add a release/build step that regenerates the embedded fallback from JSON.
+- Completed 2026-05-17: added repo-owned catalog and group source files, local JSON loading with embedded fallback, `tools\Sync-EmbeddedCatalog.ps1` to regenerate the one-file fallback, `tools\Export-WingetterCatalog.ps1` for fallback parity checks, README/changelog count validation, duplicate-ID validation, group-reference validation, and optional `winget show` sampling.
 
 ### [x] R-002 - Reconcile versioning, README counts, changelog, and release artifacts
 

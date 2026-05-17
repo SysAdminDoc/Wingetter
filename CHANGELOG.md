@@ -5,8 +5,9 @@ All notable changes to Wingetter will be documented in this file.
 ## [Unreleased]
 
 - Added: Generated catalog snapshots in `catalog/winget.json` and `catalog/groups.json`.
-- Added: Catalog export and validation tools for package counts, duplicate IDs, built-in group references, README count drift, and changelog formatting.
+- Added: Catalog sync, export, and validation tools for package counts, duplicate IDs, built-in group references, embedded fallback freshness, README count drift, and changelog formatting.
 - Changed: Local repo runs now prefer the generated catalog and group JSON when present, while retaining embedded data as the one-file fallback.
+- Changed: `catalog/winget.json` and `catalog/groups.json` are now the curation source files; `tools/Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback.
 - Changed: Synced README version badge, built-in groups, and category counts with the v6.1.0 script catalog.
 
 ## [v6.1.0] - 2026-03-13
