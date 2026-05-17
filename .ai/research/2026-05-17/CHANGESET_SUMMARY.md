@@ -174,6 +174,26 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-SearchMetadata.ps1`
 - `git diff --check`
 
+## Development Follow-up: 2026-05-17 Package Source Adapter Batch
+
+### Files Created
+
+- `src/Wingetter.Sources.ps1` - added the package-source adapter contract and registered WinGet as the first backend.
+- `tools/Test-PackageSources.ps1` - validates the WinGet adapter operation contract, command preview behavior, adapter registration, and the UI-to-source boundary.
+
+### Files Modified
+
+- `Wingetter.ps1` - added the source adapter module to the launcher module set.
+- `src/Wingetter.Ui.ps1` - routed package details, official source profile import/export, install/update execution, installed scans, pin operations, and copied install commands through package-source wrappers.
+- `.github/workflows/validate.yml` and `tools/Test-Catalog.ps1` - added source adapter validation to CI and module parsing/import checks.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented the source adapter boundary and marked R-014 complete.
+
+### Verification Performed
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-PackageSources.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+
 ## Development Follow-up: 2026-05-17 Modularization Batch
 
 ### Files Created

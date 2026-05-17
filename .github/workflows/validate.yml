@@ -31,6 +31,10 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SearchMetadata.ps1
 
+      - name: Validate package source adapters
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-PackageSources.ps1
+
       - name: Validate visual and accessibility rules
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibility.ps1

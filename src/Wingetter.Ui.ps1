@@ -1042,6 +1042,7 @@ function Show-WinGetInstallerGUI {
     $ui["SidebarButtons"]      = [System.Collections.ArrayList]::new()
     $ui["CategoryAppsStacks"]  = [System.Collections.ArrayList]::new()
     $ui["BuiltInGroups"]       = $Script:BuiltInGroups
+    $ui["PackageSource"]       = Get-WingetterPackageSourceAdapter -Name "winget"
 
     foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ImportBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
@@ -1465,8 +1466,8 @@ function Show-WinGetInstallerGUI {
         & $SetDetailText $ui["DetailPinState"] "Loading..."
         [System.Windows.Forms.Application]::DoEvents()
 
-        $details = Get-WinGetPackageDetails -PackageId $App.WingetId
-        $pinStatus = Get-WinGetPinStatus -PackageId $App.WingetId
+        $details = Get-WingetterPackageSourceDetails -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId
+        $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId
         & $SetDetailText $ui["DetailSource"] $details.Source
         & $SetDetailText $ui["DetailPublisher"] $details.Publisher
         $installedRecord = if ($ui["InstalledIds"].ContainsKey($App.WingetId)) { $ui["InstalledIds"][$App.WingetId] } else { $null }
@@ -1505,8 +1506,8 @@ function Show-WinGetInstallerGUI {
         }
         [System.Windows.Forms.Application]::DoEvents()
 
-        $result = Invoke-WinGetPinOperation -PackageId $package.WingetId -Operation $Operation
-        $pinStatus = Get-WinGetPinStatus -PackageId $package.WingetId
+        $result = Invoke-WingetterPackageSourcePinOperation -SourceAdapter $ui["PackageSource"] -PackageId $package.WingetId -Operation $Operation
+        $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $ui["PackageSource"] -PackageId $package.WingetId
         & $SetPinVisual $package.WingetId $pinStatus
         & $RefreshPinControls $pinStatus
         if ($result.Success) {
@@ -1921,7 +1922,7 @@ function Show-WinGetInstallerGUI {
     # WINGET CHECK
     # ========================================================
     $checkWinGet = {
-        $status = Test-WinGet
+        $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if ($status.Installed) {
             $WinGetStatus.Text = "WinGet $($status.Version)"
             $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1fb879")
@@ -1998,7 +1999,7 @@ function Show-WinGetInstallerGUI {
 
     $InstallWinGetBtn.Add_Click({
         $ProgressText.Text = "Repairing WinGet/App Installer..."
-        $installed = Install-WinGet
+        $installed = Install-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         & $checkWinGet
         $logSuffix = if ($Script:LastBootstrapLogPath) { " Log: $Script:LastBootstrapLogPath" } else { "" }
         $ProgressText.Text = if ($installed) { "WinGet is ready.$logSuffix" } else { "WinGet repair needs manual follow-up.$logSuffix" }
@@ -2154,7 +2155,7 @@ function Show-WinGetInstallerGUI {
 
             switch ($dlg.FilterIndex) {
                 1 {
-                    Export-GroupAsWinGetJSON -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName
+                    Export-WingetterPackageSourceProfile -SourceAdapter $ui["PackageSource"] -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName
                     $ProgressText.Text = "Exported $($sel.Count) apps as official WinGet import JSON."
                 }
                 2 {
@@ -2179,7 +2180,7 @@ function Show-WinGetInstallerGUI {
             try {
                 $content = Get-Content $dlg.FileName -Raw | ConvertFrom-Json
                 $fallbackName = [System.IO.Path]::GetFileNameWithoutExtension($dlg.FileName)
-                $import = Import-PackageIdsFromJSON -Content $content -FallbackGroupName $fallbackName
+                $import = Import-WingetterPackageSourceProfile -SourceAdapter $ui["PackageSource"] -Content $content -FallbackGroupName $fallbackName
                 $ids = @($import.PackageIds)
                 if ($ids.Count -eq 0) { throw "No package IDs were found in the selected JSON file." }
                 if ($import.Warnings.Count -gt 0) {
@@ -2214,9 +2215,9 @@ function Show-WinGetInstallerGUI {
     $CopyCommandBtn.Add_Click({
         $sel = @(); foreach ($cb in $ui["AllCheckboxes"].Values) { if ($cb.IsChecked) { $sel += $cb.Tag.WingetId } }
         if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before copying commands."; return }
-        $s = if ($SilentCheck.IsChecked) { " --silent" } else { "" }
-        $a = if ($AcceptCheck.IsChecked) { " --accept-package-agreements --accept-source-agreements" } else { "" }
-        $cmds = $sel | ForEach-Object { "winget install --id $_ --exact$s$a" }
+        $cmds = $sel | ForEach-Object {
+            Get-WingetterPackageSourceInstallCommand -SourceAdapter $ui["PackageSource"] -PackageId $_ -Silent ([bool]$SilentCheck.IsChecked) -AcceptAgreements ([bool]$AcceptCheck.IsChecked)
+        }
         [System.Windows.Clipboard]::SetText(($cmds -join "`n")); $ProgressText.Text = "Copied $($sel.Count) winget commands to the clipboard."
     }.GetNewClosure())
 
@@ -2275,7 +2276,7 @@ function Show-WinGetInstallerGUI {
 
     # Install / Update handler
     $InstallBtn.Add_Click({
-        $status = Test-WinGet
+        $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can install packages. Use 'Install WinGet' and try again.", "WinGet Required", "OK", "Warning"); return }
         $selected = @()
         foreach ($cb in $ui["AllCheckboxes"].Values) { if ($cb.IsChecked) { $selected += @{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId } } }
@@ -2306,7 +2307,8 @@ function Show-WinGetInstallerGUI {
             $ProgressText.Text = "$actionVerb $($app.Name) ($current of $total)..."
             [System.Windows.Forms.Application]::DoEvents()
 
-            $result = Invoke-WinGetPackageOperation `
+            $result = Invoke-WingetterPackageSourcePackageOperation `
+                -SourceAdapter $ui["PackageSource"] `
                 -Action $operation `
                 -PackageId $app.WingetId `
                 -PackageName $app.Name `
@@ -2334,7 +2336,7 @@ function Show-WinGetInstallerGUI {
 
         try {
             $selectedIds = @($selected | ForEach-Object { [string]$_.WingetId })
-            $postRunScan = Get-WinGetInstalledCatalogPackages -PackageIds $selectedIds
+            $postRunScan = Get-WingetterPackageSourceInstalledCatalogPackages -SourceAdapter $ui["PackageSource"] -PackageIds $selectedIds
             foreach ($record in @($postRunScan.Packages.Values)) {
                 $ui["InstalledIds"][[string]$record.PackageId] = $record
             }
@@ -2578,12 +2580,16 @@ function Show-WinGetInstallerGUI {
     foreach ($cat in $Script:SoftwareDatabase.Keys) {
         foreach ($app in $Script:SoftwareDatabase[$cat]) { $catalogPackageIds += [string]$app.WingetId }
     }
-    $winGetModulePath = Join-Path (Join-Path (Get-WingetterRootPath) "src") "Wingetter.WinGet.ps1"
+    $sourceRootPath = Join-Path (Get-WingetterRootPath) "src"
+    $winGetModulePath = Join-Path $sourceRootPath "Wingetter.WinGet.ps1"
+    $sourcesModulePath = Join-Path $sourceRootPath "Wingetter.Sources.ps1"
+    $packageSourceName = [string]$ui["PackageSource"].Name
     [void]$installedPs.AddScript({
-        param($queue, $packageIds, $modulePath)
+        param($queue, $packageIds, $winGetModulePath, $sourcesModulePath, $packageSourceName)
         try {
-            . $modulePath
-            $scan = Get-WinGetInstalledCatalogPackages -PackageIds $packageIds
+            . $winGetModulePath
+            . $sourcesModulePath
+            $scan = Get-WingetterPackageSourceInstalledCatalogPackages -SourceName $packageSourceName -PackageIds $packageIds
             foreach ($package in @($scan.Packages.Values)) {
                 $queue.Enqueue($package)
             }
@@ -2607,6 +2613,8 @@ function Show-WinGetInstallerGUI {
     [void]$installedPs.AddArgument($installedQueue)
     [void]$installedPs.AddArgument($catalogPackageIds)
     [void]$installedPs.AddArgument($winGetModulePath)
+    [void]$installedPs.AddArgument($sourcesModulePath)
+    [void]$installedPs.AddArgument($packageSourceName)
     $installedHandle = $installedPs.BeginInvoke()
 
     # Build lookup: WingetId -> index in InstalledDots list
