@@ -22,6 +22,7 @@ $Script:WingetterModuleFiles = @(
     "Wingetter.WinGet.ps1",
     "Wingetter.Groups.ps1",
     "Wingetter.Sources.ps1",
+    "Wingetter.UpdateWatcher.ps1",
     "Wingetter.Ui.ps1",
     "Wingetter.App.ps1"
 )
