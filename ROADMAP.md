@@ -26,12 +26,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L01, L09, L11, L14, L18.
 - Completed 2026-05-17: chose `v6.1.0` as the shipped version, fixed the README version badge, corrected README category and built-in group tables, rewrote the malformed changelog header, and added `tools\Test-Catalog.ps1` as the count/version consistency check.
 
-### [ ] R-003 - Support official `winget export` / `winget import` schema
+### [x] R-003 - Support official `winget export` / `winget import` schema
 
 - Problem: Wingetter has custom group JSON, but WinGet already defines import/export JSON with `Sources`, `Packages`, `PackageIdentifier`, and optional versions.
 - Build: import official WinGet JSON; export official WinGet JSON; preserve Wingetter-only metadata in a separate profile format; validate source names and package availability before execution.
 - Acceptance: a file produced by `winget export` can be imported into Wingetter, edited, and exported back to a file usable by `winget import`.
 - Sources: L04, E03, E04.
+- Completed 2026-05-17: added official WinGet JSON export with `Sources`, `Packages`, `PackageIdentifier`, schema URL, and `winget` source details; import now accepts official WinGet JSON, Wingetter group JSON, and package ID arrays; the Wingetter-specific profile format remains separate as `Wingetter.Group.v1`; `tools\Test-ProfileJson.ps1` verifies round trips without launching the GUI.
 
 ### [ ] R-004 - Harden install/update execution and result capture
 

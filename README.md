@@ -45,8 +45,8 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Silent install & auto-accept agreements** -- toggleable checkboxes for hands-free deployment
 - **Copy command** -- grab the raw `winget install` commands to clipboard
 - **Save / Load groups** -- persist custom selections as named groups for reuse
-- **Export as PS1 or JSON** -- generate standalone installer scripts or portable JSON configs
-- **Import groups** -- load previously exported PS1/JSON files back in
+- **Export as PS1, Wingetter JSON, or official WinGet JSON** -- generate standalone installer scripts, reusable Wingetter group profiles, or files usable with `winget import`
+- **Import JSON profiles** -- load official WinGet export/import JSON, Wingetter group JSON, or simple package ID arrays
 - **10 built-in quick-select groups** -- one-click presets for common setups
 - **Category sidebar** -- quick-jump navigation panel for all 39 categories
 - **Collapsible categories** -- click any category header to collapse/expand
@@ -131,9 +131,13 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 
 ### Exporting
 
+**Export as WinGet Import JSON** creates an official `winget import` compatible file with `Sources`, `Packages`, and `PackageIdentifier` entries.
+
+**Export as Wingetter Group JSON** creates a portable Wingetter profile that can be imported back into Wingetter on any machine.
+
 **Export as PS1** generates a self-contained PowerShell script that installs your selected packages with no dependencies -- hand it to a coworker or drop it in your deployment pipeline.
 
-**Export as JSON** creates a portable config file that can be imported back into Wingetter on any machine.
+**Import JSON** accepts official WinGet import/export JSON, Wingetter group JSON, or a simple JSON array of package IDs. Packages not present in the Wingetter catalog are reported and skipped during selection.
 
 ## Catalog Validation
 
@@ -142,6 +146,7 @@ The repo includes generated catalog snapshots in `catalog/` and validation tools
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileJson.ps1
 ```
 
 `catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded one-file fallback in `Wingetter.ps1`, and `Test-Catalog.ps1` checks script parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
