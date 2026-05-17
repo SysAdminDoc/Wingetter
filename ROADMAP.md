@@ -108,12 +108,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L06, E08, E19.
 - Completed 2026-05-17: added pure catalog search scoring over names, package IDs, publisher-like ID prefixes, category, built-in group membership, source/scope, installed state, update state, and pin state; the UI now ranks matches within each category during active searches and restores curated order when the search is cleared; CI now covers representative searches like `vpn privacy`, `developer python`, publisher-like tokens, and source/scope/state queries.
 
-### [ ] R-013 - Fix visual rule violations and accessibility basics
+### [x] R-013 - Fix visual rule violations and accessibility basics
 
 - Problem: several UI elements use pill-style `CornerRadius=999`; dialogs and status badges should use bounded rectangular radii. Some command flows still rely on confirmation dialogs.
 - Build: replace pill backdrops with 8-12px rectangular radii, preserve true circular progress/indicator use only where visually required, review contrast, focus states, text truncation, and button state clarity.
 - Acceptance: no `CornerRadius="999"` or `CornerRadius = ...999` remains on text-bearing backdrops; common flows remain usable with visible focus and no text overlap.
 - Sources: L16.
+- Completed 2026-05-17: replaced remaining `CornerRadius=999` text-bearing badges and progress backdrops with bounded radii, added automation names for the theme toggle and package search box, and added `tools/Test-VisualAccessibility.ps1` plus CI coverage to prevent pill-radius regressions and missing baseline accessibility names.
 
 ## P2 - Ecosystem Expansion
 

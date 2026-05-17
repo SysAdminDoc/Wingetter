@@ -502,8 +502,8 @@ function Show-WinGetInstallerGUI {
                 <Setter.Value>
                     <ControlTemplate TargetType="ProgressBar">
                         <Grid>
-                            <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="999"/>
-                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="999">
+                            <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="4"/>
+                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="4">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                                         <GradientStop Color="#1fb879" Offset="0"/>
@@ -581,7 +581,7 @@ function Show-WinGetInstallerGUI {
                                 </LinearGradientBrush>
                             </TextBlock.Foreground>
                         </TextBlock>
-                        <Border Margin="10,0,0,2" Padding="8,3" CornerRadius="999" Background="#102133" BorderBrush="#24374a" BorderThickness="1">
+                        <Border Margin="10,0,0,2" Padding="8,3" CornerRadius="8" Background="#102133" BorderBrush="#24374a" BorderThickness="1">
                             <TextBlock x:Name="HeaderVersion" Text="v6.1.0" FontSize="11" FontWeight="SemiBold" Foreground="#7a90a6"/>
                         </Border>
                     </StackPanel>
@@ -600,7 +600,7 @@ function Show-WinGetInstallerGUI {
                             <TextBlock x:Name="WinGetStatus" Text="Checking WinGet..." Foreground="#c4d2df" FontSize="12.5" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <Button x:Name="ModeBtn" Width="44" Height="44" Cursor="Hand" ToolTip="Switch between dark and light mode">
+                    <Button x:Name="ModeBtn" Width="44" Height="44" Cursor="Hand" ToolTip="Switch between dark and light mode" AutomationProperties.Name="Switch between dark and light mode">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="modeBorder" Background="#102133" BorderBrush="#24374a" BorderThickness="1" CornerRadius="14">
@@ -643,7 +643,7 @@ function Show-WinGetInstallerGUI {
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="SearchIcon" Grid.Column="0" Text="⌕" FontSize="17" Foreground="#7a90a6" VerticalAlignment="Center" Margin="1,0,8,0" IsHitTestVisible="False"/>
                             <TextBlock x:Name="SearchPlaceholder" Grid.Column="1" Text="Search apps or Winget IDs" Foreground="#70859b" FontSize="13" VerticalAlignment="Center" IsHitTestVisible="False"/>
-                            <TextBox x:Name="SearchBox" Grid.Column="1" Background="Transparent" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Foreground="#eff6fb" Padding="0,8,0,8"/>
+                            <TextBox x:Name="SearchBox" Grid.Column="1" Background="Transparent" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Foreground="#eff6fb" Padding="0,8,0,8" AutomationProperties.Name="Search apps by name, package ID, category, group, source, or state"/>
                             <Button x:Name="ClearSearchBtn" Grid.Column="2" Style="{StaticResource ToolBtn}" Content="Clear" Padding="10,5" Margin="8,0,0,0" FontSize="11" Cursor="Hand" Visibility="Collapsed"/>
                         </Grid>
                     </Border>
@@ -1578,7 +1578,7 @@ function Show-WinGetInstallerGUI {
         $catCount = $Script:SoftwareDatabase[$category].Count
         $countBadge = New-Object System.Windows.Controls.Border
         $countBadge.Background = (& $toBrush "#102133")
-        $countBadge.CornerRadius = [System.Windows.CornerRadius]::new(999)
+        $countBadge.CornerRadius = [System.Windows.CornerRadius]::new(8)
         $countBadge.Padding = [System.Windows.Thickness]::new(8, 3, 8, 3)
         $countBadge.Margin = [System.Windows.Thickness]::new(6, 0, 6, 0)
         $countBadge.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
@@ -1657,7 +1657,7 @@ function Show-WinGetInstallerGUI {
             $installedBadge.Background = (& $toBrush "#103526")
             $installedBadge.BorderBrush = (& $toBrush "#103526")
             $installedBadge.BorderThickness = [System.Windows.Thickness]::new(1)
-            $installedBadge.CornerRadius = [System.Windows.CornerRadius]::new(999)
+            $installedBadge.CornerRadius = [System.Windows.CornerRadius]::new(8)
             $installedBadge.Padding = [System.Windows.Thickness]::new(7, 2, 7, 2)
             $installedBadge.Margin = [System.Windows.Thickness]::new(8, 0, 0, 0)
             $installedBadge.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
@@ -2260,7 +2260,7 @@ function Show-WinGetInstallerGUI {
         [System.Windows.Controls.Grid]::SetColumn($nameText, 0)
         $statusBadge = New-Object System.Windows.Controls.Border
         $statusBadge.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString((if ($ui["IsDark"]) { "#132132" } else { "#ffffff" }))
-        $statusBadge.CornerRadius = [System.Windows.CornerRadius]::new(999)
+        $statusBadge.CornerRadius = [System.Windows.CornerRadius]::new(8)
         $statusBadge.Padding = [System.Windows.Thickness]::new(8, 3, 8, 3)
         [System.Windows.Controls.Grid]::SetColumn($statusBadge, 1)
         $statusText = New-Object System.Windows.Controls.TextBlock

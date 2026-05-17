@@ -152,6 +152,28 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - Live package detail extraction for `Google.Chrome` using the new helper functions.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1 -CheckWingetAvailability -AvailabilitySampleSize 5`
 
+## Development Follow-up: 2026-05-17 Visual Accessibility Batch
+
+### Files Created
+
+- `tools/Test-VisualAccessibility.ps1` - added a regression check for forbidden `CornerRadius=999` values and required automation names on key controls.
+
+### Files Modified
+
+- `src/Wingetter.Ui.ps1` - replaced remaining pill-style progress, badge, and status radii with bounded rectangular radii; added automation names to the mode toggle and search box.
+- `.github/workflows/validate.yml` - added visual/accessibility validation to CI.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented visual/accessibility validation and marked R-013 complete.
+
+### Verification Performed
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-VisualAccessibility.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-SearchMetadata.ps1`
+- `git diff --check`
+
 ## Development Follow-up: 2026-05-17 Modularization Batch
 
 ### Files Created
