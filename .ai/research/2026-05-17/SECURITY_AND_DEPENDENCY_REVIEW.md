@@ -112,6 +112,7 @@ Sources: E07, E08, E09.
 - No `--ignore-security-hash` path was found in current install/update commands.
 - WinGet admin settings on this machine showed installer hash override disabled.
 - Local parser check found zero PowerShell syntax errors.
+- Public profile gallery imports are checked-in JSON only, SHA256-verified against `profiles/gallery.json`, reject unsupported install-argument fields, and select packages only after visible package/source review.
 
 ## Dependency Upgrade Opportunities
 

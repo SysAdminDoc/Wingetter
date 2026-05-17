@@ -26,6 +26,7 @@ try {
         "DownloadCacheBtn",
         "ExportReportBtn",
         "ImportBtn",
+        "GalleryBtn",
         "IncludePinnedCheck",
         "CorporateModeCheck",
         "DetailPinState",

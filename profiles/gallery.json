@@ -1,0 +1,54 @@
+{
+  "Schema": "Wingetter.ProfileGalleryIndex.v1",
+  "Generated": "2026-05-17T00:00:00Z",
+  "Profiles": [
+    {
+      "Id": "essential-pc",
+      "Name": "Essential PC Setup",
+      "Description": "Baseline browser, archive, media, search, PDF, screenshot, and Windows utility tools.",
+      "Publisher": "Wingetter maintainers",
+      "Tags": [
+        "baseline",
+        "productivity"
+      ],
+      "ProfilePath": "profiles/gallery/essential-pc.wingetter.json",
+      "Sha256": "6C107DFFFC71B5BAEC931AD7AFFB58F725726B2F7A6014FA3C1324F8052D1ACC",
+      "PackageCount": 9,
+      "SourceNames": [
+        "winget"
+      ]
+    },
+    {
+      "Id": "developer-workstation",
+      "Name": "Developer Workstation",
+      "Description": "Core source control, terminal, editor, runtime, container, and API testing tools.",
+      "Publisher": "Wingetter maintainers",
+      "Tags": [
+        "developer",
+        "workstation"
+      ],
+      "ProfilePath": "profiles/gallery/developer-workstation.wingetter.json",
+      "Sha256": "EF0BDBBB802CFAD9FD1677737D00EB757E38F813CA76E3177DA99139895D5502",
+      "PackageCount": 9,
+      "SourceNames": [
+        "winget"
+      ]
+    },
+    {
+      "Id": "privacy-baseline",
+      "Name": "Privacy Baseline",
+      "Description": "Privacy and security-oriented browser, VPN, password, encryption, and messaging tools.",
+      "Publisher": "Wingetter maintainers",
+      "Tags": [
+        "privacy",
+        "security"
+      ],
+      "ProfilePath": "profiles/gallery/privacy-baseline.wingetter.json",
+      "Sha256": "3BDD6906EC9945F44B2BD324E225BF5324E17633D16BD189EDFEF6D518258524",
+      "PackageCount": 8,
+      "SourceNames": [
+        "winget"
+      ]
+    }
+  ]
+}

@@ -30,6 +30,7 @@ This register maps claims in the research artifacts and roadmap to local evidenc
 | L20 | `winget source list`, `winget pin list` | Local default sources: `msstore`, `winget`, `winget-font`; no configured pins. |
 | L21 | `winget download --help` | Local download/offline installer mode options. |
 | L22 | `winget configure --help`, `winget configure validate --help`, generated `.winget` validation | Local WinGet Configuration command and validation behavior for generated `Microsoft.WinGet.DSC/WinGetPackage` YAML. |
+| L23 | `profiles/gallery.json`, `profiles/gallery/*.wingetter.json`, `src/Wingetter.ProfileGallery.ps1`, `tools/Test-ProfileGallery.ps1` | Public profile gallery index, hashed profile files, strict parser/review helpers, and validation coverage. |
 
 ## External Evidence
 

@@ -27,6 +27,7 @@ All notable changes to Wingetter will be documented in this file.
 - Added: Scheduled update-check workflow with no auto-upgrades, metered-network skip support, pin/source-policy classification, JSON logs, log rotation, toast summaries, and scheduled-task registration scripts.
 - Added: Offline download cache workflow using `winget download`, with GUI and CLI entry points, per-package download logs, `offline-manifest.json`, and generated `install-offline.ps1` replay script.
 - Added: WinGet Configuration export using `Microsoft.WinGet.DSC/WinGetPackage` resources, with GUI and CLI entry points plus local validation coverage.
+- Added: Public profile gallery with hashed checked-in profile files, package/source review, GUI import, and validation coverage.
 - Changed: Local repo runs now prefer the generated catalog and group JSON when present, while retaining embedded module data as fallback.
 - Changed: `Wingetter.ps1` is now a thin launcher that loads local modules or downloads the module set for raw GitHub quick-launch runs.
 - Changed: `catalog/winget.json` and `catalog/groups.json` are now the curation source files; `tools/Sync-EmbeddedCatalog.ps1` regenerates the embedded module fallbacks.
@@ -41,6 +42,7 @@ All notable changes to Wingetter will be documented in this file.
 - Changed: CI now validates update watcher summary classification, scheduled-task action arguments, and update-check log rotation.
 - Changed: CI now validates offline cache argument generation, manifest export, replay script generation, and cache file delta tracking.
 - Changed: CI now validates WinGet Configuration YAML generation.
+- Changed: CI now validates profile gallery hashes, catalog references, preview text, and rejection of unsupported install-argument fields.
 - Changed: Install/update execution now uses structured process arguments where available, captures stderr, passes `--verbose-logs`, and surfaces the run log directory after completion or cancellation.
 - Changed: WinGet repair now prefers App Installer registration and `Microsoft.WinGet.Client` `Repair-WinGetPackageManager` instead of downloading GitHub/AppX assets directly.
 - Changed: Synced README version badge, built-in groups, and category counts with the v6.1.0 script catalog.
