@@ -34,6 +34,7 @@ Wingetter is currently monolithic:
 - When run from a local repo checkout, the script prefers `catalog/winget.json` and `catalog/groups.json` if present and falls back to the embedded catalog/groups if those files are unavailable or malformed.
 - Search filters app name and WinGet ID only.
 - Installs and updates run serially by launching `winget install` or `winget upgrade` with `--id`, `--exact`, and optional `--silent` / agreement flags.
+- Install/update execution writes per-package stdout, stderr, and JSON result files under `%APPDATA%\Wingetter\logs\<timestamp>-<action>`, passes `--verbose-logs`, and records command, action, package ID, exit code, status, stdout/stderr excerpts, cancellation state, run log directory, and WinGet diagnostic log directory when available.
 - Installed app detection runs in a background runspace using `winget list --source winget` and regex parsing.
 - Icons are loaded lazily across a 4-worker runspace pool from Google favicon URLs, with letter placeholders before network fetches complete.
 - Profile import/export helpers now support the official WinGet JSON hierarchy: `Sources`, `Packages`, `PackageIdentifier`, and optional `Version` fields are accepted on import; exports generate a `https://aka.ms/winget-packages.schema.2.0.json` file with the `winget` source details.
@@ -53,7 +54,7 @@ Wingetter is currently monolithic:
 - `ROADMAP.md` previously included good ideas but lacked prioritization, source IDs, saturation notes, and live repo reconciliation.
 - Catalog JSON, embedded fallback sync, and validation tooling now exist. The remaining catalog risk is that there is no CI job enforcing those checks yet.
 - No CI, Pester tests, release build script, or GitHub Actions validation exists yet.
-- Install/update result classification depends on localized stdout text and ignores stderr details.
+- Install/update result records now capture stderr and exit codes, but status classification still uses some English WinGet output phrases for "already current" cases.
 - WinGet bootstrap downloads dependencies and the latest WinGet release without a recorded checksum verification path.
 - Several GUI elements still use fully rounded `CornerRadius="999"` or `CornerRadius = 999`, which conflicts with the project-wide visual rule against pill backdrops.
 - PSScriptAnalyzer reports warning-level issues: automatic variable shadowing, empty catch blocks, stale encoding assumptions, and other maintainability warnings.
@@ -63,10 +64,9 @@ Wingetter is currently monolithic:
 The next phase should move Wingetter from "large polished script" to "trustworthy setup cockpit":
 
 1. Add CI so catalog validation and embedded fallback freshness cannot drift silently.
-2. Replace fragile text parsing with structured logs, stderr capture, and per-package result records.
-3. Add source and manifest trust visibility: source, publisher, installer URL, hash, scope, installer type, and pin state.
-4. Add CI checks so counts, package IDs, embedded fallback sync, and profile JSON behavior cannot drift silently.
-5. Consider Scoop, Chocolatey, and PowerShell Gallery only after the catalog and execution layers are separated behind a package-source interface.
+2. Add source and manifest trust visibility: source, publisher, installer URL, hash, scope, installer type, and pin state.
+3. Add CI checks so counts, package IDs, embedded fallback sync, profile JSON behavior, and runner helpers cannot drift silently.
+4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the catalog and execution layers are separated behind a package-source interface.
 
 ## Source Trail
 

@@ -34,12 +34,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L04, E03, E04.
 - Completed 2026-05-17: added official WinGet JSON export with `Sources`, `Packages`, `PackageIdentifier`, schema URL, and `winget` source details; import now accepts official WinGet JSON, Wingetter group JSON, and package ID arrays; the Wingetter-specific profile format remains separate as `Wingetter.Group.v1`; `tools\Test-ProfileJson.ps1` verifies round trips without launching the GUI.
 
-### [ ] R-004 - Harden install/update execution and result capture
+### [x] R-004 - Harden install/update execution and result capture
 
 - Problem: install/update launches `winget` serially with joined arguments, reads stdout asynchronously, discards stderr, and classifies results with brittle English text matches.
 - Build: use `ProcessStartInfo.ArgumentList` when available, capture stdout and stderr, write per-package log files, pass `--verbose-logs`, store exit code plus parsed result, surface the WinGet log path, and include a retry/skip state.
 - Acceptance: every package operation leaves a structured result record with command, package ID, action, exit code, stdout excerpt, stderr excerpt, WinGet log path, and final status.
 - Sources: L07, E01, E02.
+- Completed 2026-05-17: added `Invoke-WinGetPackageOperation` with structured argument handling, stdout/stderr capture, per-package log files, `--verbose-logs`, JSON result records, cancellation state, status classification, run log directory surfacing, WinGet diagnostic log directory hints, and `tools\Test-WinGetRunner.ps1` for non-installing runner smoke coverage.
 
 ### [ ] R-005 - Add source, manifest, and trust detail panels
 
