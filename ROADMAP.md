@@ -118,12 +118,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 
 ## P2 - Ecosystem Expansion
 
-### [ ] R-014 - Package-source interface for WinGet first, then Scoop/Chocolatey/PowerShell Gallery
+### [x] R-014 - Package-source interface for WinGet first, then Scoop/Chocolatey/PowerShell Gallery
 
 - Problem: multi-backend ideas are premature until catalog and execution are abstracted.
 - Build: define a source adapter contract for search, show/details, install, upgrade, uninstall, export, import, and pin/hold equivalents; implement WinGet first; prototype Scoop, Chocolatey, and PowerShell Gallery after the contract stabilizes.
 - Acceptance: WinGet behavior is unchanged behind an adapter; adding a second source does not require editing WPF event handlers directly.
 - Sources: E12, E16, E17, E18.
+- Completed 2026-05-17: added `src/Wingetter.Sources.ps1` with a validated package-source adapter contract; registered WinGet as the first backend for search, details, install, upgrade, uninstall, export/import, installed scans, pin/hold operations, bootstrap, and command previews; routed WPF details, official source profile import/export, install/update, pin controls, copied commands, and installed scans through adapter wrappers; and added `tools\Test-PackageSources.ps1` plus CI coverage to enforce the adapter boundary.
 
 ### [ ] R-015 - Corporate/internal source mode
 

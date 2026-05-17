@@ -156,11 +156,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileJson.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SearchMetadata.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-PackageSources.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibility.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
 ```
 
-`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
+`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
 
 `catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback data in the catalog and group modules, and `Test-Catalog.ps1` checks launcher/module parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
 
