@@ -240,6 +240,28 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-UpdateWatcher.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
 
+## Development Follow-up: 2026-05-17 Offline Cache Batch
+
+### Files Created
+
+- `src/Wingetter.OfflineCache.ps1` - added offline cache directory, `winget download` argument, per-package download, manifest, and replay-script helpers.
+- `tools\Invoke-OfflineCache.ps1` - runs an offline cache build for explicit package IDs from the command line.
+- `tools\Test-OfflineCache.ps1` - validates download arguments, file delta tracking, manifest metadata, and replay script generation.
+
+### Files Modified
+
+- `Wingetter.ps1` and `tools\Test-Catalog.ps1` - added the offline cache module to the module set.
+- `src/Wingetter.Ui.ps1` and `tools\Test-Xaml.ps1` - added the Download Cache toolbar action and XAML coverage.
+- `.github/workflows/validate.yml` - added offline cache validation to CI.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented offline cache mode and marked R-017 complete.
+
+### Verification Performed
+
+- `winget download --help`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-OfflineCache.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+
 ## Development Follow-up: 2026-05-17 Modularization Batch
 
 ### Files Created

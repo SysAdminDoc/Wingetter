@@ -672,6 +672,7 @@ function Show-WinGetInstallerGUI {
                         <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="0,2,12,2"/>
                         <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON or a PowerShell install script"/>
                         <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and winget source commands"/>
+                        <Button x:Name="DownloadCacheBtn" Style="{StaticResource ToolBtn}" Content="Download Cache" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Download selected installers and write an offline cache manifest"/>
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="CopyCommandBtn" Style="{StaticResource ToolBtn}" Content="Copy Commands" FontSize="11.5" Cursor="Hand"/>
                         <Border x:Name="Divider2" Visibility="Collapsed" Width="0"/>
@@ -923,6 +924,7 @@ function Show-WinGetInstallerGUI {
     $DeselectAllBtn   = $Window.FindName("DeselectAllBtn")
     $ExportBtn        = $Window.FindName("ExportBtn")
     $ExportSourcesBtn = $Window.FindName("ExportSourcesBtn")
+    $DownloadCacheBtn = $Window.FindName("DownloadCacheBtn")
     $ImportBtn        = $Window.FindName("ImportBtn")
     $CopyCommandBtn   = $Window.FindName("CopyCommandBtn")
     $InstallWinGetBtn = $Window.FindName("InstallWinGetBtn")
@@ -981,6 +983,7 @@ function Show-WinGetInstallerGUI {
     $ui["VisibleCountText"]   = $VisibleCountText
     $ui["GroupCombo"]          = $GroupCombo
     $ui["ExportSourcesBtn"]    = $ExportSourcesBtn
+    $ui["DownloadCacheBtn"]    = $DownloadCacheBtn
     $ui["SidebarPanel"]        = $SidebarPanel
     $ui["SidebarBorder"]       = $Window.FindName("SidebarBorder")
     $ui["SidebarTitle"]        = $Window.FindName("SidebarTitle")
@@ -1051,7 +1054,7 @@ function Show-WinGetInstallerGUI {
     $ui["SourcePolicy"]        = Get-WingetterSourcePolicy
     $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $ImportBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
     foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck, $CorporateModeCheck)) {
@@ -2308,6 +2311,91 @@ function Show-WinGetInstallerGUI {
         $LogScrollViewer.ScrollToEnd()
     }
 
+    $DownloadCacheBtn.Add_Click({
+        $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
+        if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can download package installers.", "WinGet Required", "OK", "Warning"); return }
+
+        $selected = @()
+        $blockedByPolicy = @()
+        foreach ($cb in $ui["AllCheckboxes"].Values) {
+            if ($cb.IsChecked) {
+                $sourceName = Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name
+                $policyCheck = Test-WingetterPackageAllowedBySourcePolicy -Policy $ui["SourcePolicy"] -PackageId $cb.Tag.WingetId -SourceName $sourceName
+                if (!$policyCheck.Allowed) {
+                    $blockedByPolicy += "$($cb.Tag.Name) [$sourceName]"
+                } else {
+                    $selected += [PSCustomObject]@{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName }
+                }
+            }
+        }
+        if ($selected.Count -eq 0) { $ProgressText.Text = "Select at least one app before building an offline cache."; return }
+        if ($blockedByPolicy.Count -gt 0) {
+            [System.Windows.MessageBox]::Show("Corporate source policy blocked: $($blockedByPolicy -join ', ')", "Source Policy Blocked", "OK", "Warning")
+            $ProgressText.Text = "Corporate source policy blocked $($blockedByPolicy.Count) selected package(s)."
+            return
+        }
+
+        $folder = New-Object System.Windows.Forms.FolderBrowserDialog
+        $folder.Description = "Choose where Wingetter should create the offline cache folder."
+        if ($folder.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
+
+        $cacheDir = New-WingetterOfflineCacheDirectory -BaseDirectory $folder.SelectedPath
+        $runLogDir = New-WingetterRunLogDirectory -Action "download"
+        $downloadResults = [System.Collections.ArrayList]::new()
+
+        $LogEntriesPanel.Children.Clear()
+        $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
+        $LogToggleBtn.Content = "Hide"
+        $ui["Cancelled"] = $false
+
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
+            $ctl.IsEnabled = $false
+        }
+        $CancelBtn.IsEnabled = $true
+
+        $total = $selected.Count
+        $current = 0
+        foreach ($app in $selected) {
+            if ($ui["Cancelled"]) { & $AddLogEntry $app.Name "CANCELLED" "#f39c12"; break }
+            $current++
+            $pct = [math]::Round(($current / $total) * 100)
+            $ProgressBar.Value = $pct
+            $ProgressPercent.Text = "$pct%"
+            $ProgressText.Text = "Downloading $($app.Name) ($current of $total) to offline cache..."
+            [System.Windows.Forms.Application]::DoEvents()
+
+            $result = Invoke-WingetterOfflinePackageDownload `
+                -PackageId $app.WingetId `
+                -PackageName $app.Name `
+                -SourceName $app.SourceName `
+                -DownloadDirectory $cacheDir `
+                -RunLogDir $runLogDir `
+                -AcceptAgreements ([bool]$AcceptCheck.IsChecked) `
+                -ShouldCancel { $ui["Cancelled"] } `
+                -PumpUi { [System.Windows.Forms.Application]::DoEvents() }
+
+            [void]$downloadResults.Add($result)
+            switch ($result.Status) {
+                "SUCCESS" { & $AddLogEntry $app.Name "DOWNLOADED" "#2ecc71" }
+                "CANCELLED" { $ui["Cancelled"] = $true; & $AddLogEntry $app.Name "CANCELLED" "#f39c12" }
+                default { & $AddLogEntry $app.Name "FAILED" "#e74c3c" }
+            }
+        }
+
+        $manifest = New-WingetterOfflineCacheManifest -CacheDirectory $cacheDir -SelectedPackages $selected -DownloadResults $downloadResults.ToArray() -SourcePolicy $ui["SourcePolicy"]
+        $paths = Export-WingetterOfflineCacheManifest -Manifest $manifest -ManifestPath (Join-Path $cacheDir "offline-manifest.json")
+
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
+            $ctl.IsEnabled = $true
+        }
+        $CancelBtn.IsEnabled = $false
+        $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
+        & $UpdateGroupActionState
+        $ProgressBar.Value = 100
+        $ProgressPercent.Text = "100%"
+        $ProgressText.Text = "Offline cache ready: $cacheDir. Manifest: $($paths.ManifestPath). Replay script: $($paths.ScriptPath)"
+    }.GetNewClosure())
+
     # Install / Update handler
     $InstallBtn.Add_Click({
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
@@ -2333,7 +2421,7 @@ function Show-WinGetInstallerGUI {
         if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }
 
         $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true; $SelectAllBtn.IsEnabled = $false; $DeselectAllBtn.IsEnabled = $false
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $ExportReportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
             $ctl.IsEnabled = $false
         }
         $ui["Cancelled"] = $false
@@ -2413,7 +2501,7 @@ function Show-WinGetInstallerGUI {
         try { Export-WingetterMigrationReport -Report $report -FilePath $reportPath } catch {}
 
         $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false; $SelectAllBtn.IsEnabled = $true; $DeselectAllBtn.IsEnabled = $true
-        foreach ($ctl in @($ImportBtn, $ExportSourcesBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
+        foreach ($ctl in @($ImportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
             $ctl.IsEnabled = $true
         }
         $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
@@ -2462,6 +2550,7 @@ function Show-WinGetInstallerGUI {
         $DeleteGroupBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ExportBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Collapsed
+        $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ImportBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $CopyCommandBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $Divider1.Visibility = [System.Windows.Visibility]::Collapsed
@@ -2541,6 +2630,7 @@ function Show-WinGetInstallerGUI {
         $DeleteGroupBtn.Visibility = [System.Windows.Visibility]::Visible
         $ExportBtn.Visibility = [System.Windows.Visibility]::Visible
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Visible
+        $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Visible
         $ImportBtn.Visibility = [System.Windows.Visibility]::Visible
         $CopyCommandBtn.Visibility = [System.Windows.Visibility]::Visible
         $Divider1.Visibility = [System.Windows.Visibility]::Visible

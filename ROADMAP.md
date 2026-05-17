@@ -142,12 +142,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: E12, E15.
 - Completed 2026-05-17: added `src/Wingetter.UpdateWatcher.ps1`, one-time update check and scheduled-task registration scripts, check-only update classification that respects pins/source policy/allowlists/blocklists, metered-network skip support, JSON log writing and rotation under `%APPDATA%\Wingetter\logs\update-checks`, toast summaries, and `tools\Test-UpdateWatcher.ps1` plus CI coverage.
 
-### [ ] R-017 - Offline download/cache mode
+### [x] R-017 - Offline download/cache mode
 
 - Problem: air-gapped or low-bandwidth rebuild workflows need prefetch and verification, not just live install.
 - Build: expose `winget download` into a "download selected installers" mode, save manifest metadata, and generate an install manifest for later use.
 - Acceptance: selected packages can be downloaded to a folder with package IDs, source metadata, and a replay script/report.
 - Sources: L21, E01, E08.
+- Completed 2026-05-17: added `src/Wingetter.OfflineCache.ps1`, GUI Download Cache action, `tools\Invoke-OfflineCache.ps1`, `winget download --download-directory` argument generation, source-policy checks before download, per-package download result logs, `offline-manifest.json`, generated `install-offline.ps1` replay script, and `tools\Test-OfflineCache.ps1` plus CI coverage.
 
 ### [ ] R-018 - WinGet Configuration export
 

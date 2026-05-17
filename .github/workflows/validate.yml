@@ -43,6 +43,10 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-UpdateWatcher.ps1
 
+      - name: Validate offline cache
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-OfflineCache.ps1
+
       - name: Validate visual and accessibility rules
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibility.ps1
