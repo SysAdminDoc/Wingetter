@@ -47,6 +47,10 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-OfflineCache.ps1
 
+      - name: Validate WinGet Configuration export
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ConfigurationExport.ps1
+
       - name: Validate visual and accessibility rules
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibility.ps1

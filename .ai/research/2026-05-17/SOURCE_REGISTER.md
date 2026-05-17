@@ -29,6 +29,7 @@ This register maps claims in the research artifacts and roadmap to local evidenc
 | L19 | `winget install --help`, `winget upgrade --help`, `winget export --help`, `winget import --help`, `winget pin --help`, `winget configure --help` | Local current CLI options and absence of a local `--parallel` install flag in WinGet 1.28.240 help. |
 | L20 | `winget source list`, `winget pin list` | Local default sources: `msstore`, `winget`, `winget-font`; no configured pins. |
 | L21 | `winget download --help` | Local download/offline installer mode options. |
+| L22 | `winget configure --help`, `winget configure validate --help`, generated `.winget` validation | Local WinGet Configuration command and validation behavior for generated `Microsoft.WinGet.DSC/WinGetPackage` YAML. |
 
 ## External Evidence
 
@@ -57,6 +58,7 @@ This register maps claims in the research artifacts and roadmap to local evidenc
 | E21 | GitHub CLI search results on 2026-05-17 | Adjacent winget GUI/script projects including Romanitho/Winget-Install-GUI and DrewNaylor/guinget. |
 | E22 | PowerShell Gallery, Microsoft.WinGet.Client: https://www.powershellgallery.com/packages/Microsoft.WinGet.Client/ | Official WinGet PowerShell module availability and package metadata. |
 | E23 | Microsoft REST source reference implementation: https://github.com/microsoft/winget-cli-restsource | Private/REST source opportunity for corporate mode. |
+| E24 | Microsoft Learn, create WinGet Configuration files: https://learn.microsoft.com/en-us/windows/package-manager/configuration/create?source=docs | Current WinGet Configuration YAML structure, package resource syntax, schema hint, and `configurationVersion`. |
 
 ## Notes On Source Quality
 

@@ -2169,7 +2169,7 @@ function Show-WinGetInstallerGUI {
         if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before exporting."; return }
 
         $dlg = New-Object Microsoft.Win32.SaveFileDialog
-        $dlg.Filter = "WinGet Import JSON (*.json)|*.json|Wingetter Group JSON (*.wingetter.json)|*.wingetter.json|PowerShell Script (*.ps1)|*.ps1"
+        $dlg.Filter = "WinGet Import JSON (*.json)|*.json|Wingetter Group JSON (*.wingetter.json)|*.wingetter.json|PowerShell Script (*.ps1)|*.ps1|WinGet Configuration (*.winget)|*.winget"
         $dlg.FileName = "WinGetPackages.json"
 
         if ($dlg.ShowDialog() -eq $true) {
@@ -2187,6 +2187,19 @@ function Show-WinGetInstallerGUI {
                 3 {
                     Export-GroupAsPS1 -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName -Silent $SilentCheck.IsChecked -AcceptAgreements $AcceptCheck.IsChecked
                     $ProgressText.Text = "Exported $($sel.Count) apps as a PowerShell installer."
+                }
+                4 {
+                    $entries = @()
+                    foreach ($cb in $ui["AllCheckboxes"].Values) {
+                        if ($cb.IsChecked) {
+                            $entries += New-WingetterConfigurationPackageEntry `
+                                -Name $cb.Tag.Name `
+                                -PackageId $cb.Tag.WingetId `
+                                -SourceName (Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name)
+                        }
+                    }
+                    Export-WingetterConfigurationFile -PackageEntries $entries -FilePath $dlg.FileName | Out-Null
+                    $ProgressText.Text = "Exported $($entries.Count) apps as a WinGet Configuration file."
                 }
             }
         }

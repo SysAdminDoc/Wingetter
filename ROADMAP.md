@@ -150,12 +150,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L21, E01, E08.
 - Completed 2026-05-17: added `src/Wingetter.OfflineCache.ps1`, GUI Download Cache action, `tools\Invoke-OfflineCache.ps1`, `winget download --download-directory` argument generation, source-policy checks before download, per-package download result logs, `offline-manifest.json`, generated `install-offline.ps1` replay script, and `tools\Test-OfflineCache.ps1` plus CI coverage.
 
-### [ ] R-018 - WinGet Configuration export
+### [x] R-018 - WinGet Configuration export
 
 - Problem: WinGet Configuration can express packages plus machine configuration as repeatable YAML, which is stronger than a linear PS1 installer for onboarding.
 - Build: export selected packages into a minimal WinGet Configuration file, then later add optional DSC resources for common developer setup assertions.
 - Acceptance: selected packages can be exported to a valid configuration file that `winget configure validate` accepts.
-- Sources: E06.
+- Sources: E06, E24, L22.
+- Completed 2026-05-17: added `src\Wingetter.Configuration.ps1` for WinGet Configuration YAML generation, GUI export as `*.winget`, `tools\Export-WinGetConfiguration.ps1` for CLI export, `tools\Test-ConfigurationExport.ps1` for static validation, and local `winget configure validate -f <file> --disable-interactivity` coverage against a generated `Microsoft.WinGet.DSC/WinGetPackage` configuration.
 
 ### [ ] R-019 - Public profile gallery with strict trust boundaries
 
