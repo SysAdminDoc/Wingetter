@@ -231,16 +231,13 @@ function Get-WinGetOperationStatus {
     return "FAILED"
 }
 
-function Invoke-WinGetPackageOperation {
+function New-WinGetPackageOperationArguments {
     param(
         [string]$Action,
         [string]$PackageId,
-        [string]$PackageName,
         [bool]$Silent,
         [bool]$AcceptAgreements,
-        [string]$RunLogDir,
-        [scriptblock]$ShouldCancel = { $false },
-        [scriptblock]$PumpUi = {}
+        [bool]$IncludePinned
     )
 
     $arguments = @($Action, "--id", $PackageId, "--exact", "--verbose-logs", "--disable-interactivity")
@@ -249,6 +246,26 @@ function Invoke-WinGetPackageOperation {
         $arguments += "--accept-package-agreements"
         $arguments += "--accept-source-agreements"
     }
+    if ($Action -eq "upgrade" -and $IncludePinned) {
+        $arguments += "--include-pinned"
+    }
+    return [string[]]$arguments
+}
+
+function Invoke-WinGetPackageOperation {
+    param(
+        [string]$Action,
+        [string]$PackageId,
+        [string]$PackageName,
+        [bool]$Silent,
+        [bool]$AcceptAgreements,
+        [bool]$IncludePinned,
+        [string]$RunLogDir,
+        [scriptblock]$ShouldCancel = { $false },
+        [scriptblock]$PumpUi = {}
+    )
+
+    $arguments = New-WinGetPackageOperationArguments -Action $Action -PackageId $PackageId -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned
 
     $safeId = Get-SafeFileName -Value $PackageId
     $stamp = Get-Date -Format "yyyyMMdd-HHmmssfff"
@@ -345,6 +362,89 @@ function Get-WinGetInstalledVersion {
     }
 
     return ""
+}
+
+function Get-WinGetPinStatusFromText {
+    param(
+        [string]$Text,
+        [string]$PackageId,
+        [int]$ExitCode = 0,
+        [bool]$TimedOut = $false
+    )
+
+    $combined = if ($null -eq $Text) { "" } else { $Text }
+    $isPinned = ($ExitCode -eq 0 -and $combined -match [regex]::Escape($PackageId))
+    $pinType = "None"
+    $summary = "Not pinned"
+
+    if ($TimedOut) {
+        $summary = "Pin lookup timed out"
+    } elseif ($ExitCode -ne 0 -and !$isPinned) {
+        $summary = "Pin lookup failed"
+    } elseif ($isPinned) {
+        if ($combined -match "(?i)\bblocking\b") {
+            $pinType = "Blocking"
+            $summary = "Blocking pin"
+        } elseif ($combined -match "(?i)\bgating\b|\bversion\b|\binstalled\b") {
+            $pinType = "Gating"
+            $summary = "Version-gated pin"
+        } else {
+            $pinType = "Pinned"
+            $summary = "Pinned"
+        }
+    }
+
+    [PSCustomObject]@{
+        PackageId = $PackageId
+        IsPinned  = [bool]$isPinned
+        PinType   = $pinType
+        Summary   = $summary
+        ExitCode  = $ExitCode
+        Raw       = $combined
+    }
+}
+
+function Get-WinGetPinStatus {
+    param([string]$PackageId)
+
+    $capture = Invoke-WinGetCapture -Arguments @("pin", "list", "--id", $PackageId, "--exact", "--disable-interactivity") -TimeoutSeconds 20
+    $combined = "$($capture.StdOut)`n$($capture.StdErr)"
+    return Get-WinGetPinStatusFromText -Text $combined -PackageId $PackageId -ExitCode $capture.ExitCode -TimedOut ([bool]$capture.TimedOut)
+}
+
+function Invoke-WinGetPinOperation {
+    param(
+        [string]$PackageId,
+        [ValidateSet("Pin", "Block", "PinInstalled", "Remove")]
+        [string]$Operation
+    )
+
+    switch ($Operation) {
+        "Remove" {
+            $arguments = @("pin", "remove", "--id", $PackageId, "--exact", "--disable-interactivity")
+        }
+        "Block" {
+            $arguments = @("pin", "add", "--id", $PackageId, "--exact", "--blocking", "--force", "--accept-source-agreements", "--disable-interactivity")
+        }
+        "PinInstalled" {
+            $arguments = @("pin", "add", "--id", $PackageId, "--exact", "--installed", "--force", "--accept-source-agreements", "--disable-interactivity")
+        }
+        default {
+            $arguments = @("pin", "add", "--id", $PackageId, "--exact", "--force", "--accept-source-agreements", "--disable-interactivity")
+        }
+    }
+
+    $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds 60
+    $combined = "$($capture.StdOut)`n$($capture.StdErr)".Trim()
+    [PSCustomObject]@{
+        PackageId = $PackageId
+        Operation = $Operation
+        Command   = "winget " + (Join-ProcessArguments -Arguments $arguments)
+        ExitCode  = $capture.ExitCode
+        Success   = ($capture.ExitCode -eq 0 -and -not $capture.TimedOut)
+        TimedOut  = [bool]$capture.TimedOut
+        Output    = Get-TextExcerpt -Text $combined -MaxLength 600
+    }
 }
 
 function Get-WinGetPackageDetails {

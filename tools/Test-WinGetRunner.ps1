@@ -63,6 +63,15 @@ if ($failures.Count -eq 0) {
         Add-Failure "Status classifier did not classify failure."
     }
 
+    $upgradeArgs = New-WinGetPackageOperationArguments -Action "upgrade" -PackageId "Google.Chrome" -Silent $true -AcceptAgreements $true -IncludePinned $true
+    if ($upgradeArgs -notcontains "--include-pinned") {
+        Add-Failure "Upgrade arguments did not include --include-pinned when requested."
+    }
+    $installArgs = New-WinGetPackageOperationArguments -Action "install" -PackageId "Google.Chrome" -Silent $false -AcceptAgreements $false -IncludePinned $true
+    if ($installArgs -contains "--include-pinned") {
+        Add-Failure "Install arguments unexpectedly included --include-pinned."
+    }
+
     $showSample = @"
 Version: 1.2.3
 Publisher: Example Publisher
@@ -76,6 +85,20 @@ Installer:
     }
     if ((Get-WinGetShowField -Text $showSample -Label "Installer Url") -ne "https://example.com/app.msi") {
         Add-Failure "Get-WinGetShowField did not parse indented Installer Url."
+    }
+
+    $pinSample = @"
+Name          Id            Version Pin type
+---------------------------------------------
+Google Chrome Google.Chrome 124.0   Blocking
+"@
+    $pinStatus = Get-WinGetPinStatusFromText -Text $pinSample -PackageId "Google.Chrome"
+    if (!$pinStatus.IsPinned -or $pinStatus.PinType -ne "Blocking") {
+        Add-Failure "Get-WinGetPinStatusFromText did not parse a blocking pin."
+    }
+    $noPinStatus = Get-WinGetPinStatusFromText -Text "There are no pins configured." -PackageId "Google.Chrome"
+    if ($noPinStatus.IsPinned -or $noPinStatus.PinType -ne "None") {
+        Add-Failure "Get-WinGetPinStatusFromText did not parse an unpinned package."
     }
 
     $bootstrapLogPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-bootstrap-test-" + [System.Guid]::NewGuid().ToString("N") + ".jsonl")

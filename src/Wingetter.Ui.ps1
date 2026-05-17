@@ -721,9 +721,10 @@ function Show-WinGetInstallerGUI {
             </Grid>
         </Grid>
         <!-- Package Detail Panel -->
-        <Border x:Name="PackageDetailsBorder" Grid.Row="4" Background="#071019" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Visibility="Collapsed" MaxHeight="240" Padding="20,14">
+        <Border x:Name="PackageDetailsBorder" Grid.Row="4" Background="#071019" BorderBrush="#1d2a3a" BorderThickness="0,1,0,0" Visibility="Collapsed" MaxHeight="300" Padding="20,14">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -762,7 +763,15 @@ function Show-WinGetInstallerGUI {
                     <TextBlock x:Name="DetailShaLabel" Grid.Row="2" Grid.Column="0" Text="SHA256" FontSize="11" Foreground="#94a7bc" Margin="0,0,8,0"/>
                     <TextBlock x:Name="DetailSha256" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="-" FontSize="11.5" Foreground="#dbe7f2" TextTrimming="CharacterEllipsis"/>
                 </Grid>
-                <StackPanel Grid.Row="2" Margin="0,10,0,0">
+                <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,10,0,0">
+                    <TextBlock x:Name="DetailPinLabel" Text="Pin" FontSize="11" Foreground="#94a7bc" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="DetailPinState" Text="-" FontSize="11.5" Foreground="#dbe7f2" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                    <Button x:Name="PinPackageBtn" Style="{StaticResource ToolBtn}" Content="Pin" Padding="9,4" Margin="0,0,6,0" FontSize="10.5" Cursor="Hand"/>
+                    <Button x:Name="PinBlockingBtn" Style="{StaticResource ToolBtn}" Content="Block Updates" Padding="9,4" Margin="0,0,6,0" FontSize="10.5" Cursor="Hand"/>
+                    <Button x:Name="PinInstalledBtn" Style="{StaticResource ToolBtn}" Content="Pin Installed" Padding="9,4" Margin="0,0,6,0" FontSize="10.5" Cursor="Hand"/>
+                    <Button x:Name="RemovePinBtn" Style="{StaticResource ToolBtn}" Content="Remove Pin" Padding="9,4" FontSize="10.5" Cursor="Hand"/>
+                </StackPanel>
+                <StackPanel Grid.Row="3" Margin="0,10,0,0">
                     <TextBlock x:Name="DetailInstallerUrl" Text="-" FontSize="11.5" Foreground="#94a7bc" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
                     <TextBlock x:Name="DetailWarnings" Text="" FontSize="11" Foreground="#ffbf69" TextWrapping="Wrap" Margin="0,5,0,0"/>
                 </StackPanel>
@@ -815,7 +824,8 @@ function Show-WinGetInstallerGUI {
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <CheckBox x:Name="SilentCheck" Content="Use silent install where available" IsChecked="True" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center"/>
-                        <CheckBox x:Name="AcceptCheck" Content="Accept package and source agreements" IsChecked="True" FontSize="12.5" VerticalAlignment="Center"/>
+                        <CheckBox x:Name="AcceptCheck" Content="Accept package and source agreements" IsChecked="True" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center"/>
+                        <CheckBox x:Name="IncludePinnedCheck" Content="Include pinned updates" IsChecked="False" FontSize="12.5" VerticalAlignment="Center" ToolTip="Applies --include-pinned to update runs. Blocking pins still cannot be overridden."/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="InstallWinGetBtn" Style="{StaticResource ToolBtn}" Content="Install WinGet" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" Visibility="Collapsed"/>
@@ -917,6 +927,7 @@ function Show-WinGetInstallerGUI {
     $DeleteGroupBtn   = $Window.FindName("DeleteGroupBtn")
     $SilentCheck      = $Window.FindName("SilentCheck")
     $AcceptCheck      = $Window.FindName("AcceptCheck")
+    $IncludePinnedCheck = $Window.FindName("IncludePinnedCheck")
     $ModeBtn          = $Window.FindName("ModeBtn")
 
     $MainScroll       = $Window.FindName("MainScroll")
@@ -983,13 +994,20 @@ function Show-WinGetInstallerGUI {
     $ui["DetailInstallerType"] = $Window.FindName("DetailInstallerType")
     $ui["DetailInstallerUrl"] = $Window.FindName("DetailInstallerUrl")
     $ui["DetailSha256"] = $Window.FindName("DetailSha256")
+    $ui["DetailPinLabel"] = $Window.FindName("DetailPinLabel")
+    $ui["DetailPinState"] = $Window.FindName("DetailPinState")
+    $ui["PinPackageBtn"] = $Window.FindName("PinPackageBtn")
+    $ui["PinBlockingBtn"] = $Window.FindName("PinBlockingBtn")
+    $ui["PinInstalledBtn"] = $Window.FindName("PinInstalledBtn")
+    $ui["RemovePinBtn"] = $Window.FindName("RemovePinBtn")
     $ui["DetailWarnings"] = $Window.FindName("DetailWarnings")
     $ui["DetailLabels"] = @(
         $Window.FindName("DetailSourceLabel"),
         $Window.FindName("DetailPublisherLabel"),
         $Window.FindName("DetailInstalledLabel"),
         $Window.FindName("DetailInstallerLabel"),
-        $Window.FindName("DetailShaLabel")
+        $Window.FindName("DetailShaLabel"),
+        $ui["DetailPinLabel"]
     )
     $ui["DetailValues"] = @(
         $ui["DetailSource"],
@@ -997,7 +1015,8 @@ function Show-WinGetInstallerGUI {
         $ui["DetailInstalledVersion"],
         $ui["DetailInstallerType"],
         $ui["DetailInstallerUrl"],
-        $ui["DetailSha256"]
+        $ui["DetailSha256"],
+        $ui["DetailPinState"]
     )
     $ui["MainScroll"]          = $MainScroll
     $ui["ToolbarHintBorder"]   = $Window.FindName("ToolbarHintBorder")
@@ -1012,14 +1031,17 @@ function Show-WinGetInstallerGUI {
     $ui["IsUpdateMode"]        = $false
     $ui["LastClickedIndex"]    = -1
     $ui["InstalledIds"]        = @{}
+    $ui["PinnedIds"]           = @{}
+    $ui["PinBadgesById"]       = @{}
+    $ui["SelectedPackage"]     = $null
     $ui["SidebarButtons"]      = [System.Collections.ArrayList]::new()
     $ui["CategoryAppsStacks"]  = [System.Collections.ArrayList]::new()
     $ui["BuiltInGroups"]       = $Script:BuiltInGroups
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ImportBtn, $InstallWinGetBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn)) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ImportBtn, $InstallWinGetBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
-    foreach ($chk in @($SilentCheck, $AcceptCheck)) {
+    foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck)) {
         [void]$ui["Elements"]["FooterChecks"].Add($chk)
     }
 
@@ -1352,9 +1374,43 @@ function Show-WinGetInstallerGUI {
             $TextBlock.Text = if ([string]::IsNullOrWhiteSpace($Value)) { "-" } else { $Value }
         }
     }
+    $SetPinVisual = {
+        param([string]$PackageId, [object]$PinStatus)
+        if (!$PackageId) { return }
+        if ($PinStatus -and $PinStatus.IsPinned) {
+            $ui["PinnedIds"][$PackageId] = $PinStatus.PinType
+        } elseif ($ui["PinnedIds"].ContainsKey($PackageId)) {
+            $ui["PinnedIds"].Remove($PackageId)
+        }
+
+        if ($ui["PinBadgesById"].ContainsKey($PackageId)) {
+            $badge = $ui["PinBadgesById"][$PackageId]
+            if ($PinStatus -and $PinStatus.IsPinned) {
+                $badge.Visibility = [System.Windows.Visibility]::Visible
+                $badge.ToolTip = $PinStatus.Summary
+            } else {
+                $badge.Visibility = [System.Windows.Visibility]::Collapsed
+                $badge.ToolTip = "Not pinned"
+            }
+        }
+    }
+    $RefreshPinControls = {
+        param([object]$PinStatus)
+        $hasSelection = $null -ne $ui["SelectedPackage"]
+        foreach ($btn in @($ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+            if ($btn) { $btn.IsEnabled = $hasSelection }
+        }
+        if ($ui["RemovePinBtn"]) {
+            $ui["RemovePinBtn"].IsEnabled = ($hasSelection -and $PinStatus -and $PinStatus.IsPinned)
+        }
+        if ($ui["DetailPinState"]) {
+            $ui["DetailPinState"].Text = if ($PinStatus) { $PinStatus.Summary } else { "-" }
+        }
+    }
     $ShowPackageDetails = {
         param([object]$App)
 
+        $ui["SelectedPackage"] = $App
         $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Visible
         $ui["PackageDetailsTitle"].Text = $App.Name
         $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - loading source and installer metadata..."
@@ -1365,9 +1421,12 @@ function Show-WinGetInstallerGUI {
         & $SetDetailText $ui["DetailInstallerUrl"] "-"
         & $SetDetailText $ui["DetailSha256"] "-"
         $ui["DetailWarnings"].Text = ""
+        & $RefreshPinControls $null
+        & $SetDetailText $ui["DetailPinState"] "Loading..."
         [System.Windows.Forms.Application]::DoEvents()
 
         $details = Get-WinGetPackageDetails -PackageId $App.WingetId
+        $pinStatus = Get-WinGetPinStatus -PackageId $App.WingetId
         & $SetDetailText $ui["DetailSource"] $details.Source
         & $SetDetailText $ui["DetailPublisher"] $details.Publisher
         $installedText = if ($details.InstalledVersion) { $details.InstalledVersion } elseif ($ui["InstalledIds"].ContainsKey($App.WingetId)) { "Detected" } else { "Not detected" }
@@ -1381,9 +1440,36 @@ function Show-WinGetInstallerGUI {
         } else {
             $ui["DetailWarnings"].Text = ""
         }
+        & $SetPinVisual $App.WingetId $pinStatus
+        & $RefreshPinControls $pinStatus
         $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - metadata from winget show"
     }
     $PackageDetailsCloseBtn.Add_Click({ $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Collapsed }.GetNewClosure())
+    $ApplyPinOperation = {
+        param([string]$Operation)
+        if ($null -eq $ui["SelectedPackage"]) { return }
+        $package = $ui["SelectedPackage"]
+        $ui["DetailPinState"].Text = "Updating pin..."
+        foreach ($btn in @($ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+            if ($btn) { $btn.IsEnabled = $false }
+        }
+        [System.Windows.Forms.Application]::DoEvents()
+
+        $result = Invoke-WinGetPinOperation -PackageId $package.WingetId -Operation $Operation
+        $pinStatus = Get-WinGetPinStatus -PackageId $package.WingetId
+        & $SetPinVisual $package.WingetId $pinStatus
+        & $RefreshPinControls $pinStatus
+        if ($result.Success) {
+            $ui["PackageDetailsSubtitle"].Text = "$($package.WingetId) - pin command completed"
+        } else {
+            $ui["DetailWarnings"].Text = "Pin command failed: $($result.Output)"
+            $ui["PackageDetailsSubtitle"].Text = "$($package.WingetId) - pin command failed"
+        }
+    }
+    $ui["PinPackageBtn"].Add_Click({ & $ApplyPinOperation "Pin" }.GetNewClosure())
+    $ui["PinBlockingBtn"].Add_Click({ & $ApplyPinOperation "Block" }.GetNewClosure())
+    $ui["PinInstalledBtn"].Add_Click({ & $ApplyPinOperation "PinInstalled" }.GetNewClosure())
+    $ui["RemovePinBtn"].Add_Click({ & $ApplyPinOperation "Remove" }.GetNewClosure())
     $appNum = 0
 
     foreach ($category in $Script:SoftwareDatabase.Keys) {
@@ -1538,10 +1624,36 @@ function Show-WinGetInstallerGUI {
             [void]$ui["Elements"]["AppStatusBadges"].Add($installedBadge)
             [void]$ui["Elements"]["AppStatusTexts"].Add($installedText)
 
+            $pinBadge = New-Object System.Windows.Controls.Border
+            $pinBadge.Background = (& $toBrush "#3a2a10")
+            $pinBadge.BorderBrush = (& $toBrush "#604315")
+            $pinBadge.BorderThickness = [System.Windows.Thickness]::new(1)
+            $pinBadge.CornerRadius = [System.Windows.CornerRadius]::new(8)
+            $pinBadge.Padding = [System.Windows.Thickness]::new(7, 2, 7, 2)
+            $pinBadge.Margin = [System.Windows.Thickness]::new(6, 0, 0, 0)
+            $pinBadge.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            $pinBadge.Visibility = [System.Windows.Visibility]::Collapsed
+            $pinBadge.ToolTip = "Pinned"
+
+            $pinText = New-Object System.Windows.Controls.TextBlock
+            $pinText.Text = "Pinned"
+            $pinText.FontSize = 9.5
+            $pinText.FontWeight = [System.Windows.FontWeights]::SemiBold
+            $pinText.Foreground = (& $toBrush "#ffbf69")
+            $pinBadge.Child = $pinText
+            $ui["PinBadgesById"][$app.WingetId] = $pinBadge
+
+            $statusStack = New-Object System.Windows.Controls.StackPanel
+            $statusStack.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+            $statusStack.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+            [System.Windows.Controls.Grid]::SetColumn($statusStack, 4)
+            [void]$statusStack.Children.Add($installedBadge)
+            [void]$statusStack.Children.Add($pinBadge)
+
             [void]$appStack.Children.Add($checkbox)
             [void]$appStack.Children.Add($iconImage)
             [void]$appStack.Children.Add($appLabel)
-            [void]$appStack.Children.Add($installedBadge)
+            [void]$appStack.Children.Add($statusStack)
 
             $appBorder.Child = $appStack
 
@@ -2097,7 +2209,7 @@ function Show-WinGetInstallerGUI {
         if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }
 
         $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true; $SelectAllBtn.IsEnabled = $false; $DeselectAllBtn.IsEnabled = $false
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ImportBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck)) {
             $ctl.IsEnabled = $false
         }
         $ui["Cancelled"] = $false
@@ -2127,6 +2239,7 @@ function Show-WinGetInstallerGUI {
                 -PackageName $app.Name `
                 -Silent ([bool]$SilentCheck.IsChecked) `
                 -AcceptAgreements ([bool]$AcceptCheck.IsChecked) `
+                -IncludePinned ([bool]$IncludePinnedCheck.IsChecked) `
                 -RunLogDir $runLogDir `
                 -ShouldCancel { $ui["Cancelled"] } `
                 -PumpUi { [System.Windows.Forms.Application]::DoEvents() }
@@ -2146,7 +2259,7 @@ function Show-WinGetInstallerGUI {
         $ui["LastRunResults"] = $runResults.ToArray()
 
         $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false; $SelectAllBtn.IsEnabled = $true; $DeselectAllBtn.IsEnabled = $true
-        foreach ($ctl in @($ImportBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn)) {
+        foreach ($ctl in @($ImportBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck)) {
             $ctl.IsEnabled = $true
         }
         & $UpdateGroupActionState
