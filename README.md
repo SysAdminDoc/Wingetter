@@ -151,6 +151,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileJson.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
 ```
 
 `catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded one-file fallback in `Wingetter.ps1`, and `Test-Catalog.ps1` checks script parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.

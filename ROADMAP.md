@@ -60,12 +60,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 
 ## P1 - Reliability, Workflow, And Maintainability
 
-### [ ] R-007 - Add CI and focused PowerShell tests
+### [x] R-007 - Add CI and focused PowerShell tests
 
 - Problem: no automated parse, lint, catalog, export/import, or count checks exist. PSScriptAnalyzer already reports warnings.
 - Build: add Pester tests or script-level checks for parse success, package count, duplicate IDs, built-in group IDs, export/import round trip, and README count sync. Add GitHub Actions for `pwsh` validation.
 - Acceptance: CI fails on parse errors, duplicate package IDs, stale counts, broken group references, or malformed JSON exports.
 - Sources: L13, L18.
+- Completed 2026-05-17: added `.github/workflows/validate.yml` on Windows plus focused scripts for catalog/README/changelog sync, embedded fallback freshness, official/Wingetter profile JSON round trips, WinGet runner helper behavior, and WPF XAML loading.
 
 ### [ ] R-008 - Modularize without changing behavior
 
