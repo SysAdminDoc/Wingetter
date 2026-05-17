@@ -126,12 +126,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: E12, E16, E17, E18.
 - Completed 2026-05-17: added `src/Wingetter.Sources.ps1` with a validated package-source adapter contract; registered WinGet as the first backend for search, details, install, upgrade, uninstall, export/import, installed scans, pin/hold operations, bootstrap, and command previews; routed WPF details, official source profile import/export, install/update, pin controls, copied commands, and installed scans through adapter wrappers; and added `tools\Test-PackageSources.ps1` plus CI coverage to enforce the adapter boundary.
 
-### [ ] R-015 - Corporate/internal source mode
+### [x] R-015 - Corporate/internal source mode
 
 - Problem: sysadmin/MSP use cases need internal manifests, locked source lists, explicit sources, and audit trails.
 - Build: add a settings profile that locks allowed sources, supports `Microsoft.Rest` private sources, shows source trust level, and exports source configuration.
 - Acceptance: Wingetter can run against a private explicit source and refuse packages outside allowed sources when corporate mode is enabled.
 - Sources: E07, E23, E15, E17.
+- Completed 2026-05-17: added `Wingetter.SourcePolicy.v1` support under `%APPDATA%\Wingetter\source-policy.json`, a footer Corporate policy toggle, source trust summaries in package details, explicit `--source` command generation, policy refusal before install/update execution, `Microsoft.Rest` private source definitions with `--explicit` source-add command export, GUI Export Sources, and `tools\Test-SourcePolicy.ps1` plus CI coverage.
 
 ### [ ] R-016 - Scheduled update watcher and tray/status workflow
 

@@ -44,6 +44,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Installed app detection** -- background scan prefers `Microsoft.WinGet.Client`, falls back to `winget list`, and caches detected versions under `%APPDATA%\Wingetter`
 - **Package trust details** -- click an app to inspect source, publisher, installed/latest version, installer type, URL, SHA256, and metadata warnings
 - **WinGet pin controls** -- inspect pin state, add standard/blocking/installed-version pins, remove pins, and opt into pinned updates
+- **Corporate source policy** -- optional allowed-source mode can block packages outside trusted sources and export `winget source add` commands, including explicit `Microsoft.Rest` private sources
 - **Silent install & auto-accept agreements** -- toggleable checkboxes for hands-free deployment
 - **Copy command** -- grab the raw `winget install` commands to clipboard
 - **Save / Load groups** -- persist custom selections as named groups for reuse
@@ -146,6 +147,8 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 
 **Import JSON** accepts official WinGet import/export JSON, Wingetter group JSON, or a simple JSON array of package IDs. Packages not present in the Wingetter catalog are reported and skipped during selection.
 
+**Corporate source policy** is stored at `%APPDATA%\Wingetter\source-policy.json`. Enable **Corporate policy** in the footer to refuse selected packages whose source is not listed in that policy. **Export Sources** writes the current policy plus reproducible `winget source add` commands for allowed and private sources.
+
 ## Catalog Validation
 
 The repo includes generated catalog snapshots in `catalog/` and validation tools in `tools/`:
@@ -157,6 +160,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileJson.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SearchMetadata.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-PackageSources.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SourcePolicy.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibility.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
 ```

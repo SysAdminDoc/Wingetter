@@ -71,6 +71,10 @@ if ($failures.Count -eq 0) {
     if ($installArgs -contains "--include-pinned") {
         Add-Failure "Install arguments unexpectedly included --include-pinned."
     }
+    $sourceArgs = New-WinGetPackageOperationArguments -Action "install" -PackageId "Internal.Tool" -SourceName "corp" -Silent $false -AcceptAgreements $true -IncludePinned $false
+    if ($sourceArgs -notcontains "--source" -or $sourceArgs -notcontains "corp") {
+        Add-Failure "Install arguments did not include an explicit source."
+    }
 
     $showSample = @"
 Version: 1.2.3

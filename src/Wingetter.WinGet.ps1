@@ -235,12 +235,17 @@ function New-WinGetPackageOperationArguments {
     param(
         [string]$Action,
         [string]$PackageId,
+        [string]$SourceName = "",
         [bool]$Silent,
         [bool]$AcceptAgreements,
         [bool]$IncludePinned
     )
 
     $arguments = @($Action, "--id", $PackageId, "--exact", "--verbose-logs", "--disable-interactivity")
+    if (![string]::IsNullOrWhiteSpace($SourceName) -and $Action -ne "uninstall") {
+        $arguments += "--source"
+        $arguments += $SourceName
+    }
     if ($Silent) { $arguments += "--silent" }
     if ($AcceptAgreements) {
         $arguments += "--accept-package-agreements"
@@ -257,6 +262,7 @@ function Invoke-WinGetPackageOperation {
         [string]$Action,
         [string]$PackageId,
         [string]$PackageName,
+        [string]$SourceName = "",
         [bool]$Silent,
         [bool]$AcceptAgreements,
         [bool]$IncludePinned,
@@ -265,7 +271,7 @@ function Invoke-WinGetPackageOperation {
         [scriptblock]$PumpUi = {}
     )
 
-    $arguments = New-WinGetPackageOperationArguments -Action $Action -PackageId $PackageId -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned
+    $arguments = New-WinGetPackageOperationArguments -Action $Action -PackageId $PackageId -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned
 
     $safeId = Get-SafeFileName -Value $PackageId
     $stamp = Get-Date -Format "yyyyMMdd-HHmmssfff"
@@ -319,6 +325,7 @@ function Invoke-WinGetPackageOperation {
         Action        = $Action
         PackageName   = $PackageName
         PackageId     = $PackageId
+        SourceName    = $SourceName
         Command       = "winget " + (Join-ProcessArguments -Arguments $arguments)
         ExitCode      = $exitCode
         Status        = $status
@@ -345,9 +352,17 @@ function Get-WinGetShowField {
 }
 
 function Get-WinGetInstalledVersion {
-    param([string]$PackageId)
+    param(
+        [string]$PackageId,
+        [string]$SourceName = ""
+    )
 
-    $capture = Invoke-WinGetCapture -Arguments @("list", "--id", $PackageId, "--exact", "--disable-interactivity") -TimeoutSeconds 15
+    $arguments = @("list", "--id", $PackageId, "--exact", "--disable-interactivity")
+    if (![string]::IsNullOrWhiteSpace($SourceName)) {
+        $arguments += "--source"
+        $arguments += $SourceName
+    }
+    $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds 15
     if ($capture.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($capture.StdOut)) { return "" }
 
     foreach ($line in ($capture.StdOut -split "`r?`n")) {
@@ -457,7 +472,10 @@ function ConvertFrom-WinGetListText {
 }
 
 function Get-WinGetInstalledCatalogPackages {
-    param([string[]]$PackageIds)
+    param(
+        [string[]]$PackageIds,
+        [string]$SourceName = ""
+    )
 
     $scannedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
     $packageIdSet = @{}
@@ -479,7 +497,8 @@ function Get-WinGetInstalledCatalogPackages {
         $method = "winget list"
         $errorMessage = $_.Exception.Message
         try {
-            $capture = Invoke-WinGetCapture -Arguments @("list", "--source", "winget", "--disable-interactivity") -TimeoutSeconds 45
+            $listSource = if ([string]::IsNullOrWhiteSpace($SourceName)) { "winget" } else { $SourceName }
+            $capture = Invoke-WinGetCapture -Arguments @("list", "--source", $listSource, "--disable-interactivity") -TimeoutSeconds 45
             $records = ConvertFrom-WinGetListText -Text "$($capture.StdOut)`n$($capture.StdErr)" -PackageIds $PackageIds -ScannedAtUtc $scannedAtUtc
             if ($capture.ExitCode -ne 0 -and !$errorMessage) { $errorMessage = "winget list exited with code $($capture.ExitCode)." }
         } catch {
@@ -492,6 +511,7 @@ function Get-WinGetInstalledCatalogPackages {
         [ordered]@{
             scannedAtUtc    = $scannedAtUtc
             detectionMethod = $method
+            sourceName      = $SourceName
             error           = $errorMessage
             packages        = @($records.Values)
         } | ConvertTo-Json -Depth 6 | Set-Content -Path $cachePath -Encoding UTF8
@@ -590,9 +610,17 @@ function Invoke-WinGetPinOperation {
 }
 
 function Get-WinGetPackageDetails {
-    param([string]$PackageId)
+    param(
+        [string]$PackageId,
+        [string]$SourceName = ""
+    )
 
-    $capture = Invoke-WinGetCapture -Arguments @("show", "--id", $PackageId, "--exact", "--disable-interactivity", "--accept-source-agreements") -TimeoutSeconds 20
+    $arguments = @("show", "--id", $PackageId, "--exact", "--disable-interactivity", "--accept-source-agreements")
+    if (![string]::IsNullOrWhiteSpace($SourceName)) {
+        $arguments += "--source"
+        $arguments += $SourceName
+    }
+    $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds 20
     $combined = "$($capture.StdOut)`n$($capture.StdErr)"
     $warnings = [System.Collections.ArrayList]::new()
     if ($capture.TimedOut) { [void]$warnings.Add("winget show timed out.") }
@@ -607,7 +635,7 @@ function Get-WinGetPackageDetails {
     $sha256 = Get-WinGetShowField -Text $combined -Label "Installer SHA256"
     $homepage = Get-WinGetShowField -Text $combined -Label "Homepage"
     $version = Get-WinGetShowField -Text $combined -Label "Version"
-    $installedVersion = Get-WinGetInstalledVersion -PackageId $PackageId
+    $installedVersion = Get-WinGetInstalledVersion -PackageId $PackageId -SourceName $SourceName
 
     foreach ($required in @(
         @{ Name = "publisher"; Value = $publisher },
@@ -622,6 +650,7 @@ function Get-WinGetPackageDetails {
 
     [PSCustomObject]@{
         PackageId        = $PackageId
+        SourceName       = $SourceName
         Publisher        = $publisher
         Source           = $source
         LatestVersion    = $version
