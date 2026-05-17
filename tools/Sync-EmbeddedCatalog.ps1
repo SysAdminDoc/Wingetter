@@ -109,6 +109,11 @@ function Write-Utf8NoBom {
     [System.IO.File]::WriteAllText($Path, $Value, $encoding)
 }
 
+function ConvertTo-NormalizedText {
+    param([string]$Value)
+    return (($Value -replace "`r`n", "`n") -replace "`r", "`n")
+}
+
 $catalog = Read-JsonFile -Path $CatalogPath
 $groups = Read-JsonFile -Path $GroupsPath
 $resolvedScriptPath = (Resolve-Path $ScriptPath).Path
@@ -124,8 +129,8 @@ $updatedText = Replace-SingleBlock -Text $scriptText -Pattern $databasePattern -
 $updatedText = Replace-SingleBlock -Text $updatedText -Pattern $groupsPattern -Replacement $groupsBlock -Name "groups"
 
 if ($Check) {
-    if ($updatedText -ne $scriptText) {
-        Write-Error "Embedded catalog fallback is stale. Run tools/Sync-EmbeddedCatalog.ps1."
+    if ((ConvertTo-NormalizedText $updatedText) -ne (ConvertTo-NormalizedText $scriptText)) {
+        Write-Host "Embedded catalog fallback is stale. Run tools/Sync-EmbeddedCatalog.ps1." -ForegroundColor Red
         exit 1
     }
     Write-Host "Embedded catalog fallback is current for $($catalog.version)."

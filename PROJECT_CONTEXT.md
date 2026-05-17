@@ -18,6 +18,8 @@ Wingetter is a Windows-first PowerShell/WPF GUI for discovering, selecting, grou
 - Built-in groups in code: Essential PC Setup, Web Developer, Python Developer, Creative Suite, Gaming PC, Privacy & Security, System Admin, Streaming Setup, Office & Productivity, and 3D Printing Workshop.
 - Persisted user groups: `%APPDATA%\Wingetter\groups.json`.
 - Icon cache: `%TEMP%\WingetterIcons`.
+- Export formats: official WinGet import JSON, Wingetter group JSON, and standalone PowerShell installer script.
+- Import formats: official WinGet import/export JSON, Wingetter group JSON, and simple package ID arrays.
 - The root README version badge, category counts, and built-in group names are synced to the v6.1.0 catalog as of 2026-05-17.
 - `CLAUDE.md` and `AGENTS.md` exist locally but are ignored/untracked. They are tool-specific working notes, not canonical shipped docs.
 
@@ -34,13 +36,14 @@ Wingetter is currently monolithic:
 - Installs and updates run serially by launching `winget install` or `winget upgrade` with `--id`, `--exact`, and optional `--silent` / agreement flags.
 - Installed app detection runs in a background runspace using `winget list --source winget` and regex parsing.
 - Icons are loaded lazily across a 4-worker runspace pool from Google favicon URLs, with letter placeholders before network fetches complete.
+- Profile import/export helpers now support the official WinGet JSON hierarchy: `Sources`, `Packages`, `PackageIdentifier`, and optional `Version` fields are accepted on import; exports generate a `https://aka.ms/winget-packages.schema.2.0.json` file with the `winget` source details.
 
 ## Verified Strengths
 
 - Fast zero-install entry point: the README supports direct `irm ... | iex` execution.
 - Broad curated local catalog with no duplicate package IDs.
 - Familiar dark/light WPF UI with categories, sidebar navigation, collapsible sections, selection state, update review mode, log panel, and toast notification.
-- Useful profile primitives already exist: save/load groups, import JSON, export JSON, export PowerShell installer script, and copy raw winget commands.
+- Useful profile primitives exist: save/load groups, import official WinGet JSON, import Wingetter JSON, export official WinGet JSON, export Wingetter JSON, export PowerShell installer script, and copy raw winget commands.
 - The script parses successfully with no PowerShell parser errors.
 
 ## Important Gaps
@@ -60,11 +63,10 @@ Wingetter is currently monolithic:
 The next phase should move Wingetter from "large polished script" to "trustworthy setup cockpit":
 
 1. Add CI so catalog validation and embedded fallback freshness cannot drift silently.
-2. Support the official WinGet export/import schema alongside Wingetter groups.
-3. Replace fragile text parsing with structured logs, stderr capture, and per-package result records.
-4. Add source and manifest trust visibility: source, publisher, installer URL, hash, scope, installer type, and pin state.
-5. Reconcile docs/versioning/release artifacts and add CI checks so counts and package IDs cannot drift silently.
-6. Consider Scoop, Chocolatey, and PowerShell Gallery only after the catalog and execution layers are separated behind a package-source interface.
+2. Replace fragile text parsing with structured logs, stderr capture, and per-package result records.
+3. Add source and manifest trust visibility: source, publisher, installer URL, hash, scope, installer type, and pin state.
+4. Add CI checks so counts, package IDs, embedded fallback sync, and profile JSON behavior cannot drift silently.
+5. Consider Scoop, Chocolatey, and PowerShell Gallery only after the catalog and execution layers are separated behind a package-source interface.
 
 ## Source Trail
 

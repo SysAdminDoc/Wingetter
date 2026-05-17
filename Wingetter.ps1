@@ -1351,6 +1351,7 @@ function Export-GroupAsPS1 {
 function Export-GroupAsJSON {
     param([string]$GroupName, [string[]]$PackageIds, [string]$FilePath)
     $obj = @{
+        Schema     = "Wingetter.Group.v1"
         GroupName  = $GroupName
         Generated  = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
         Generator  = "Wingetter"
@@ -1358,6 +1359,117 @@ function Export-GroupAsJSON {
         PackageIds = $PackageIds
     }
     $obj | ConvertTo-Json -Depth 5 | Set-Content -Path $FilePath -Encoding UTF8
+}
+
+function Export-GroupAsWinGetJSON {
+    param([string]$GroupName, [string[]]$PackageIds, [string]$FilePath)
+
+    $wingetVersion = try { (winget --version 2>$null) } catch { $null }
+    $packages = @($PackageIds | ForEach-Object {
+        [ordered]@{ PackageIdentifier = $_ }
+    })
+
+    $obj = [ordered]@{
+        '$schema'     = "https://aka.ms/winget-packages.schema.2.0.json"
+        CreationDate  = (Get-Date).ToUniversalTime().ToString("o")
+        Sources       = @(
+            [ordered]@{
+                Packages      = $packages
+                SourceDetails = [ordered]@{
+                    Argument   = "https://cdn.winget.microsoft.com/cache"
+                    Identifier = "Microsoft.Winget.Source_8wekyb3d8bbwe"
+                    Name       = "winget"
+                    Type       = "Microsoft.PreIndexed.Package"
+                }
+            }
+        )
+    }
+    if ($wingetVersion) { $obj["WinGetVersion"] = [string]$wingetVersion }
+
+    $obj | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+}
+
+function Get-JsonPropertyValue {
+    param([object]$InputObject, [string]$PropertyName)
+    if ($null -eq $InputObject) { return $null }
+    $property = $InputObject.PSObject.Properties[$PropertyName]
+    if ($property) { return $property.Value }
+    return $null
+}
+
+function Import-PackageIdsFromJSON {
+    param([object]$Content, [string]$FallbackGroupName = "Imported Group")
+
+    $ids = [System.Collections.ArrayList]::new()
+    $sourceNames = [System.Collections.ArrayList]::new()
+    $warnings = [System.Collections.ArrayList]::new()
+    $groupName = $FallbackGroupName
+    $format = "Unknown"
+
+    $packageIds = Get-JsonPropertyValue -InputObject $Content -PropertyName "PackageIds"
+    $wingetSources = Get-JsonPropertyValue -InputObject $Content -PropertyName "Sources"
+    $flatPackages = Get-JsonPropertyValue -InputObject $Content -PropertyName "Packages"
+
+    if ($packageIds) {
+        $format = "Wingetter group JSON"
+        $name = Get-JsonPropertyValue -InputObject $Content -PropertyName "GroupName"
+        if ($name) { $groupName = [string]$name }
+        foreach ($id in @($packageIds)) {
+            if (![string]::IsNullOrWhiteSpace([string]$id)) { [void]$ids.Add([string]$id) }
+        }
+    } elseif ($wingetSources) {
+        $format = "WinGet import JSON"
+        foreach ($source in @($wingetSources)) {
+            $sourceDetails = Get-JsonPropertyValue -InputObject $source -PropertyName "SourceDetails"
+            $sourceName = Get-JsonPropertyValue -InputObject $sourceDetails -PropertyName "Name"
+            if (!$sourceName) { $sourceName = Get-JsonPropertyValue -InputObject $source -PropertyName "Name" }
+            if ($sourceName) {
+                [void]$sourceNames.Add([string]$sourceName)
+            } else {
+                [void]$warnings.Add("A WinGet source entry is missing SourceDetails.Name.")
+            }
+
+            $sourcePackages = Get-JsonPropertyValue -InputObject $source -PropertyName "Packages"
+            foreach ($package in @($sourcePackages)) {
+                $id = Get-JsonPropertyValue -InputObject $package -PropertyName "PackageIdentifier"
+                if ($id) {
+                    [void]$ids.Add([string]$id)
+                } else {
+                    [void]$warnings.Add("A WinGet package entry is missing PackageIdentifier.")
+                }
+            }
+        }
+    } elseif ($flatPackages) {
+        $format = "WinGet package list JSON"
+        foreach ($package in @($flatPackages)) {
+            $id = Get-JsonPropertyValue -InputObject $package -PropertyName "PackageIdentifier"
+            if ($id) { [void]$ids.Add([string]$id) }
+        }
+    } elseif ($Content -is [System.Array]) {
+        $format = "Package ID array JSON"
+        foreach ($id in @($Content)) {
+            if (![string]::IsNullOrWhiteSpace([string]$id)) { [void]$ids.Add([string]$id) }
+        }
+    } else {
+        throw "Unrecognized JSON format"
+    }
+
+    $seen = @{}
+    $uniqueIds = [System.Collections.ArrayList]::new()
+    foreach ($id in $ids) {
+        if (!$seen.ContainsKey($id)) {
+            $seen[$id] = $true
+            [void]$uniqueIds.Add($id)
+        }
+    }
+
+    [PSCustomObject]@{
+        GroupName   = $groupName
+        Format      = $format
+        PackageIds  = [string[]]$uniqueIds.ToArray([string])
+        SourceNames = [string[]]$sourceNames.ToArray([string])
+        Warnings    = [string[]]$warnings.ToArray([string])
+    }
 }
 
 # Pre-built groups
@@ -3023,60 +3135,68 @@ function Show-WinGetInstallerGUI {
     }.GetNewClosure())
 
     # ========================================================
-    # EXPORT (Enhanced - JSON config or PS1 script)
+    # EXPORT (WinGet JSON, Wingetter JSON, or PS1 script)
     # ========================================================
     $ExportBtn.Add_Click({
         $sel = & $GetSelectedIds
         if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before exporting."; return }
 
         $dlg = New-Object Microsoft.Win32.SaveFileDialog
-        $dlg.Filter = "PowerShell Script (*.ps1)|*.ps1|JSON Config (*.json)|*.json"
-        $dlg.FileName = "WinGetGroup"
+        $dlg.Filter = "WinGet Import JSON (*.json)|*.json|Wingetter Group JSON (*.wingetter.json)|*.wingetter.json|PowerShell Script (*.ps1)|*.ps1"
+        $dlg.FileName = "WinGetPackages.json"
 
         if ($dlg.ShowDialog() -eq $true) {
-            $ext = [System.IO.Path]::GetExtension($dlg.FileName).ToLower()
             $baseName = [System.IO.Path]::GetFileNameWithoutExtension($dlg.FileName)
 
-            if ($ext -eq ".ps1") {
-                Export-GroupAsPS1 -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName -Silent $SilentCheck.IsChecked -AcceptAgreements $AcceptCheck.IsChecked
-                $ProgressText.Text = "Exported $($sel.Count) apps as a PowerShell installer."
-            } else {
-                Export-GroupAsJSON -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName
-                $ProgressText.Text = "Exported $($sel.Count) apps as a JSON config."
+            switch ($dlg.FilterIndex) {
+                1 {
+                    Export-GroupAsWinGetJSON -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName
+                    $ProgressText.Text = "Exported $($sel.Count) apps as official WinGet import JSON."
+                }
+                2 {
+                    Export-GroupAsJSON -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName
+                    $ProgressText.Text = "Exported $($sel.Count) apps as a Wingetter group JSON profile."
+                }
+                3 {
+                    Export-GroupAsPS1 -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName -Silent $SilentCheck.IsChecked -AcceptAgreements $AcceptCheck.IsChecked
+                    $ProgressText.Text = "Exported $($sel.Count) apps as a PowerShell installer."
+                }
             }
         }
     }.GetNewClosure())
 
     # ========================================================
-    # IMPORT (Enhanced - supports both JSON formats)
+    # IMPORT (WinGet JSON, Wingetter JSON, or simple package ID arrays)
     # ========================================================
     $ImportBtn.Add_Click({
         $dlg = New-Object Microsoft.Win32.OpenFileDialog
-        $dlg.Filter = "JSON Config (*.json)|*.json|All Files (*.*)|*.*"
+        $dlg.Filter = "JSON Config (*.json;*.wingetter.json)|*.json;*.wingetter.json|All Files (*.*)|*.*"
         if ($dlg.ShowDialog() -eq $true) {
             try {
                 $content = Get-Content $dlg.FileName -Raw | ConvertFrom-Json
-
-                # Detect format: group config (has PackageIds) vs simple array
-                if ($content.PackageIds) {
-                    $ids = @($content.PackageIds)
-                    $gName = if ($content.GroupName) { $content.GroupName } else { "Imported Group" }
-                } elseif ($content -is [System.Array]) {
-                    $ids = @($content)
-                    $gName = "Imported Group"
-                } else {
-                    throw "Unrecognized JSON format"
+                $fallbackName = [System.IO.Path]::GetFileNameWithoutExtension($dlg.FileName)
+                $import = Import-PackageIdsFromJSON -Content $content -FallbackGroupName $fallbackName
+                $ids = @($import.PackageIds)
+                if ($ids.Count -eq 0) { throw "No package IDs were found in the selected JSON file." }
+                if ($import.Warnings.Count -gt 0) {
+                    $ProgressText.Text = "Import warning: $($import.Warnings[0])"
                 }
 
                 $loaded = & $ApplyPackageList $ids
-                $ProgressText.Text = "Imported '$gName' and selected $loaded of $($ids.Count) apps."
+                $missing = $ids.Count - $loaded
+                $sourceSuffix = if ($import.SourceNames.Count -gt 0) { " Sources: $(@($import.SourceNames | Select-Object -Unique) -join ', ')." } else { "" }
+                if ($missing -gt 0) {
+                    $ProgressText.Text = "Imported '$($import.GroupName)' ($($import.Format)) and selected $loaded of $($ids.Count) apps; $missing are not in the Wingetter catalog.$sourceSuffix"
+                } else {
+                    $ProgressText.Text = "Imported '$($import.GroupName)' ($($import.Format)) and selected all $loaded apps.$sourceSuffix"
+                }
 
                 # Offer to save as group
-                $save = [System.Windows.MessageBox]::Show("Save '$gName' as a reusable group for later?", "Save Imported Group", "YesNo", "Question")
+                $save = [System.Windows.MessageBox]::Show("Save '$($import.GroupName)' as a reusable Wingetter group for later?", "Save Imported Group", "YesNo", "Question")
                 if ($save -eq "Yes") {
-                    Save-GroupToFile -Name $gName -PackageIds $ids
+                    Save-GroupToFile -Name $import.GroupName -PackageIds $ids
                     & $RefreshGroupCombo
-                    $ProgressText.Text = "Imported and saved '$gName' ($loaded apps)."
+                    $ProgressText.Text = "Imported and saved '$($import.GroupName)' ($loaded matched apps)."
                 }
             } catch {
                 $ProgressText.Text = "Import failed: $($_.Exception.Message)"
