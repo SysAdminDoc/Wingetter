@@ -68,17 +68,17 @@ Wingetter is now a launcher plus dot-sourced modules:
 - Install/update result records now capture stderr and exit codes, but status and pin classification still use some English WinGet output phrases for "already current" and pin-type cases.
 - Fallback installed-app parsing still depends on text output when `Microsoft.WinGet.Client` is unavailable.
 - WinGet bootstrap no longer downloads GitHub/AppX assets directly, but still depends on PowerShell Gallery availability when the `Microsoft.WinGet.Client` repair path is needed.
-- Several GUI elements still use fully rounded `CornerRadius="999"` or `CornerRadius = 999`, which conflicts with the project-wide visual rule against pill backdrops.
+- Visual/accessibility validation now rejects `CornerRadius=999` regressions and checks baseline automation names, but deeper keyboard navigation and screen reader flow testing are still manual.
 - PSScriptAnalyzer reports warning-level issues: automatic variable shadowing, empty catch blocks, stale encoding assumptions, and other maintainability warnings.
 
 ## Strategic Direction
 
 The next phase should move Wingetter from "modularized WinGet GUI" to "trustworthy setup cockpit":
 
-1. Fix remaining visual rule violations and accessibility basics, especially pill-style backdrops and focus/contrast details.
-2. Add deeper tests for import/export edge cases, install-result fixtures, pin-output fixtures, and installed-app parsing.
+1. Introduce a package-source interface around the current WinGet implementation before adding Scoop, Chocolatey, PowerShell Gallery, or corporate/private-source modes.
+2. Add deeper tests for import/export edge cases, install-result fixtures, pin-output fixtures, installed-app parsing, and source-adapter behavior.
 3. Continue moving UI-heavy workflow code behind smaller functions now that the source is split into modules.
-4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the WinGet execution layer is separated behind a package-source interface.
+4. Add release/package automation and GUI automation once the source adapter boundary is stable.
 
 ## Source Trail
 
