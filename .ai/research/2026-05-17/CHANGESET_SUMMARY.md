@@ -72,6 +72,27 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
 
+## Development Follow-up: 2026-05-17 Installed Detection Batch
+
+### Files Modified
+
+- `src/Wingetter.WinGet.ps1` - added `Microsoft.WinGet.Client` object-based installed package detection, `winget list` fallback parsing, cache writing, and conversion helpers for installed package records.
+- `src/Wingetter.Ui.ps1` - changed the background installed-app scan to consume richer installed package records and show detected versions in package details.
+- `tools/Test-WinGetRunner.ps1` - added object conversion and fallback text parsing tests for installed detection.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented the richer installed detection path and marked R-010 complete.
+
+### Verification Performed
+
+- `Get-Module -ListAvailable Microsoft.WinGet.Client`
+- `Get-Command -Module Microsoft.WinGet.Client`
+- `Get-Help Get-WinGetPackage -Parameter *`
+- `Get-WinGetPackage -Count 3 | Select-Object -First 3 | Format-List *`
+- `winget list --help`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+- Live helper smoke: `Get-WinGetInstalledCatalogPackages -PackageIds @('7zip.7zip','Google.Chrome','Mozilla.Firefox')`
+
 ## Development Follow-up: 2026-05-17 Pin Controls Batch
 
 ### Files Modified

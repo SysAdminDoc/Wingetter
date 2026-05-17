@@ -364,6 +364,148 @@ function Get-WinGetInstalledVersion {
     return ""
 }
 
+function Get-WingetterInstalledCachePath {
+    $root = Join-Path $env:APPDATA "Wingetter"
+    if (!(Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+    return (Join-Path $root "installed-cache.json")
+}
+
+function ConvertFrom-WinGetPackageObject {
+    param(
+        [object]$Package,
+        [string]$ScannedAtUtc,
+        [string]$DetectionMethod = "Microsoft.WinGet.Client"
+    )
+
+    $availableVersions = @()
+    $availableProperty = $Package.PSObject.Properties["AvailableVersions"]
+    if ($availableProperty -and $availableProperty.Value) {
+        $availableVersions = @($availableProperty.Value | ForEach-Object { [string]$_ })
+    }
+
+    $installedVersion = [string]$Package.InstalledVersion
+    $availableVersion = ""
+    $updateProperty = $Package.PSObject.Properties["IsUpdateAvailable"]
+    $isUpdateAvailable = ($updateProperty -and [bool]$updateProperty.Value)
+    if ($isUpdateAvailable -and $availableVersions.Count -gt 0) {
+        $availableVersion = @($availableVersions | Where-Object { $_ -and $_ -ne $installedVersion } | Select-Object -First 1)
+        if (!$availableVersion) { $availableVersion = $availableVersions[0] }
+    }
+
+    $scope = ""
+    $scopeProperty = $Package.PSObject.Properties["Scope"]
+    if ($scopeProperty -and $scopeProperty.Value) { $scope = [string]$scopeProperty.Value }
+
+    [PSCustomObject]@{
+        PackageId        = [string]$Package.Id
+        Name             = [string]$Package.Name
+        InstalledVersion = $installedVersion
+        AvailableVersion = [string]$availableVersion
+        Source           = [string]$Package.Source
+        Scope            = $scope
+        IsUpdateAvailable = [bool]$isUpdateAvailable
+        DetectionMethod  = $DetectionMethod
+        ScannedAtUtc     = $ScannedAtUtc
+    }
+}
+
+function ConvertFrom-WinGetListText {
+    param(
+        [string]$Text,
+        [string[]]$PackageIds,
+        [string]$ScannedAtUtc
+    )
+
+    $records = @{}
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $records }
+
+    foreach ($line in ($Text -split "`r?`n")) {
+        foreach ($packageId in $PackageIds) {
+            if ($records.ContainsKey($packageId)) { continue }
+            $index = $line.IndexOf($packageId, [System.StringComparison]::OrdinalIgnoreCase)
+            if ($index -lt 0) { continue }
+
+            $name = $line.Substring(0, $index).Trim()
+            $afterId = $line.Substring($index + $packageId.Length).Trim()
+            if (!$afterId) { continue }
+            $parts = @($afterId -split '\s+' | Where-Object { $_ })
+            if ($parts.Count -eq 0 -or $parts[0] -match '^-+$') { continue }
+
+            $installedVersion = [string]$parts[0]
+            $source = ""
+            $availableVersion = ""
+            if ($parts.Count -ge 2) {
+                $source = [string]$parts[$parts.Count - 1]
+                if ($parts.Count -ge 3) { $availableVersion = [string]$parts[1] }
+            }
+
+            $records[$packageId] = [PSCustomObject]@{
+                PackageId        = $packageId
+                Name             = $name
+                InstalledVersion = $installedVersion
+                AvailableVersion = $availableVersion
+                Source           = $source
+                Scope            = ""
+                IsUpdateAvailable = -not [string]::IsNullOrWhiteSpace($availableVersion)
+                DetectionMethod  = "winget list"
+                ScannedAtUtc     = $ScannedAtUtc
+            }
+        }
+    }
+
+    return $records
+}
+
+function Get-WinGetInstalledCatalogPackages {
+    param([string[]]$PackageIds)
+
+    $scannedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+    $packageIdSet = @{}
+    foreach ($id in $PackageIds) { $packageIdSet[$id] = $true }
+
+    $records = @{}
+    $method = "Microsoft.WinGet.Client"
+    $errorMessage = ""
+
+    try {
+        Import-Module Microsoft.WinGet.Client -Force -ErrorAction Stop
+        foreach ($package in @(Get-WinGetPackage -ErrorAction Stop)) {
+            $id = [string]$package.Id
+            if ($packageIdSet.ContainsKey($id)) {
+                $records[$id] = ConvertFrom-WinGetPackageObject -Package $package -ScannedAtUtc $scannedAtUtc -DetectionMethod $method
+            }
+        }
+    } catch {
+        $method = "winget list"
+        $errorMessage = $_.Exception.Message
+        try {
+            $capture = Invoke-WinGetCapture -Arguments @("list", "--source", "winget", "--disable-interactivity") -TimeoutSeconds 45
+            $records = ConvertFrom-WinGetListText -Text "$($capture.StdOut)`n$($capture.StdErr)" -PackageIds $PackageIds -ScannedAtUtc $scannedAtUtc
+            if ($capture.ExitCode -ne 0 -and !$errorMessage) { $errorMessage = "winget list exited with code $($capture.ExitCode)." }
+        } catch {
+            $errorMessage = $_.Exception.Message
+        }
+    }
+
+    $cachePath = Get-WingetterInstalledCachePath
+    try {
+        [ordered]@{
+            scannedAtUtc    = $scannedAtUtc
+            detectionMethod = $method
+            error           = $errorMessage
+            packages        = @($records.Values)
+        } | ConvertTo-Json -Depth 6 | Set-Content -Path $cachePath -Encoding UTF8
+    } catch {}
+
+    [PSCustomObject]@{
+        Packages        = $records
+        ScannedAtUtc    = $scannedAtUtc
+        DetectionMethod = $method
+        Error           = $errorMessage
+        CachePath       = $cachePath
+    }
+}
+
 function Get-WinGetPinStatusFromText {
     param(
         [string]$Text,

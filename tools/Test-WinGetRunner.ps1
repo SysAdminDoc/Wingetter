@@ -87,6 +87,30 @@ Installer:
         Add-Failure "Get-WinGetShowField did not parse indented Installer Url."
     }
 
+    $objectPackage = [PSCustomObject]@{
+        Id                = "Google.Chrome"
+        Name              = "Google Chrome"
+        InstalledVersion  = "124.0"
+        IsUpdateAvailable = $true
+        Source            = "winget"
+        AvailableVersions = @("125.0", "124.0")
+    }
+    $objectRecord = ConvertFrom-WinGetPackageObject -Package $objectPackage -ScannedAtUtc "2026-05-17T00:00:00.0000000Z"
+    if ($objectRecord.PackageId -ne "Google.Chrome" -or $objectRecord.InstalledVersion -ne "124.0" -or $objectRecord.AvailableVersion -ne "125.0" -or $objectRecord.Source -ne "winget") {
+        Add-Failure "ConvertFrom-WinGetPackageObject did not preserve object-based installed package fields."
+    }
+
+    $listSample = @"
+Name            Id               Version Available Source
+----------------------------------------------------------
+Google Chrome   Google.Chrome    124.0   125.0     winget
+Mozilla Firefox Mozilla.Firefox  123.0             winget
+"@
+    $listRecords = ConvertFrom-WinGetListText -Text $listSample -PackageIds @("Google.Chrome", "Mozilla.Firefox") -ScannedAtUtc "2026-05-17T00:00:00.0000000Z"
+    if (!$listRecords.ContainsKey("Google.Chrome") -or $listRecords["Google.Chrome"].InstalledVersion -ne "124.0" -or $listRecords["Google.Chrome"].AvailableVersion -ne "125.0") {
+        Add-Failure "ConvertFrom-WinGetListText did not parse installed and available versions."
+    }
+
     $pinSample = @"
 Name          Id            Version Pin type
 ---------------------------------------------
