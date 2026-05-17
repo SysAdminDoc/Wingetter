@@ -71,6 +71,29 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
 - `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
+
+## Development Follow-up: 2026-05-17 Pin Controls Batch
+
+### Files Modified
+
+- `src/Wingetter.WinGet.ps1` - added package operation argument builder, `--include-pinned` support for update operations, pin status parsing, pin status lookup, and pin add/block/installed/remove commands.
+- `src/Wingetter.Ui.ps1` - added pin status and controls to the package detail panel, row-level pinned badges after lookup, and an Include pinned updates checkbox.
+- `tools/Test-WinGetRunner.ps1` - added pin parser coverage and update argument checks for `--include-pinned`.
+- `tools/Test-Xaml.ps1` - added required pin controls to the XAML smoke test.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - documented pin controls and marked R-009 complete.
+
+### Verification Performed
+
+- `winget pin --help`
+- `winget pin add --help`
+- `winget pin remove -?`
+- `winget pin list --help --disable-interactivity`
+- `winget upgrade -?`
+- `winget pin list --id Google.Chrome --exact --disable-interactivity`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`
 - XAML load smoke command confirming `PackageDetailsBorder` exists.
 - Live package detail extraction for `Google.Chrome` using the new helper functions.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1 -CheckWingetAvailability -AvailabilitySampleSize 5`

@@ -76,12 +76,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L01, L04, L07, L08.
 - Completed 2026-05-17: split runtime code into `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`; reduced `Wingetter.ps1` to a launcher that loads local modules or downloads modules for raw GitHub quick launch; moved catalog/group embedded fallbacks into modules; updated validation tools so profile and WinGet helper tests import source modules directly.
 
-### [ ] R-009 - Add update pins and package lifecycle controls
+### [x] R-009 - Add update pins and package lifecycle controls
 
 - Problem: WinGet has first-class pins, but Wingetter only has install and update review primitives.
 - Build: show current pin state; add pin, blocking pin, gating pin, remove pin, and "include pinned" update option with clear warnings.
 - Acceptance: `winget pin list` state is visible and package rows can add/remove pins without leaving the GUI.
 - Sources: E02, E05, L20.
+- Completed 2026-05-17: added WinGet pin lookup helpers, pin-output parsing tests, package detail pin state, standard/blocking/installed-version pin buttons, remove-pin action, row-level pinned badges after lookup, and an "Include pinned updates" checkbox that adds `--include-pinned` to update operations.
 
 ### [ ] R-010 - Improve installed-app detection
 

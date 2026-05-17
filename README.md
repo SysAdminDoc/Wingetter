@@ -43,6 +43,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Update mode** -- toggle between Install and Update mode to upgrade already-installed apps
 - **Installed app detection** -- background scan via `winget list` with green dot indicators
 - **Package trust details** -- click an app to inspect source, publisher, installed/latest version, installer type, URL, SHA256, and metadata warnings
+- **WinGet pin controls** -- inspect pin state, add standard/blocking/installed-version pins, remove pins, and opt into pinned updates
 - **Silent install & auto-accept agreements** -- toggleable checkboxes for hands-free deployment
 - **Copy command** -- grab the raw `winget install` commands to clipboard
 - **Save / Load groups** -- persist custom selections as named groups for reuse

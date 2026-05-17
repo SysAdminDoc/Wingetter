@@ -22,7 +22,13 @@ try {
         "LogPanelBorder",
         "InstallBtn",
         "ExportBtn",
-        "ImportBtn"
+        "ImportBtn",
+        "IncludePinnedCheck",
+        "DetailPinState",
+        "PinPackageBtn",
+        "PinBlockingBtn",
+        "PinInstalledBtn",
+        "RemovePinBtn"
     )) {
         if (!$window.FindName($requiredName)) {
             throw "Missing named XAML control '$requiredName'."
