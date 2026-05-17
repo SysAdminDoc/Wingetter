@@ -1,5 +1,5 @@
 param(
-    [string]$ScriptPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1")
+    [string]$SourceDir = (Join-Path $PSScriptRoot "..\src")
 )
 
 Set-StrictMode -Version Latest
@@ -29,35 +29,17 @@ function Assert-EqualArray {
     }
 }
 
-$scriptText = [System.IO.File]::ReadAllText((Resolve-Path $ScriptPath).Path)
-$tokens = $null
-$parseErrors = $null
-$ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptText, [ref]$tokens, [ref]$parseErrors)
-if ($parseErrors.Count -gt 0) {
-    foreach ($error in $parseErrors) {
-        Add-Failure "PowerShell parser error at line $($error.Extent.StartLineNumber): $($error.Message)"
-    }
-}
-
-$requiredFunctions = @(
-    "Get-JsonPropertyValue",
-    "Import-PackageIdsFromJSON",
-    "Export-GroupAsWinGetJSON",
-    "Export-GroupAsJSON"
-)
-
-foreach ($functionName in $requiredFunctions) {
-    $functionAst = $ast.Find({
-        param($node)
-        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $functionName
-    }, $true)
-
-    if (!$functionAst) {
-        Add-Failure "Could not find function '$functionName' in $ScriptPath."
+foreach ($moduleName in @("Wingetter.Common.ps1", "Wingetter.Catalog.ps1", "Wingetter.Groups.ps1")) {
+    $modulePath = Join-Path $SourceDir $moduleName
+    if (!(Test-Path $modulePath)) {
+        Add-Failure "Missing source module '$moduleName'."
         continue
     }
-
-    Invoke-Expression $functionAst.Extent.Text
+    try {
+        . (Resolve-Path $modulePath).Path
+    } catch {
+        Add-Failure "Could not import '$moduleName': $($_.Exception.Message)"
+    }
 }
 
 if ($failures.Count -eq 0) {

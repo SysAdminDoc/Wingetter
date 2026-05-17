@@ -1,11 +1,11 @@
 param(
-    [string]$ScriptPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1")
+    [string]$UiModulePath = (Join-Path $PSScriptRoot "..\src\Wingetter.Ui.ps1")
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$text = Get-Content -Path $ScriptPath -Raw
+$text = Get-Content -Path $UiModulePath -Raw
 $match = [regex]::Match($text, '(?s)\$XAML = @"\r?\n(?<xaml>.*?)\r?\n"@')
 if (!$match.Success) {
     Write-Host "XAML validation failed: XAML block not found." -ForegroundColor Red

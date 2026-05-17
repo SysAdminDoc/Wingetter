@@ -16,7 +16,7 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Build: move catalog data to a repo-owned data file such as `catalog/winget.json`; add a generator/validator script that checks unique IDs, category counts, built-in group references, JSON schema, and `winget show --id <id> --exact` availability sampling.
 - Acceptance: `pwsh tools/Test-Catalog.ps1` exits nonzero for duplicate IDs, missing group IDs, invalid icon URLs, stale README counts, or malformed category records.
 - Sources: L02, L18, E08, E09, E11.
-- Completed 2026-05-17: added repo-owned catalog and group source files, local JSON loading with embedded fallback, `tools\Sync-EmbeddedCatalog.ps1` to regenerate the one-file fallback, `tools\Export-WingetterCatalog.ps1` for fallback parity checks, README/changelog count validation, duplicate-ID validation, group-reference validation, and optional `winget show` sampling.
+- Completed 2026-05-17: added repo-owned catalog and group source files, local JSON loading with embedded fallback, `tools\Sync-EmbeddedCatalog.ps1` to regenerate the embedded fallback, `tools\Export-WingetterCatalog.ps1` for fallback parity checks, README/changelog count validation, duplicate-ID validation, group-reference validation, and optional `winget show` sampling.
 
 ### [x] R-002 - Reconcile versioning, README counts, changelog, and release artifacts
 
@@ -68,12 +68,13 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: L13, L18.
 - Completed 2026-05-17: added `.github/workflows/validate.yml` on Windows plus focused scripts for catalog/README/changelog sync, embedded fallback freshness, official/Wingetter profile JSON round trips, WinGet runner helper behavior, and WPF XAML loading.
 
-### [ ] R-008 - Modularize without changing behavior
+### [x] R-008 - Modularize without changing behavior
 
 - Problem: a 3,283-line single script makes targeted fixes and reviews difficult.
 - Build: split into `src/Wingetter.App.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Ui.ps1`, and `Wingetter.ps1` as a thin launcher while keeping direct-run behavior.
 - Acceptance: `Wingetter.ps1` still launches the GUI; tests can import non-UI modules independently.
 - Sources: L01, L04, L07, L08.
+- Completed 2026-05-17: split runtime code into `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`; reduced `Wingetter.ps1` to a launcher that loads local modules or downloads modules for raw GitHub quick launch; moved catalog/group embedded fallbacks into modules; updated validation tools so profile and WinGet helper tests import source modules directly.
 
 ### [ ] R-009 - Add update pins and package lifecycle controls
 

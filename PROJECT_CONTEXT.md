@@ -9,11 +9,12 @@ Wingetter is a Windows-first PowerShell/WPF GUI for discovering, selecting, grou
 ## Canonical Current State
 
 - Repository: `SysAdminDoc/Wingetter`, public GitHub repo, default branch `main`.
-- Primary implementation: [Wingetter.ps1](Wingetter.ps1), a single PowerShell 5.1+ WPF script.
+- Launcher: [Wingetter.ps1](Wingetter.ps1), a PowerShell 5.1+ entry point that loads dot-sourced modules from `src/`.
+- Source modules: `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`.
 - Current runtime version shown in the script UI: `v6.1.0`.
 - Local catalog: 765 unique `WingetId` entries across 39 categories.
 - Generated catalog snapshots: `catalog/winget.json` and `catalog/groups.json`.
-- Embedded fallback sync command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1`.
+- Embedded module fallback sync command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1`.
 - Validation command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1`.
 - CI workflow: `.github/workflows/validate.yml` runs catalog sync/count validation, profile JSON tests, WinGet runner helper tests, and WPF XAML load validation on Windows.
 - Built-in groups in code: Essential PC Setup, Web Developer, Python Developer, Creative Suite, Gaming PC, Privacy & Security, System Admin, Streaming Setup, Office & Productivity, and 3D Printing Workshop.
@@ -26,13 +27,18 @@ Wingetter is a Windows-first PowerShell/WPF GUI for discovering, selecting, grou
 
 ## Architecture
 
-Wingetter is currently monolithic:
+Wingetter is now a launcher plus dot-sourced modules:
 
-- The complete application, static catalog, WPF layout, theme definitions, built-in groups, WinGet bootstrap logic, export/import logic, install/update runner, installed-app scan, and icon loader all live in `Wingetter.ps1`.
-- The app builds WPF controls in a large `Show-WinGetInstallerGUI` function rather than through separate XAML files or modules.
+- `Wingetter.ps1` resolves the module directory, dot-sources the modules in order, and calls `Start-Wingetter`.
+- Local checkout runs use `src/` directly. Raw `irm .../Wingetter.ps1 | iex` runs download the same module set from `https://raw.githubusercontent.com/SysAdminDoc/Wingetter/main/src` unless `WINGETTER_MODULE_BASE_URL` overrides it.
+- `src/Wingetter.Common.ps1` owns shared root-path resolution.
+- `src/Wingetter.Catalog.ps1` owns catalog conversion and the embedded catalog fallback.
+- `src/Wingetter.WinGet.ps1` owns WinGet detection, bootstrap repair, command capture, result logging, installed version lookup, and package detail parsing.
+- `src/Wingetter.Groups.ps1` owns saved groups, profile import/export, official WinGet JSON import/export, and built-in group fallback data.
+- `src/Wingetter.Ui.ps1` owns splash/icon helpers, WPF theme definitions, XAML, event wiring, installed-app scan UI, and package detail presentation.
+- `src/Wingetter.App.ps1` owns runtime initialization and starts the GUI.
 - `catalog/winget.json` and `catalog/groups.json` are the curation source files.
-- The script still contains an embedded `[ordered]` hashtable catalog for one-file launch fallback; regenerate that fallback with `tools/Sync-EmbeddedCatalog.ps1`.
-- When run from a local repo checkout, the script prefers `catalog/winget.json` and `catalog/groups.json` if present and falls back to the embedded catalog/groups if those files are unavailable or malformed.
+- Local checkout runs prefer `catalog/winget.json` and `catalog/groups.json` if present and fall back to embedded module data if those files are unavailable or malformed.
 - Search filters app name and WinGet ID only.
 - Installs and updates run serially by launching `winget install` or `winget upgrade` with `--id`, `--exact`, and optional `--silent` / agreement flags.
 - Install/update execution writes per-package stdout, stderr, and JSON result files under `%APPDATA%\Wingetter\logs\<timestamp>-<action>`, passes `--verbose-logs`, and records command, action, package ID, exit code, status, stdout/stderr excerpts, cancellation state, run log directory, and WinGet diagnostic log directory when available.
@@ -48,15 +54,15 @@ Wingetter is currently monolithic:
 - Broad curated local catalog with no duplicate package IDs.
 - Familiar dark/light WPF UI with categories, sidebar navigation, collapsible sections, selection state, update review mode, log panel, and toast notification.
 - Useful profile primitives exist: save/load groups, import official WinGet JSON, import Wingetter JSON, export official WinGet JSON, export Wingetter JSON, export PowerShell installer script, and copy raw winget commands.
-- The script parses successfully with no PowerShell parser errors.
+- The launcher and source modules parse successfully with no PowerShell parser errors.
 
 ## Important Gaps
 
 - `CLAUDE.md` still says `v0.1.0`; it is ignored/untracked and should not be treated as shipped project truth.
 - The repo README is now synced to 765 apps and 39 categories, but GitHub repo metadata may still need to be checked if it drifts outside git.
 - `ROADMAP.md` previously included good ideas but lacked prioritization, source IDs, saturation notes, and live repo reconciliation.
-- Catalog JSON, embedded fallback sync, and validation tooling now exist. The remaining catalog risk is that there is no CI job enforcing those checks yet.
-- CI now covers catalog sync/counts, profile JSON helpers, WinGet runner helpers, and XAML loading. There is still no release build script or full GUI automation.
+- Catalog JSON, embedded module fallback sync, validation tooling, and CI now exist.
+- CI now covers catalog sync/counts, profile JSON helpers imported from modules, WinGet runner helpers imported from modules, and XAML loading. There is still no release build script or full GUI automation.
 - Install/update result records now capture stderr and exit codes, but status classification still uses some English WinGet output phrases for "already current" cases.
 - WinGet bootstrap no longer downloads GitHub/AppX assets directly, but still depends on PowerShell Gallery availability when the `Microsoft.WinGet.Client` repair path is needed.
 - Several GUI elements still use fully rounded `CornerRadius="999"` or `CornerRadius = 999`, which conflicts with the project-wide visual rule against pill backdrops.
@@ -64,12 +70,12 @@ Wingetter is currently monolithic:
 
 ## Strategic Direction
 
-The next phase should move Wingetter from "large polished script" to "trustworthy setup cockpit":
+The next phase should move Wingetter from "modularized WinGet GUI" to "trustworthy setup cockpit":
 
-1. Add CI so catalog validation and embedded fallback freshness cannot drift silently.
-2. Extend trust visibility with scope, source policy, and pin state.
-3. Add deeper tests for import/export edge cases, install-result fixtures, and installed-app parsing.
-4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the catalog and execution layers are separated behind a package-source interface.
+1. Extend trust visibility with scope, source policy, and pin state.
+2. Add deeper tests for import/export edge cases, install-result fixtures, and installed-app parsing.
+3. Continue moving UI-heavy workflow code behind smaller functions now that the source is split into modules.
+4. Consider Scoop, Chocolatey, and PowerShell Gallery only after the WinGet execution layer is separated behind a package-source interface.
 
 ## Source Trail
 
