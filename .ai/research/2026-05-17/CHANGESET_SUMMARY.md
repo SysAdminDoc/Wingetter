@@ -47,7 +47,7 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - `catalog/winget.json` - generated package catalog snapshot for v6.1.0.
 - `catalog/groups.json` - generated built-in group snapshot for v6.1.0.
 - `tools/Export-WingetterCatalog.ps1` - parser/exporter that regenerates catalog snapshots from the current script.
-- `tools/Sync-EmbeddedCatalog.ps1` - sync tool that regenerates the embedded one-file fallback in `Wingetter.ps1` from the JSON catalog and groups.
+- `tools/Sync-EmbeddedCatalog.ps1` - sync tool that regenerates the embedded fallback from the JSON catalog and groups.
 - `tools/Test-Catalog.ps1` - validation command for script parse health, generated JSON freshness, README count drift, duplicate IDs, group references, and changelog formatting.
 - `tools/Test-ProfileJson.ps1` - non-UI smoke test for official WinGet JSON, Wingetter group JSON, and simple package ID array import/export helpers.
 - `tools/Test-WinGetRunner.ps1` - non-installing smoke test for WinGet runner argument handling, safe log names, excerpts, and status classification.
@@ -74,3 +74,35 @@ No `CONTINUE_FROM_HERE.md` was created because the required artifacts were compl
 - XAML load smoke command confirming `PackageDetailsBorder` exists.
 - Live package detail extraction for `Google.Chrome` using the new helper functions.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1 -CheckWingetAvailability -AvailabilitySampleSize 5`
+
+## Development Follow-up: 2026-05-17 Modularization Batch
+
+### Files Created
+
+- `src/Wingetter.Common.ps1` - shared module helper for resolving the repository/root path.
+- `src/Wingetter.Catalog.ps1` - catalog conversion plus embedded catalog fallback data.
+- `src/Wingetter.WinGet.ps1` - WinGet detection, bootstrap repair, process capture, result logging, and package detail helpers.
+- `src/Wingetter.Groups.ps1` - saved group, profile import/export, official WinGet JSON, and built-in group fallback helpers.
+- `src/Wingetter.Ui.ps1` - splash/icon helpers, theme definitions, XAML, and GUI event wiring.
+- `src/Wingetter.App.ps1` - WPF/runtime bootstrap and `Start-Wingetter`.
+
+### Files Modified
+
+- `Wingetter.ps1` - reduced to a launcher that loads local `src/` modules, supports `WINGETTER_SOURCE_DIR`, and downloads modules from raw GitHub for `irm ... | iex` quick-launch runs when no local `src/` is available.
+- `catalog/winget.json` and `catalog/groups.json` - updated `embeddedFallbackFile` metadata to point at the source modules.
+- `tools/Sync-EmbeddedCatalog.ps1` - now regenerates embedded fallback data inside `src/Wingetter.Catalog.ps1` and `src/Wingetter.Groups.ps1`.
+- `tools/Export-WingetterCatalog.ps1` - now exports catalog/group snapshots from source modules instead of the launcher.
+- `tools/Test-Catalog.ps1` - now parses the launcher and all `src/*.ps1` modules.
+- `tools/Test-ProfileJson.ps1` - now imports `src` modules directly for JSON profile coverage.
+- `tools/Test-WinGetRunner.ps1` - now imports the WinGet module directly for runner helper coverage.
+- `tools/Test-Xaml.ps1` - now validates the XAML block from `src/Wingetter.Ui.ps1`.
+- `README.md`, `CHANGELOG.md`, `PROJECT_CONTEXT.md`, and `ROADMAP.md` - updated for the module architecture and marked R-008 complete.
+
+### Verification Performed
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Sync-EmbeddedCatalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Export-WingetterCatalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-ProfileJson.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-WinGetRunner.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\Test-Xaml.ps1`

@@ -1,5 +1,5 @@
 param(
-    [string]$ScriptPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1")
+    [string]$SourceDir = (Join-Path $PSScriptRoot "..\src")
 )
 
 Set-StrictMode -Version Latest
@@ -12,38 +12,15 @@ function Add-Failure {
     $script:failures.Add($Message)
 }
 
-$scriptText = [System.IO.File]::ReadAllText((Resolve-Path $ScriptPath).Path)
-$tokens = $null
-$parseErrors = $null
-$ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptText, [ref]$tokens, [ref]$parseErrors)
-if ($parseErrors.Count -gt 0) {
-    foreach ($error in $parseErrors) {
-        Add-Failure "PowerShell parser error at line $($error.Extent.StartLineNumber): $($error.Message)"
+$modulePath = Join-Path $SourceDir "Wingetter.WinGet.ps1"
+if (!(Test-Path $modulePath)) {
+    Add-Failure "Missing source module 'Wingetter.WinGet.ps1'."
+} else {
+    try {
+        . (Resolve-Path $modulePath).Path
+    } catch {
+        Add-Failure "Could not import 'Wingetter.WinGet.ps1': $($_.Exception.Message)"
     }
-}
-
-$requiredFunctions = @(
-    "Join-ProcessArguments",
-    "Set-ProcessArguments",
-    "Get-SafeFileName",
-    "Get-TextExcerpt",
-    "Get-WinGetOperationStatus",
-    "Get-WinGetShowField",
-    "Write-WinGetBootstrapLog"
-)
-
-foreach ($functionName in $requiredFunctions) {
-    $functionAst = $ast.Find({
-        param($node)
-        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $functionName
-    }, $true)
-
-    if (!$functionAst) {
-        Add-Failure "Could not find function '$functionName' in $ScriptPath."
-        continue
-    }
-
-    Invoke-Expression $functionAst.Extent.Text
 }
 
 if ($failures.Count -eq 0) {

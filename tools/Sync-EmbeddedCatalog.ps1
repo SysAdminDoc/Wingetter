@@ -1,5 +1,6 @@
 param(
-    [string]$ScriptPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1"),
+    [string]$CatalogModulePath = (Join-Path $PSScriptRoot "..\src\Wingetter.Catalog.ps1"),
+    [string]$GroupsModulePath = (Join-Path $PSScriptRoot "..\src\Wingetter.Groups.ps1"),
     [string]$CatalogPath = (Join-Path $PSScriptRoot "..\catalog\winget.json"),
     [string]$GroupsPath = (Join-Path $PSScriptRoot "..\catalog\groups.json"),
     [switch]$Check
@@ -89,12 +90,13 @@ function Replace-SingleBlock {
         [string]$Text,
         [string]$Pattern,
         [string]$Replacement,
-        [string]$Name
+        [string]$Name,
+        [string]$Path
     )
 
     $match = [regex]::Match($Text, $Pattern)
     if (!$match.Success) {
-        throw "Could not find embedded $Name block in $ScriptPath."
+        throw "Could not find embedded $Name block in $Path."
     }
 
     return $Text.Substring(0, $match.Index) + $Replacement.TrimEnd() + [Environment]::NewLine + $Text.Substring($match.Index + $match.Length)
@@ -116,26 +118,35 @@ function ConvertTo-NormalizedText {
 
 $catalog = Read-JsonFile -Path $CatalogPath
 $groups = Read-JsonFile -Path $GroupsPath
-$resolvedScriptPath = (Resolve-Path $ScriptPath).Path
-$scriptText = [System.IO.File]::ReadAllText($resolvedScriptPath)
+$resolvedCatalogModulePath = (Resolve-Path $CatalogModulePath).Path
+$resolvedGroupsModulePath = (Resolve-Path $GroupsModulePath).Path
+$catalogText = [System.IO.File]::ReadAllText($resolvedCatalogModulePath)
+$groupsText = [System.IO.File]::ReadAllText($resolvedGroupsModulePath)
 
 $catalogBlock = New-CatalogBlock -Catalog $catalog
 $groupsBlock = New-GroupsBlock -Groups $groups
 
-$databasePattern = '(?ms)^\$Script:SoftwareDatabase = \[ordered\]@\{.*?^\}\s*(?=^if \(!\[string\]::IsNullOrWhiteSpace\(\$PSScriptRoot\)\) \{\r?\n\s+\$catalogPath)'
-$groupsPattern = '(?ms)^\$Script:BuiltInGroups = \[ordered\]@\{.*?^\}\s*(?=^if \(!\[string\]::IsNullOrWhiteSpace\(\$PSScriptRoot\)\) \{\r?\n\s+\$groupsPath)'
+$databasePattern = '(?ms)^\$Script:SoftwareDatabase = \[ordered\]@\{.*?^\}\s*(?=^\$wingetterRoot = Get-WingetterRootPath)'
+$groupsPattern = '(?ms)^\$Script:BuiltInGroups = \[ordered\]@\{.*?^\}\s*(?=^\$wingetterRoot = Get-WingetterRootPath)'
 
-$updatedText = Replace-SingleBlock -Text $scriptText -Pattern $databasePattern -Replacement $catalogBlock -Name "catalog"
-$updatedText = Replace-SingleBlock -Text $updatedText -Pattern $groupsPattern -Replacement $groupsBlock -Name "groups"
+$updatedCatalogText = Replace-SingleBlock -Text $catalogText -Pattern $databasePattern -Replacement $catalogBlock -Name "catalog" -Path $resolvedCatalogModulePath
+$updatedGroupsText = Replace-SingleBlock -Text $groupsText -Pattern $groupsPattern -Replacement $groupsBlock -Name "groups" -Path $resolvedGroupsModulePath
 
 if ($Check) {
-    if ((ConvertTo-NormalizedText $updatedText) -ne (ConvertTo-NormalizedText $scriptText)) {
+    $failed = $false
+    if ((ConvertTo-NormalizedText $updatedCatalogText) -ne (ConvertTo-NormalizedText $catalogText)) {
         Write-Host "Embedded catalog fallback is stale. Run tools/Sync-EmbeddedCatalog.ps1." -ForegroundColor Red
-        exit 1
+        $failed = $true
     }
-    Write-Host "Embedded catalog fallback is current for $($catalog.version)."
+    if ((ConvertTo-NormalizedText $updatedGroupsText) -ne (ConvertTo-NormalizedText $groupsText)) {
+        Write-Host "Embedded groups fallback is stale. Run tools/Sync-EmbeddedCatalog.ps1." -ForegroundColor Red
+        $failed = $true
+    }
+    if ($failed) { exit 1 }
+    Write-Host "Embedded catalog and groups fallbacks are current for $($catalog.version)."
     exit 0
 }
 
-Write-Utf8NoBom -Path $resolvedScriptPath -Value $updatedText
-Write-Host "Updated embedded catalog fallback in $resolvedScriptPath from $CatalogPath and $GroupsPath."
+Write-Utf8NoBom -Path $resolvedCatalogModulePath -Value $updatedCatalogText
+Write-Utf8NoBom -Path $resolvedGroupsModulePath -Value $updatedGroupsText
+Write-Host "Updated embedded catalog fallback in $resolvedCatalogModulePath and group fallback in $resolvedGroupsModulePath."

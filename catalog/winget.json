@@ -2,7 +2,7 @@
     "schemaVersion":  1,
     "version":  "v6.1.0",
     "canonicalFile":  "catalog/winget.json",
-    "embeddedFallbackFile":  "Wingetter.ps1",
+    "embeddedFallbackFile":  "src/Wingetter.Catalog.ps1",
     "appCount":  765,
     "categoryCount":  39,
     "categories":  [

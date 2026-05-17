@@ -1,5 +1,7 @@
 param(
-    [string]$ScriptPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1"),
+    [string]$LauncherPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1"),
+    [string]$CatalogModulePath = (Join-Path $PSScriptRoot "..\src\Wingetter.Catalog.ps1"),
+    [string]$GroupsModulePath = (Join-Path $PSScriptRoot "..\src\Wingetter.Groups.ps1"),
     [string]$CatalogPath = (Join-Path $PSScriptRoot "..\catalog\winget.json"),
     [string]$GroupsPath = (Join-Path $PSScriptRoot "..\catalog\groups.json"),
     [switch]$Check
@@ -53,21 +55,28 @@ function Get-Section {
     return $Text.Substring($start, $end - $start)
 }
 
-function Get-ScriptVersions {
-    param([string]$Text)
+function Get-ProjectVersion {
+    param([string[]]$Paths)
     $versions = New-Object System.Collections.Generic.List[string]
-    foreach ($pattern in @(
-        '\$ver\.Text\s*=\s*"(?<version>v\d+\.\d+\.\d+)"',
-        'Title="Wingetter (?<version>v\d+\.\d+\.\d+)',
-        'HeaderVersion" Text="(?<version>v\d+\.\d+\.\d+)"'
-    )) {
-        foreach ($match in [regex]::Matches($Text, $pattern)) {
-            $versions.Add($match.Groups["version"].Value)
+    foreach ($path in $Paths) {
+        if (!(Test-Path $path)) { continue }
+        $text = Get-Content -Path $path -Raw
+        foreach ($pattern in @(
+            '(?m)^\s*\.VERSION\s*\r?\n\s*(?<version>v?\d+\.\d+\.\d+)',
+            '\$ver\.Text\s*=\s*"(?<version>v?\d+\.\d+\.\d+)"',
+            'Title="Wingetter (?<version>v?\d+\.\d+\.\d+)',
+            'HeaderVersion" Text="(?<version>v?\d+\.\d+\.\d+)"'
+        )) {
+            foreach ($match in [regex]::Matches($text, $pattern)) {
+                $version = $match.Groups["version"].Value
+                if ($version -notmatch '^v') { $version = "v$version" }
+                $versions.Add($version)
+            }
         }
     }
     $uniqueVersions = @($versions | Select-Object -Unique)
     if ($uniqueVersions.Count -ne 1) {
-        throw "Expected one script version, found: $($uniqueVersions -join ', ')"
+        throw "Expected one project version, found: $($uniqueVersions -join ', ')"
     }
     return $uniqueVersions[0]
 }
@@ -87,13 +96,14 @@ function Export-CatalogObject {
     param(
         [string]$Text,
         [string]$Version,
-        [string]$CanonicalPath
+        [string]$CanonicalPath,
+        [string]$FallbackPath
     )
 
     $databaseSection = Get-Section `
         -Text $Text `
         -StartMarker '$Script:SoftwareDatabase = [ordered]@{' `
-        -EndMarker '# WINGET DETECTION AND INSTALLATION'
+        -EndMarker '$wingetterRoot = Get-WingetterRootPath'
 
     $categoryPattern = '(?ms)^\s*"(?<category>[^"]+)"\s*=\s*@\((?<body>.*?)^\s*\)\s*(?=^\s*"[^"]+"\s*=\s*@\(|^\s*\}\s*$)'
     $appPattern = '@\{\s*Name\s*=\s*"(?<name>[^"]+)";\s*WingetId\s*=\s*"(?<id>[^"]+)";\s*Icon\s*=\s*"\$\{f\}(?<domain>[^"]+)"\s*\}'
@@ -115,7 +125,7 @@ function Export-CatalogObject {
     }
 
     if ($categories.Count -eq 0) {
-        throw "No catalog categories were parsed from $ScriptPath."
+        throw "No catalog categories were parsed from $CatalogModulePath."
     }
 
     $appCount = 0
@@ -127,7 +137,7 @@ function Export-CatalogObject {
         schemaVersion        = 1
         version              = $Version
         canonicalFile        = Get-RepoRelativePath -Path $CanonicalPath
-        embeddedFallbackFile = Get-RepoRelativePath -Path $ScriptPath
+        embeddedFallbackFile = Get-RepoRelativePath -Path $FallbackPath
         appCount             = $appCount
         categoryCount        = $categories.Count
         categories           = @($categories)
@@ -138,13 +148,14 @@ function Export-GroupsObject {
     param(
         [string]$Text,
         [string]$Version,
-        [string]$CanonicalPath
+        [string]$CanonicalPath,
+        [string]$FallbackPath
     )
 
     $groupsSection = Get-Section `
         -Text $Text `
         -StartMarker '$Script:BuiltInGroups = [ordered]@{' `
-        -EndMarker '# THEME DEFINITIONS'
+        -EndMarker '$wingetterRoot = Get-WingetterRootPath'
 
     $groupPattern = '(?ms)^\s*"(?<group>[^"]+)"\s*=\s*@\((?<body>.*?)^\s*\)'
     $idPattern = '"(?<id>[^"]+)"'
@@ -166,24 +177,27 @@ function Export-GroupsObject {
     }
 
     if ($groups.Count -eq 0) {
-        throw "No built-in groups were parsed from $ScriptPath."
+        throw "No built-in groups were parsed from $GroupsModulePath."
     }
 
     return [ordered]@{
         schemaVersion        = 1
         version              = $Version
         canonicalFile        = Get-RepoRelativePath -Path $CanonicalPath
-        embeddedFallbackFile = Get-RepoRelativePath -Path $ScriptPath
+        embeddedFallbackFile = Get-RepoRelativePath -Path $FallbackPath
         groupCount           = $groups.Count
         groups               = @($groups)
     }
 }
 
-$resolvedScriptPath = (Resolve-Path $ScriptPath).Path
-$scriptText = [System.IO.File]::ReadAllText($resolvedScriptPath)
-$version = Get-ScriptVersions -Text $scriptText
-$catalogObject = Export-CatalogObject -Text $scriptText -Version $version -CanonicalPath $CatalogPath
-$groupsObject = Export-GroupsObject -Text $scriptText -Version $version -CanonicalPath $GroupsPath
+$resolvedCatalogModulePath = (Resolve-Path $CatalogModulePath).Path
+$resolvedGroupsModulePath = (Resolve-Path $GroupsModulePath).Path
+$catalogText = [System.IO.File]::ReadAllText($resolvedCatalogModulePath)
+$groupsText = [System.IO.File]::ReadAllText($resolvedGroupsModulePath)
+$version = Get-ProjectVersion -Paths @($LauncherPath, (Join-Path (Split-Path -Parent $CatalogModulePath) "Wingetter.Ui.ps1"))
+
+$catalogObject = Export-CatalogObject -Text $catalogText -Version $version -CanonicalPath $CatalogPath -FallbackPath $resolvedCatalogModulePath
+$groupsObject = Export-GroupsObject -Text $groupsText -Version $version -CanonicalPath $GroupsPath -FallbackPath $resolvedGroupsModulePath
 
 $catalogJson = ConvertTo-CanonicalJson -InputObject $catalogObject
 $groupsJson = ConvertTo-CanonicalJson -InputObject $groupsObject

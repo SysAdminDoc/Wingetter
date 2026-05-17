@@ -13,8 +13,11 @@ All notable changes to Wingetter will be documented in this file.
 - Added: Package detail panel backed by `winget show` and `winget list` for source, publisher, version, installer type, installer URL, SHA256, and metadata warnings.
 - Added: Audited WinGet bootstrap logging under `%APPDATA%\Wingetter\logs`.
 - Added: GitHub Actions validation for catalog, profile JSON, WinGet runner helpers, and WPF XAML loading.
-- Changed: Local repo runs now prefer the generated catalog and group JSON when present, while retaining embedded data as the one-file fallback.
-- Changed: `catalog/winget.json` and `catalog/groups.json` are now the curation source files; `tools/Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback.
+- Added: Source modules under `src/` for common helpers, catalog data, WinGet operations, group/profile helpers, UI, and runtime bootstrap.
+- Changed: Local repo runs now prefer the generated catalog and group JSON when present, while retaining embedded module data as fallback.
+- Changed: `Wingetter.ps1` is now a thin launcher that loads local modules or downloads the module set for raw GitHub quick-launch runs.
+- Changed: `catalog/winget.json` and `catalog/groups.json` are now the curation source files; `tools/Sync-EmbeddedCatalog.ps1` regenerates the embedded module fallbacks.
+- Changed: Profile JSON, WinGet runner, catalog, and XAML tests now validate the module split rather than extracting helpers from the launcher.
 - Changed: Install/update execution now uses structured process arguments where available, captures stderr, passes `--verbose-logs`, and surfaces the run log directory after completion or cancellation.
 - Changed: WinGet repair now prefers App Installer registration and `Microsoft.WinGet.Client` `Repair-WinGetPackageManager` instead of downloading GitHub/AppX assets directly.
 - Changed: Synced README version badge, built-in groups, and category counts with the v6.1.0 script catalog.

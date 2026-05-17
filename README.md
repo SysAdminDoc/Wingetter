@@ -154,11 +154,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps
 powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
 ```
 
-`catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded one-file fallback in `Wingetter.ps1`, and `Test-Catalog.ps1` checks script parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
+`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
+
+`catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback data in the catalog and group modules, and `Test-Catalog.ps1` checks launcher/module parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
 
 ## Contributing
 
-Contributions are welcome. To add applications to the database, edit `catalog/winget.json`, run `tools\Sync-EmbeddedCatalog.ps1`, and then run `tools\Test-Catalog.ps1`. Each embedded fallback entry follows this format:
+Contributions are welcome. To add applications to the database, edit `catalog/winget.json`, run `tools\Sync-EmbeddedCatalog.ps1`, and then run `tools\Test-Catalog.ps1`. Each module fallback entry follows this format:
 
 ```powershell
 @{ Name = "App Name"; WingetId = "Publisher.PackageName"; Icon = "${f}domain.com" }

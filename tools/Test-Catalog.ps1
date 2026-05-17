@@ -1,5 +1,6 @@
 param(
     [string]$ScriptPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1"),
+    [string]$SourceDir = (Join-Path $PSScriptRoot "..\src"),
     [string]$CatalogPath = (Join-Path $PSScriptRoot "..\catalog\winget.json"),
     [string]$GroupsPath = (Join-Path $PSScriptRoot "..\catalog\groups.json"),
     [string]$ReadmePath = (Join-Path $PSScriptRoot "..\README.md"),
@@ -30,12 +31,15 @@ function Get-ScriptVersion {
     param([string]$Text)
     $versions = New-Object System.Collections.Generic.List[string]
     foreach ($pattern in @(
-        '\$ver\.Text\s*=\s*"(?<version>v\d+\.\d+\.\d+)"',
-        'Title="Wingetter (?<version>v\d+\.\d+\.\d+)',
-        'HeaderVersion" Text="(?<version>v\d+\.\d+\.\d+)"'
+        '(?m)^\s*\.VERSION\s*\r?\n\s*(?<version>v?\d+\.\d+\.\d+)',
+        '\$ver\.Text\s*=\s*"(?<version>v?\d+\.\d+\.\d+)"',
+        'Title="Wingetter (?<version>v?\d+\.\d+\.\d+)',
+        'HeaderVersion" Text="(?<version>v?\d+\.\d+\.\d+)"'
     )) {
         foreach ($match in [regex]::Matches($Text, $pattern)) {
-            $versions.Add($match.Groups["version"].Value)
+            $version = $match.Groups["version"].Value
+            if ($version -notmatch '^v') { $version = "v$version" }
+            $versions.Add($version)
         }
     }
     return @($versions | Select-Object -Unique)
@@ -110,14 +114,56 @@ function Assert-PackageAvailability {
     }
 }
 
-$scriptText = [System.IO.File]::ReadAllText((Resolve-Path $ScriptPath).Path)
-$tokens = $null
-$parseErrors = $null
-[System.Management.Automation.Language.Parser]::ParseInput($scriptText, [ref]$tokens, [ref]$parseErrors) | Out-Null
-if ($parseErrors.Count -gt 0) {
-    foreach ($error in $parseErrors) {
-        Add-Failure "PowerShell parser error at line $($error.Extent.StartLineNumber): $($error.Message)"
+$scriptFiles = New-Object System.Collections.Generic.List[string]
+if (Test-Path $ScriptPath) {
+    $scriptFiles.Add((Resolve-Path $ScriptPath).Path)
+} else {
+    Add-Failure "Missing launcher script: $ScriptPath"
+}
+if (Test-Path $SourceDir) {
+    foreach ($module in Get-ChildItem -Path $SourceDir -Filter "*.ps1" | Sort-Object Name) {
+        $scriptFiles.Add($module.FullName)
     }
+} else {
+    Add-Failure "Missing source module directory: $SourceDir"
+}
+
+$scriptTextBuilder = New-Object System.Text.StringBuilder
+foreach ($file in $scriptFiles) {
+    $fileText = [System.IO.File]::ReadAllText($file)
+    [void]$scriptTextBuilder.AppendLine($fileText)
+    $tokens = $null
+    $parseErrors = $null
+    [System.Management.Automation.Language.Parser]::ParseInput($fileText, [ref]$tokens, [ref]$parseErrors) | Out-Null
+    if ($parseErrors.Count -gt 0) {
+        foreach ($error in $parseErrors) {
+            Add-Failure "PowerShell parser error in '$file' at line $($error.Extent.StartLineNumber): $($error.Message)"
+        }
+    }
+}
+$scriptText = $scriptTextBuilder.ToString()
+
+foreach ($moduleName in @(
+    "Wingetter.Common.ps1",
+    "Wingetter.Catalog.ps1",
+    "Wingetter.WinGet.ps1",
+    "Wingetter.Groups.ps1",
+    "Wingetter.Ui.ps1",
+    "Wingetter.App.ps1"
+)) {
+    $modulePath = Join-Path $SourceDir $moduleName
+    if (!(Test-Path $modulePath)) {
+        Add-Failure "Missing source module '$moduleName'."
+        continue
+    }
+    try {
+        . (Resolve-Path $modulePath).Path
+    } catch {
+        Add-Failure "Could not import source module '$moduleName': $($_.Exception.Message)"
+    }
+}
+if (!(Get-Command Start-Wingetter -ErrorAction SilentlyContinue)) {
+    Add-Failure "Source module import did not expose Start-Wingetter."
 }
 
 $catalog = Read-JsonFile -Path $CatalogPath
@@ -191,12 +237,12 @@ if ([int]$groups.groupCount -ne @($groups.groups).Count) {
 
 $exportScript = Join-Path $PSScriptRoot "Export-WingetterCatalog.ps1"
 $syncScript = Join-Path $PSScriptRoot "Sync-EmbeddedCatalog.ps1"
-& $syncScript -ScriptPath $ScriptPath -CatalogPath $CatalogPath -GroupsPath $GroupsPath -Check
+& $syncScript -CatalogModulePath (Join-Path $SourceDir "Wingetter.Catalog.ps1") -GroupsModulePath (Join-Path $SourceDir "Wingetter.Groups.ps1") -CatalogPath $CatalogPath -GroupsPath $GroupsPath -Check
 if ($LASTEXITCODE -ne 0) {
     Add-Failure "Embedded catalog fallback is stale."
 }
 
-& $exportScript -ScriptPath $ScriptPath -CatalogPath $CatalogPath -GroupsPath $GroupsPath -Check
+& $exportScript -LauncherPath $ScriptPath -CatalogModulePath (Join-Path $SourceDir "Wingetter.Catalog.ps1") -GroupsModulePath (Join-Path $SourceDir "Wingetter.Groups.ps1") -CatalogPath $CatalogPath -GroupsPath $GroupsPath -Check
 if ($LASTEXITCODE -ne 0) {
     Add-Failure "Generated catalog snapshots are stale."
 }
