@@ -12,10 +12,12 @@ Wingetter is a Windows-first PowerShell/WPF GUI for discovering, selecting, grou
 - Primary implementation: [Wingetter.ps1](Wingetter.ps1), a single PowerShell 5.1+ WPF script.
 - Current runtime version shown in the script UI: `v6.1.0`.
 - Local catalog: 765 unique `WingetId` entries across 39 categories.
+- Generated catalog snapshots: `catalog/winget.json` and `catalog/groups.json`.
+- Validation command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1`.
 - Built-in groups in code: Essential PC Setup, Web Developer, Python Developer, Creative Suite, Gaming PC, Privacy & Security, System Admin, Streaming Setup, Office & Productivity, and 3D Printing Workshop.
 - Persisted user groups: `%APPDATA%\Wingetter\groups.json`.
 - Icon cache: `%TEMP%\WingetterIcons`.
-- The root README markets 765 apps and 39 categories, but several category counts and built-in group names are stale against the script.
+- The root README version badge, category counts, and built-in group names are synced to the v6.1.0 catalog as of 2026-05-17.
 - `CLAUDE.md` and `AGENTS.md` exist locally but are ignored/untracked. They are tool-specific working notes, not canonical shipped docs.
 
 ## Architecture
@@ -24,7 +26,8 @@ Wingetter is currently monolithic:
 
 - The complete application, static catalog, WPF layout, theme definitions, built-in groups, WinGet bootstrap logic, export/import logic, install/update runner, installed-app scan, and icon loader all live in `Wingetter.ps1`.
 - The app builds WPF controls in a large `Show-WinGetInstallerGUI` function rather than through separate XAML files or modules.
-- The catalog is an `[ordered]` hashtable of categories with inline app records: `Name`, `WingetId`, and favicon URL.
+- The script still contains an embedded `[ordered]` hashtable catalog for one-file launch fallback.
+- When run from a local repo checkout, the script prefers `catalog/winget.json` and `catalog/groups.json` if present and falls back to the embedded catalog/groups if those files are unavailable or malformed.
 - Search filters app name and WinGet ID only.
 - Installs and updates run serially by launching `winget install` or `winget upgrade` with `--id`, `--exact`, and optional `--silent` / agreement flags.
 - Installed app detection runs in a background runspace using `winget list --source winget` and regex parsing.
@@ -40,11 +43,11 @@ Wingetter is currently monolithic:
 
 ## Important Gaps
 
-- Documentation and versioning are inconsistent: `CLAUDE.md` says `v0.1.0`, the script says `v6.1.0`, README badge says `preview`, and CHANGELOG has a malformed date.
-- The repo README and GitHub repo description disagree on app count (`README.md` says 765; GitHub metadata still says 734).
+- `CLAUDE.md` still says `v0.1.0`; it is ignored/untracked and should not be treated as shipped project truth.
+- The repo README is now synced to 765 apps and 39 categories, but GitHub repo metadata may still need to be checked if it drifts outside git.
 - `ROADMAP.md` previously included good ideas but lacked prioritization, source IDs, saturation notes, and live repo reconciliation.
-- The catalog is embedded in code, so adding or validating apps requires editing application logic.
-- No CI, Pester tests, release build script, package validation script, or automated catalog-count check exists.
+- Catalog JSON and validation tooling now exist, but the embedded fallback is still generated from the monolithic script rather than produced by a release build from JSON as the single source of truth.
+- No CI, Pester tests, release build script, or GitHub Actions validation exists yet.
 - Install/update result classification depends on localized stdout text and ignores stderr details.
 - WinGet bootstrap downloads dependencies and the latest WinGet release without a recorded checksum verification path.
 - Several GUI elements still use fully rounded `CornerRadius="999"` or `CornerRadius = 999`, which conflicts with the project-wide visual rule against pill backdrops.
@@ -54,7 +57,7 @@ Wingetter is currently monolithic:
 
 The next phase should move Wingetter from "large polished script" to "trustworthy setup cockpit":
 
-1. Externalize and validate the catalog as data.
+1. Finish catalog externalization by making JSON the durable source of truth or adding a build step that regenerates the embedded one-file fallback.
 2. Support the official WinGet export/import schema alongside Wingetter groups.
 3. Replace fragile text parsing with structured logs, stderr capture, and per-package result records.
 4. Add source and manifest trust visibility: source, publisher, installer URL, hash, scope, installer type, and pin state.

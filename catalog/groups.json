@@ -1,0 +1,169 @@
+{
+    "schemaVersion":  1,
+    "version":  "v6.1.0",
+    "sourceFile":  "Wingetter.ps1",
+    "groupCount":  10,
+    "groups":  [
+                   {
+                       "name":  "Essential PC Setup",
+                       "appCount":  11,
+                       "packageIds":  [
+                                          "Google.Chrome",
+                                          "Mozilla.Firefox",
+                                          "7zip.7zip",
+                                          "VideoLAN.VLC",
+                                          "Notepad++.Notepad++",
+                                          "voidtools.Everything",
+                                          "Adobe.Acrobat.Reader.64-bit",
+                                          "GIMP.GIMP",
+                                          "dotPDN.PaintDotNet",
+                                          "Microsoft.PowerToys",
+                                          "ShareX.ShareX"
+                                      ]
+                   },
+                   {
+                       "name":  "Web Developer",
+                       "appCount":  12,
+                       "packageIds":  [
+                                          "Microsoft.VisualStudioCode",
+                                          "Git.Git",
+                                          "OpenJS.NodeJS.LTS",
+                                          "Docker.DockerDesktop",
+                                          "Postman.Postman",
+                                          "Mozilla.Firefox",
+                                          "Google.Chrome",
+                                          "GitHub.GitHubDesktop",
+                                          "GitHub.cli",
+                                          "Microsoft.WindowsTerminal",
+                                          "Starship.Starship",
+                                          "ajeetdsouza.zoxide"
+                                      ]
+                   },
+                   {
+                       "name":  "Python Developer",
+                       "appCount":  9,
+                       "packageIds":  [
+                                          "Microsoft.VisualStudioCode",
+                                          "Git.Git",
+                                          "Python.Python.3.13",
+                                          "Anaconda.Miniconda3",
+                                          "Docker.DockerDesktop",
+                                          "Postman.Postman",
+                                          "JetBrains.PyCharm.Community",
+                                          "Microsoft.WindowsTerminal",
+                                          "DBeaver.DBeaver"
+                                      ]
+                   },
+                   {
+                       "name":  "Creative Suite",
+                       "appCount":  11,
+                       "packageIds":  [
+                                          "GIMP.GIMP",
+                                          "KDE.Krita",
+                                          "Inkscape.Inkscape",
+                                          "BlenderFoundation.Blender",
+                                          "OBSProject.OBSStudio",
+                                          "HandBrake.HandBrake",
+                                          "Audacity.Audacity",
+                                          "KDE.Kdenlive",
+                                          "Meltytech.Shotcut",
+                                          "ShareX.ShareX",
+                                          "BlackmagicDesign.DaVinciResolve"
+                                      ]
+                   },
+                   {
+                       "name":  "Gaming PC",
+                       "appCount":  10,
+                       "packageIds":  [
+                                          "Valve.Steam",
+                                          "EpicGames.EpicGamesLauncher",
+                                          "GOG.Galaxy",
+                                          "Discord.Discord",
+                                          "Playnite.Playnite",
+                                          "MoonlightGameStreamingProject.Moonlight",
+                                          "LizardByte.Sunshine",
+                                          "7zip.7zip",
+                                          "Guru3D.Afterburner",
+                                          "TechPowerUp.NVCleanstall"
+                                      ]
+                   },
+                   {
+                       "name":  "Privacy \u0026 Security",
+                       "appCount":  10,
+                       "packageIds":  [
+                                          "Mozilla.Firefox",
+                                          "MullvadVPN.MullvadBrowser",
+                                          "Bitwarden.Bitwarden",
+                                          "ProtonTechnologies.ProtonVPN",
+                                          "LibreWolf.LibreWolf",
+                                          "OpenWhisperSystems.Signal",
+                                          "IDRIX.VeraCrypt",
+                                          "Cryptomator.Cryptomator",
+                                          "henrypp.simplewall",
+                                          "MullvadVPN.MullvadVPN"
+                                      ]
+                   },
+                   {
+                       "name":  "System Admin",
+                       "appCount":  12,
+                       "packageIds":  [
+                                          "PuTTY.PuTTY",
+                                          "WinSCP.WinSCP",
+                                          "Mobatek.MobaXterm",
+                                          "WiresharkFoundation.Wireshark",
+                                          "Insecure.Nmap",
+                                          "Microsoft.WindowsTerminal",
+                                          "Microsoft.PowerShell",
+                                          "voidtools.Everything",
+                                          "Notepad++.Notepad++",
+                                          "mRemoteNG.mRemoteNG",
+                                          "angryip.ipscan",
+                                          "Microsoft.Sysinternals.ProcessExplorer"
+                                      ]
+                   },
+                   {
+                       "name":  "Streaming Setup",
+                       "appCount":  9,
+                       "packageIds":  [
+                                          "OBSProject.OBSStudio",
+                                          "Streamlabs.Streamlabs",
+                                          "VB-Audio.Voicemeeter.Banana",
+                                          "VB-Audio.VBVirtualCable",
+                                          "Discord.Discord",
+                                          "ShareX.ShareX",
+                                          "HandBrake.HandBrake",
+                                          "Gyan.FFmpeg",
+                                          "File-New-Project.EarTrumpet"
+                                      ]
+                   },
+                   {
+                       "name":  "Office \u0026 Productivity",
+                       "appCount":  10,
+                       "packageIds":  [
+                                          "TheDocumentFoundation.LibreOffice",
+                                          "Mozilla.Thunderbird",
+                                          "Bitwarden.Bitwarden",
+                                          "Doist.Todoist",
+                                          "Obsidian.Obsidian",
+                                          "7zip.7zip",
+                                          "Adobe.Acrobat.Reader.64-bit",
+                                          "geek.PDF24Creator",
+                                          "Notion.Notion",
+                                          "VideoLAN.VLC"
+                                      ]
+                   },
+                   {
+                       "name":  "3D Printing Workshop",
+                       "appCount":  7,
+                       "packageIds":  [
+                                          "UltiMaker.Cura",
+                                          "Prusa3D.PrusaSlicer",
+                                          "Bambulab.Bambustudio",
+                                          "SoftFever.OrcaSlicer",
+                                          "FreeCAD.FreeCAD",
+                                          "OpenSCAD.OpenSCAD",
+                                          "BlenderFoundation.Blender"
+                                      ]
+                   }
+               ]
+}

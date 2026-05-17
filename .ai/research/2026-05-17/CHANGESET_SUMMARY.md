@@ -39,3 +39,27 @@ Research date: 2026-05-17.
 ## Continuation File Decision
 
 No `CONTINUE_FROM_HERE.md` was created because the required artifacts were completed in this session.
+
+## Development Follow-up: 2026-05-17 Catalog And Metadata Batch
+
+### Files Created
+
+- `catalog/winget.json` - generated package catalog snapshot for v6.1.0.
+- `catalog/groups.json` - generated built-in group snapshot for v6.1.0.
+- `tools/Export-WingetterCatalog.ps1` - parser/exporter that regenerates catalog snapshots from the current script.
+- `tools/Test-Catalog.ps1` - validation command for script parse health, generated JSON freshness, README count drift, duplicate IDs, group references, and changelog formatting.
+
+### Files Modified
+
+- `Wingetter.ps1` - added local JSON catalog/group loading with embedded fallback; added missing icon metadata for four package records.
+- `README.md` - synced the version badge, built-in group list, category counts, and catalog validation instructions.
+- `CHANGELOG.md` - replaced malformed historical header with `Unreleased`, `v6.1.0`, and `v6.0.0` entries.
+- `PROJECT_CONTEXT.md` - recorded current catalog validation state and remaining source-of-truth gap.
+- `ROADMAP.md` - converted roadmap entries to checklist headings, marked R-002 complete, and recorded R-001 as in progress.
+- GitHub repository description - synced app count from 734 to 765 through `gh repo edit`.
+
+### Verification Performed
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Export-WingetterCatalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File tools\Test-Catalog.ps1 -CheckWingetAvailability -AvailabilitySampleSize 5`
