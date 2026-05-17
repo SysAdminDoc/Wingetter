@@ -254,6 +254,67 @@ function Get-LetterColor {
 
 $f = "https://www.google.com/s2/favicons?sz=32&domain="
 
+function ConvertFrom-WingetterCatalogJson {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or !(Test-Path $Path)) { return $null }
+
+    try {
+        $catalog = Get-Content -Path $Path -Raw | ConvertFrom-Json
+        if ($catalog.schemaVersion -ne 1 -or !$catalog.categories) { return $null }
+
+        $database = [ordered]@{}
+        foreach ($category in @($catalog.categories)) {
+            $apps = @()
+            foreach ($app in @($category.apps)) {
+                $icon = if ($app.iconUrl) { [string]$app.iconUrl } else { "${f}$($app.iconDomain)" }
+                $apps += @{
+                    Name     = [string]$app.name
+                    WingetId = [string]$app.wingetId
+                    Icon     = $icon
+                }
+            }
+            if ($apps.Count -gt 0) {
+                $database[[string]$category.name] = $apps
+            }
+        }
+
+        if ($database.Keys.Count -gt 0) { return $database }
+    } catch {
+        Write-Warning "Could not load catalog from '$Path': $($_.Exception.Message). Using embedded catalog."
+    }
+
+    return $null
+}
+
+function ConvertFrom-WingetterGroupsJson {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or !(Test-Path $Path)) { return $null }
+
+    try {
+        $groupsJson = Get-Content -Path $Path -Raw | ConvertFrom-Json
+        if ($groupsJson.schemaVersion -ne 1 -or !$groupsJson.groups) { return $null }
+
+        $groups = [ordered]@{}
+        foreach ($group in @($groupsJson.groups)) {
+            $packageIds = @()
+            foreach ($packageId in @($group.packageIds)) {
+                $packageIds += [string]$packageId
+            }
+            if ($packageIds.Count -gt 0) {
+                $groups[[string]$group.name] = $packageIds
+            }
+        }
+
+        if ($groups.Keys.Count -gt 0) { return $groups }
+    } catch {
+        Write-Warning "Could not load built-in groups from '$Path': $($_.Exception.Message). Using embedded groups."
+    }
+
+    return $null
+}
+
 $Script:SoftwareDatabase = [ordered]@{
 
     "Web Browsers" = @(
@@ -661,7 +722,7 @@ $Script:SoftwareDatabase = [ordered]@{
         @{ Name = "Eclipse C/C++"; WingetId = "EclipseFoundation.Eclipse.CPP"; Icon = "${f}eclipse.org" }
         @{ Name = "PhpStorm"; WingetId = "JetBrains.PhpStorm"; Icon = "${f}jetbrains.com" }
         @{ Name = "Helix"; WingetId = "Helix.Helix"; Icon = "${f}helix-editor.com" }
-        @{ Name = "Visual Studio Code Insiders"; WingetId = "Microsoft.VisualStudioCode.Insiders" }
+        @{ Name = "Visual Studio Code Insiders"; WingetId = "Microsoft.VisualStudioCode.Insiders"; Icon = "${f}code.visualstudio.com" }
         @{ Name = "RubyMine"; WingetId = "JetBrains.RubyMine"; Icon = "${f}jetbrains.com" }
         @{ Name = "Windsurf"; WingetId = "Codeium.Windsurf"; Icon = "${f}codeium.com" }
         @{ Name = "VS 2022 Build Tools"; WingetId = "Microsoft.VisualStudio.2022.BuildTools"; Icon = "${f}visualstudio.microsoft.com" }
@@ -695,7 +756,7 @@ $Script:SoftwareDatabase = [ordered]@{
         @{ Name = "KDiff3"; WingetId = "KDE.KDiff3"; Icon = "${f}kdiff3.sourceforge.net" }
         @{ Name = "DaxStudio"; WingetId = "DaxStudio.DaxStudio"; Icon = "${f}daxstudio.org" }
         @{ Name = "DevToys"; WingetId = "DevToys-app.DevToys"; Icon = "${f}devtoys.app" }
-        @{ Name = "Docker CLI"; WingetId = "Docker.DockerCLI" }
+        @{ Name = "Docker CLI"; WingetId = "Docker.DockerCLI"; Icon = "${f}docker.com" }
         @{ Name = "Git Butler"; WingetId = "GitButler.GitButler"; Icon = "${f}gitbutler.com" }
         @{ Name = "Gitify"; WingetId = "Gitify.Gitify"; Icon = "${f}gitify.io" }
         @{ Name = "Jetbrains Toolbox"; WingetId = "JetBrains.Toolbox"; Icon = "${f}jetbrains.com" }
@@ -772,8 +833,8 @@ $Script:SoftwareDatabase = [ordered]@{
         @{ Name = "oha"; WingetId = "hatoo.oha"; Icon = "${f}github.com" }
         @{ Name = "duf"; WingetId = "muesli.duf"; Icon = "${f}github.com" }
         @{ Name = "Fastfetch"; WingetId = "Fastfetch-cli.Fastfetch"; Icon = "${f}github.com" }
-        @{ Name = "GNU Wget"; WingetId = "JernejSimoncic.Wget" }
-        @{ Name = "cURL"; WingetId = "cURL.cURL" }
+        @{ Name = "GNU Wget"; WingetId = "JernejSimoncic.Wget"; Icon = "${f}gnu.org" }
+        @{ Name = "cURL"; WingetId = "cURL.cURL"; Icon = "${f}curl.se" }
         @{ Name = "Gsudo"; WingetId = "gerardog.gsudo"; Icon = "${f}gerardog.github.io" }
         @{ Name = "Neofetch"; WingetId = "nepnep.neofetch-win"; Icon = "${f}github.com" }
         @{ Name = "gping"; WingetId = "orf.gping"; Icon = "${f}github.com" }
@@ -1141,6 +1202,14 @@ $Script:SoftwareDatabase = [ordered]@{
     )
 }
 
+if (![string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+    $catalogPath = Join-Path $PSScriptRoot "catalog\winget.json"
+    $externalCatalog = ConvertFrom-WingetterCatalogJson -Path $catalogPath
+    if ($externalCatalog) {
+        $Script:SoftwareDatabase = $externalCatalog
+    }
+}
+
 # ============================================================================
 # WINGET DETECTION AND INSTALLATION
 # ============================================================================
@@ -1313,7 +1382,7 @@ $Script:BuiltInGroups = [ordered]@{
     )
     "Creative Suite" = @(
         "GIMP.GIMP","KDE.Krita","Inkscape.Inkscape","BlenderFoundation.Blender","OBSProject.OBSStudio",
-        "HandBrake.HandBrake","Audacity.Audacity","Kdenlive.Kdenlive","Shotcut.Shotcut",
+        "HandBrake.HandBrake","Audacity.Audacity","KDE.Kdenlive","Meltytech.Shotcut",
         "ShareX.ShareX","BlackmagicDesign.DaVinciResolve"
     )
     "Gaming PC" = @(
@@ -1324,7 +1393,7 @@ $Script:BuiltInGroups = [ordered]@{
     "Privacy & Security" = @(
         "Mozilla.Firefox","MullvadVPN.MullvadBrowser","Bitwarden.Bitwarden","ProtonTechnologies.ProtonVPN",
         "LibreWolf.LibreWolf","OpenWhisperSystems.Signal","IDRIX.VeraCrypt","Cryptomator.Cryptomator",
-        "Henry++.simplewall","Mullvad.MullvadVPN"
+        "henrypp.simplewall","MullvadVPN.MullvadVPN"
     )
     "System Admin" = @(
         "PuTTY.PuTTY","WinSCP.WinSCP","Mobatek.MobaXterm","WiresharkFoundation.Wireshark",
@@ -1346,6 +1415,14 @@ $Script:BuiltInGroups = [ordered]@{
         "UltiMaker.Cura","Prusa3D.PrusaSlicer","Bambulab.Bambustudio","SoftFever.OrcaSlicer",
         "FreeCAD.FreeCAD","OpenSCAD.OpenSCAD","BlenderFoundation.Blender"
     )
+}
+
+if (![string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+    $groupsPath = Join-Path $PSScriptRoot "catalog\groups.json"
+    $externalGroups = ConvertFrom-WingetterGroupsJson -Path $groupsPath
+    if ($externalGroups) {
+        $Script:BuiltInGroups = $externalGroups
+    }
 }
 
 # ============================================================================

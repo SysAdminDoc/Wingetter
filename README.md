@@ -2,7 +2,7 @@
 <p align="center"><img src="icon.png" width="128" alt="Wingetter"></p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-preview-58A6FF?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-v6.1.0-58A6FF?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-4ade80?style=for-the-badge">
   <img alt="Platform" src="https://img.shields.io/badge/platform-PowerShell-58A6FF?style=for-the-badge">
 </p>
@@ -68,36 +68,36 @@ Pre-configured package groups for common use cases:
 | Web Developer | VS Code, Git, Node.js, Docker, Postman, Windows Terminal |
 | Python Developer | VS Code, Git, Python 3.13, Miniconda, PyCharm, DBeaver |
 | Creative Suite | GIMP, Krita, Inkscape, Blender, OBS, DaVinci Resolve |
-| Gaming PC | Steam, Discord, Epic, GOG, MSI Afterburner, DS4Windows |
-| Privacy & Security | Bitwarden, KeePassXC, VeraCrypt, Tor, Mullvad, ProtonVPN |
+| Gaming PC | Steam, Discord, Epic, GOG, Playnite, Moonlight, Sunshine |
+| Privacy & Security | Firefox, Mullvad Browser, Bitwarden, ProtonVPN, VeraCrypt, simplewall |
 | System Admin | PowerShell 7, Windows Terminal, WinSCP, PuTTY, Sysinternals |
-| Remote Worker | Zoom, Teams, Slack, AnyDesk, Notion, Bitwarden |
-| Media & Entertainment | VLC, Plex, Spotify, Stremio, MPC-HC, foobar2000 |
-| Student Essentials | Firefox, LibreOffice, Notion, Zotero, Python, VS Code |
+| Streaming Setup | OBS, Streamlabs, VoiceMeeter, Discord, ShareX, FFmpeg |
+| Office & Productivity | LibreOffice, Thunderbird, Bitwarden, Todoist, Obsidian, PDF24 |
+| 3D Printing Workshop | Cura, PrusaSlicer, Bambu Studio, OrcaSlicer, FreeCAD, OpenSCAD |
 
 ## Categories
 
 | Category | Apps | | Category | Apps |
 |---|---:|---|---|---:|
-| System Utilities | 53 | | Networking & Remote | 33 |
-| Runtimes & SDKs | 49 | | File Management | 31 |
-| Messaging & Email | 39 | | Gaming | 25 |
-| CLI Tools | 37 | | Hardware & Diagnostics | 24 |
-| Developer Tools | 35 | | Video Tools | 23 |
-| Code Editors & IDEs | 34 | | Desktop Customization | 23 |
-| Imaging & Design | 21 | | Web Browsers | 20 |
-| Note-Taking | 20 | | Music & Audio | 18 |
+| System Utilities | 54 | | Runtimes & SDKs | 52 |
+| Messaging & Email | 39 | | Developer Tools | 37 |
+| CLI Tools | 37 | | Code Editors & IDEs | 36 |
+| Networking & Remote | 33 | | Hardware & Diagnostics | 32 |
+| File Management | 31 | | Gaming | 28 |
+| Desktop Customization | 23 | | Video Tools | 23 |
+| Imaging & Design | 22 | | Note-Taking | 20 |
+| Web Browsers | 20 | | Music & Audio | 18 |
 | Media Players | 17 | | Cloud & DevOps | 16 |
-| Science & Education | 15 | | PDF & E-Books | 14 |
-| VPN & Privacy | 14 | | Documents & Office | 13 |
-| Security | 13 | | Passwords & Encryption | 13 |
-| Other | 13 | | Emulators | 12 |
-| Productivity | 12 | | Audio Production | 11 |
-| Screenshot & Recording | 10 | | Terminals & Shells | 10 |
-| 3D Printing & CAD | 10 | | Cloud Storage | 9 |
-| Backup & Sync | 9 | | VC++ Redistributables | 8 |
-| Database Tools | 8 | | Virtualization | 7 |
-| AI & LLM Tools | 7 | | Compression | 5 |
+| Security | 16 | | Science & Education | 15 |
+| Productivity | 14 | | VPN & Privacy | 14 |
+| PDF & E-Books | 14 | | Passwords & Encryption | 13 |
+| Documents & Office | 13 | | Other | 13 |
+| Emulators | 12 | | Audio Production | 11 |
+| Cloud Storage | 11 | | AI & LLM Tools | 11 |
+| 3D Printing & CAD | 10 | | Screenshot & Recording | 10 |
+| Terminals & Shells | 10 | | Backup & Sync | 9 |
+| VC++ Redistributables | 8 | | Database Tools | 8 |
+| Virtualization | 7 | | Compression | 5 |
 | Package Managers | 3 | | | |
 
 ## Requirements
@@ -135,9 +135,20 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 
 **Export as JSON** creates a portable config file that can be imported back into Wingetter on any machine.
 
+## Catalog Validation
+
+The repo includes generated catalog snapshots in `catalog/` and validation tools in `tools/`:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Export-WingetterCatalog.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
+```
+
+`Test-Catalog.ps1` checks script parse health, version agreement, unique package IDs, built-in group references, generated JSON freshness, README counts, and changelog formatting.
+
 ## Contributing
 
-Contributions are welcome. To add applications to the database, edit the `$Script:SoftwareDatabase` hashtable in `Wingetter.ps1`. Each entry follows this format:
+Contributions are welcome. To add applications to the database, edit the `$Script:SoftwareDatabase` hashtable in `Wingetter.ps1`, regenerate the catalog snapshots, and run validation. Each entry follows this format:
 
 ```powershell
 @{ Name = "App Name"; WingetId = "Publisher.PackageName"; Icon = "${f}domain.com" }

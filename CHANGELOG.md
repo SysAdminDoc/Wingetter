@@ -2,15 +2,23 @@
 
 All notable changes to Wingetter will be documented in this file.
 
-## [v0.1.0] - %Y->- (HEAD -> main, origin/main, origin/HEAD)
+## [Unreleased]
 
-- Added: Add screenshot to README
-- v6.1.0: Audit fixes and usability improvements
-- Flat single-column update view, fix upgrade detection
-- Redesign Update All as update view with selectable installed apps
-- Gray out installed apps, add Update All button
-- Removed: Remove all runtime Write-Host calls that cause popups in compiled EXE
-- Fixed: Fix EXE compilation: correct Ellipse namespace, suppress .Add() output
-- Wingetter v6.0.0 - Major UI overhaul and new features
-- Changed: Update README.md
-- upd
+- Added: Generated catalog snapshots in `catalog/winget.json` and `catalog/groups.json`.
+- Added: Catalog export and validation tools for package counts, duplicate IDs, built-in group references, README count drift, and changelog formatting.
+- Changed: Local repo runs now prefer the generated catalog and group JSON when present, while retaining embedded data as the one-file fallback.
+- Changed: Synced README version badge, built-in groups, and category counts with the v6.1.0 script catalog.
+
+## [v6.1.0] - 2026-03-13
+
+- Added: Screenshot to README.
+- Changed: Audit fixes and usability improvements.
+- Changed: Flat single-column update view and fixed upgrade detection.
+- Changed: Redesigned Update All as an update view with selectable installed apps.
+- Changed: Grayed out installed apps and added an Update All button.
+- Removed: Runtime `Write-Host` calls that caused popups in compiled EXE builds.
+- Fixed: EXE compilation issues around Ellipse namespace usage and `.Add()` output.
+
+## [v6.0.0] - 2026-03-13
+
+- Changed: Major UI overhaul and new features.
