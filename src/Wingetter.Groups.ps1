@@ -145,6 +145,12 @@ function Get-JsonPropertyValue {
     return $null
 }
 
+function Test-JsonPropertyPresence {
+    param([object]$InputObject, [string]$PropertyName)
+    if ($null -eq $InputObject) { return $false }
+    return [bool]$InputObject.PSObject.Properties[$PropertyName]
+}
+
 function Import-PackageIdsFromJSON {
     param([object]$Content, [string]$FallbackGroupName = "Imported Group")
 
@@ -157,15 +163,22 @@ function Import-PackageIdsFromJSON {
     $packageIds = Get-JsonPropertyValue -InputObject $Content -PropertyName "PackageIds"
     $wingetSources = Get-JsonPropertyValue -InputObject $Content -PropertyName "Sources"
     $flatPackages = Get-JsonPropertyValue -InputObject $Content -PropertyName "Packages"
+    # Classify by property *presence* rather than truthiness so that an explicitly
+    # empty Sources/Packages array is still recognized as the corresponding WinGet
+    # schema (zero packages, zero warnings) rather than dropping into the
+    # unrecognized-format throw.
+    $hasPackageIds = Test-JsonPropertyPresence -InputObject $Content -PropertyName "PackageIds"
+    $hasWingetSources = Test-JsonPropertyPresence -InputObject $Content -PropertyName "Sources"
+    $hasFlatPackages = Test-JsonPropertyPresence -InputObject $Content -PropertyName "Packages"
 
-    if ($packageIds) {
+    if ($hasPackageIds) {
         $format = "Wingetter group JSON"
         $name = Get-JsonPropertyValue -InputObject $Content -PropertyName "GroupName"
         if ($name) { $groupName = [string]$name }
         foreach ($id in @($packageIds)) {
             if (![string]::IsNullOrWhiteSpace([string]$id)) { [void]$ids.Add([string]$id) }
         }
-    } elseif ($wingetSources) {
+    } elseif ($hasWingetSources) {
         $format = "WinGet import JSON"
         foreach ($source in @($wingetSources)) {
             $sourceDetails = Get-JsonPropertyValue -InputObject $source -PropertyName "SourceDetails"
@@ -187,7 +200,7 @@ function Import-PackageIdsFromJSON {
                 }
             }
         }
-    } elseif ($flatPackages) {
+    } elseif ($hasFlatPackages) {
         $format = "WinGet package list JSON"
         foreach ($package in @($flatPackages)) {
             $id = Get-JsonPropertyValue -InputObject $package -PropertyName "PackageIdentifier"

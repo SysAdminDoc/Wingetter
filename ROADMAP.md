@@ -168,6 +168,14 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 
 ## P1 - Reliability Followups
 
+### [x] R-025 - Profile import edge-case coverage
+
+- Problem: `Import-PackageIdsFromJSON` accepts three distinct schemas (`Wingetter.Group.v1`, official WinGet import/export JSON, and flat package-ID arrays) plus partial inputs (missing `PackageIdentifier`, missing `SourceDetails.Name`, duplicate IDs, empty `Sources`), but `tools\Test-ProfileJson.ps1` only exercises the happy path. A regression in warning emission or deduplication would slip through unnoticed.
+- Build: extend `tools\Test-ProfileJson.ps1` with adversarial inputs (duplicate IDs, missing `PackageIdentifier`, missing `SourceDetails.Name`, empty `Sources`, empty `Packages`, mixed `PackageIds`+`Sources`, multiple sources with multiple packages, flat `Packages` array, and unrecognized payloads); assert the format classification, deduplication, warning capture, and source-name capture for each case.
+- Acceptance: `tools\Test-ProfileJson.ps1` continues to exit zero against the current tree and exits nonzero if `Import-PackageIdsFromJSON` regresses on any of the documented edge cases.
+- Sources: L04, E03, E04.
+- Completed 2026-05-18: added duplicate-ID, missing-PackageIdentifier, missing-SourceDetails.Name (with legacy Source.Name fallback), empty Sources, mixed PackageIds+Sources, multi-source, flat Packages, and unrecognized-payload cases to `tools\Test-ProfileJson.ps1`. The empty-Sources case surfaced a real bug where `elseif ($wingetSources)` treated `[]` as falsy and fell into the `Unrecognized JSON format` throw; replaced the truthiness checks in `Import-PackageIdsFromJSON` with property-presence checks via a new `Test-JsonPropertyPresence` helper so explicitly empty `Sources`/`Packages` arrays still classify as their respective WinGet schema (zero packages, zero warnings).
+
 ### [x] R-024 - Reproducible Wingetter.exe build script
 
 - Problem: `release\README.md` documents the PS2EXE build steps in prose, but there is no script that actually performs the build, so the dot-sourced modular launcher cannot be packaged into a standalone EXE without manual concatenation. As a result the checked-in `Wingetter.exe` still represents the pre-module-split v6.1.0 launcher, not the current `src\` modules.
