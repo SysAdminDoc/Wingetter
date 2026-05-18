@@ -78,6 +78,135 @@ if ($failures.Count -eq 0) {
         $arrayImport = Import-PackageIdsFromJSON -Content $ids -FallbackGroupName "Array"
         Assert-EqualArray -Actual $arrayImport.PackageIds -Expected $ids -Name "Array import package IDs"
 
+        # R-025: edge cases for Import-PackageIdsFromJSON.
+
+        # Duplicate package IDs deduplicate while preserving first-seen order.
+        $dupContent = [PSCustomObject]@{
+            Schema     = "Wingetter.Group.v1"
+            PackageIds = @("A.A", "B.B", "A.A", "C.C", "B.B")
+            GroupName  = "Dups"
+        }
+        $dupImport = Import-PackageIdsFromJSON -Content $dupContent -FallbackGroupName "FallbackDup"
+        Assert-EqualArray -Actual $dupImport.PackageIds -Expected @("A.A", "B.B", "C.C") -Name "Duplicate ID deduplication"
+        if ($dupImport.Format -ne "Wingetter group JSON") {
+            Add-Failure "Duplicate-ID import format was '$($dupImport.Format)'."
+        }
+        if ($dupImport.GroupName -ne "Dups") {
+            Add-Failure "Duplicate-ID import preferred fallback group name over GroupName."
+        }
+
+        # Missing PackageIdentifier warns once per offending package.
+        $partialSources = [PSCustomObject]@{
+            Sources = @(
+                [PSCustomObject]@{
+                    SourceDetails = [PSCustomObject]@{ Name = "winget" }
+                    Packages      = @(
+                        [PSCustomObject]@{ PackageIdentifier = "Good.One" },
+                        [PSCustomObject]@{ },
+                        [PSCustomObject]@{ PackageIdentifier = "Good.Two" }
+                    )
+                }
+            )
+        }
+        $partialImport = Import-PackageIdsFromJSON -Content $partialSources -FallbackGroupName "Sources"
+        Assert-EqualArray -Actual $partialImport.PackageIds -Expected @("Good.One", "Good.Two") -Name "Missing-PackageIdentifier filtered IDs"
+        $missingIdentifierWarnings = @($partialImport.Warnings | Where-Object { $_ -match "PackageIdentifier" })
+        if ($missingIdentifierWarnings.Count -ne 1) {
+            Add-Failure "Missing PackageIdentifier should emit exactly one warning, got $($missingIdentifierWarnings.Count)."
+        }
+        Assert-EqualArray -Actual $partialImport.SourceNames -Expected @("winget") -Name "Source names with valid SourceDetails.Name"
+
+        # Missing SourceDetails.Name warns; legacy Source.Name fallback succeeds.
+        $missingSourceName = [PSCustomObject]@{
+            Sources = @(
+                [PSCustomObject]@{
+                    SourceDetails = [PSCustomObject]@{ Argument = "https://example.com" }
+                    Packages      = @([PSCustomObject]@{ PackageIdentifier = "Edge.One" })
+                },
+                [PSCustomObject]@{
+                    Name     = "legacy"
+                    Packages = @([PSCustomObject]@{ PackageIdentifier = "Edge.Two" })
+                }
+            )
+        }
+        $missingSourceImport = Import-PackageIdsFromJSON -Content $missingSourceName -FallbackGroupName "MissingSource"
+        Assert-EqualArray -Actual $missingSourceImport.PackageIds -Expected @("Edge.One", "Edge.Two") -Name "Mixed-source-name imported IDs"
+        Assert-EqualArray -Actual $missingSourceImport.SourceNames -Expected @("legacy") -Name "Legacy source name fallback"
+        $missingNameWarnings = @($missingSourceImport.Warnings | Where-Object { $_ -match "SourceDetails.Name" })
+        if ($missingNameWarnings.Count -ne 1) {
+            Add-Failure "Missing SourceDetails.Name should emit exactly one warning, got $($missingNameWarnings.Count)."
+        }
+
+        # Empty Sources array yields zero packages and zero warnings.
+        $emptySources = [PSCustomObject]@{ Sources = @() }
+        $emptyImport = Import-PackageIdsFromJSON -Content $emptySources -FallbackGroupName "Empty"
+        if ($emptyImport.PackageIds.Count -ne 0 -or $emptyImport.Warnings.Count -ne 0) {
+            Add-Failure "Empty Sources should yield zero IDs and zero warnings."
+        }
+        if ($emptyImport.Format -ne "WinGet import JSON") {
+            Add-Failure "Empty Sources should still classify as WinGet import JSON, got '$($emptyImport.Format)'."
+        }
+
+        # Mixed PackageIds + Sources: PackageIds wins (Wingetter group JSON format takes precedence).
+        $mixedContent = [PSCustomObject]@{
+            PackageIds = @("Mixed.One")
+            Sources    = @(
+                [PSCustomObject]@{
+                    SourceDetails = [PSCustomObject]@{ Name = "winget" }
+                    Packages      = @([PSCustomObject]@{ PackageIdentifier = "Should.Not.Win" })
+                }
+            )
+        }
+        $mixedImport = Import-PackageIdsFromJSON -Content $mixedContent -FallbackGroupName "Mixed"
+        Assert-EqualArray -Actual $mixedImport.PackageIds -Expected @("Mixed.One") -Name "Mixed PackageIds + Sources precedence"
+        if ($mixedImport.Format -ne "Wingetter group JSON") {
+            Add-Failure "Mixed content should classify as Wingetter group JSON, got '$($mixedImport.Format)'."
+        }
+
+        # Multiple Sources with multiple packages each.
+        $multiSources = [PSCustomObject]@{
+            Sources = @(
+                [PSCustomObject]@{
+                    SourceDetails = [PSCustomObject]@{ Name = "winget" }
+                    Packages      = @(
+                        [PSCustomObject]@{ PackageIdentifier = "Source.A.One" },
+                        [PSCustomObject]@{ PackageIdentifier = "Source.A.Two" }
+                    )
+                },
+                [PSCustomObject]@{
+                    SourceDetails = [PSCustomObject]@{ Name = "msstore" }
+                    Packages      = @([PSCustomObject]@{ PackageIdentifier = "Source.B.One" })
+                }
+            )
+        }
+        $multiImport = Import-PackageIdsFromJSON -Content $multiSources -FallbackGroupName "Multi"
+        Assert-EqualArray -Actual $multiImport.PackageIds -Expected @("Source.A.One", "Source.A.Two", "Source.B.One") -Name "Multi-source imported IDs"
+        Assert-EqualArray -Actual $multiImport.SourceNames -Expected @("winget", "msstore") -Name "Multi-source captured names"
+
+        # Flat Packages array (no Sources, no PackageIds) — third schema path.
+        $flatContent = [PSCustomObject]@{
+            Packages = @(
+                [PSCustomObject]@{ PackageIdentifier = "Flat.One" },
+                [PSCustomObject]@{ PackageIdentifier = "Flat.Two" }
+            )
+        }
+        $flatImport = Import-PackageIdsFromJSON -Content $flatContent -FallbackGroupName "Flat"
+        Assert-EqualArray -Actual $flatImport.PackageIds -Expected @("Flat.One", "Flat.Two") -Name "Flat Packages imported IDs"
+        if ($flatImport.Format -ne "WinGet package list JSON") {
+            Add-Failure "Flat Packages should classify as WinGet package list JSON, got '$($flatImport.Format)'."
+        }
+
+        # Unrecognized payload throws.
+        $unrecognizedRejected = $false
+        try {
+            Import-PackageIdsFromJSON -Content ([PSCustomObject]@{ Foo = "bar" }) -FallbackGroupName "Reject" | Out-Null
+        } catch {
+            $unrecognizedRejected = ($_.Exception.Message -match "Unrecognized JSON format")
+        }
+        if (-not $unrecognizedRejected) {
+            Add-Failure "Unrecognized JSON payload was not rejected with the expected error message."
+        }
+
         $installedRecords = @{
             "Google.Chrome" = [PSCustomObject]@{
                 InstalledVersion = "124.0"
