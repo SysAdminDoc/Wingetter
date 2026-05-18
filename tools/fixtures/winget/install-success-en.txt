@@ -1,0 +1,8 @@
+Found Google Chrome [Google.Chrome] Version 124.0.6367.119
+This application is licensed to you by its owner.
+Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Downloading https://dl.google.com/release2/chrome/abcdef/124.0.6367.119_chrome_installer.exe
+  ██████████████████████████████  102 MB / 102 MB
+Successfully verified installer hash
+Starting package install...
+Successfully installed

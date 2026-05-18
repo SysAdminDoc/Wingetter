@@ -4,6 +4,9 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: Locale-independent WinGet result classification using documented HRESULTs, with the matched signal (`ExitCode`/`Text`/`Cancelled`/`None`) and exit-code meaning persisted on per-package result records.
+- Added: Pin classification driven by the `Pin type` column token (`Blocking` / `Gating` / `Pinning` / `PinnedByManifest`) instead of English keywords, with text-pattern fallback.
+- Added: `tools\fixtures\winget\` with English, German, and Spanish output samples for install/upgrade outcomes, multiple pin types, `winget list`, and `winget show`; `tools\Test-WinGetRunner.ps1` consumes the fixtures and verifies classification and parsed field extraction.
 - Added: Generated catalog snapshots in `catalog/winget.json` and `catalog/groups.json`.
 - Added: Catalog sync, export, and validation tools for package counts, duplicate IDs, built-in group references, embedded fallback freshness, README count drift, and changelog formatting.
 - Added: Official WinGet import/export JSON support using `Sources`, `Packages`, and `PackageIdentifier`.

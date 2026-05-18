@@ -63,6 +63,116 @@ if ($failures.Count -eq 0) {
         Add-Failure "Status classifier did not classify failure."
     }
 
+    # R-020: classification signal should report whether the verdict came from the
+    # exit code, the English-text fallback, the cancel flag, or nothing.
+    $signal = 'None'
+    [void](Get-WinGetOperationStatus -ExitCode 0 -StdOut "Successfully installed" -StdErr "" -Cancelled $false -Signal ([ref]$signal))
+    if ($signal -ne 'ExitCode') { Add-Failure "Status classifier signal should be ExitCode for plain success, got '$signal'." }
+    $signal = 'None'
+    [void](Get-WinGetOperationStatus -ExitCode 1 -StdOut "No available upgrade" -StdErr "" -Cancelled $false -Signal ([ref]$signal))
+    if ($signal -ne 'Text') { Add-Failure "Status classifier signal should be Text when only English-text matches, got '$signal'." }
+    $signal = 'None'
+    [void](Get-WinGetOperationStatus -ExitCode -1 -StdOut "" -StdErr "" -Cancelled $true -Signal ([ref]$signal))
+    if ($signal -ne 'Cancelled') { Add-Failure "Status classifier signal should be Cancelled when cancellation flag is set, got '$signal'." }
+
+    # R-020: documented WinGet HRESULT codes classify as UP TO DATE without any
+    # English text in stdout/stderr, even when the user's WinGet is localized.
+    foreach ($hresultCode in @(-1978335189, -1978335135, -1978335190)) {
+        $signal = 'None'
+        $status = Get-WinGetOperationStatus -ExitCode $hresultCode -StdOut "" -StdErr "" -Cancelled $false -Signal ([ref]$signal)
+        if ($status -ne 'UP TO DATE' -or $signal -ne 'ExitCode') {
+            Add-Failure "Documented WinGet exit code $hresultCode should classify as UP TO DATE via ExitCode signal, got '$status'/'$signal'."
+        }
+        $meaning = Get-WinGetExitCodeMeaning -ExitCode $hresultCode
+        if ([string]::IsNullOrWhiteSpace($meaning)) {
+            Add-Failure "Get-WinGetExitCodeMeaning should map documented exit code $hresultCode to a non-empty meaning."
+        }
+    }
+    if ($null -ne (Get-WinGetExitCodeMeaning -ExitCode 1603)) {
+        Add-Failure "Get-WinGetExitCodeMeaning should return `$null for unknown exit codes."
+    }
+
+    # R-021: fixture-based parser coverage.
+    $fixtureRoot = Join-Path $PSScriptRoot "fixtures\winget"
+    if (!(Test-Path $fixtureRoot)) {
+        Add-Failure "Missing fixture directory '$fixtureRoot'."
+    } else {
+        function Get-Fixture {
+            param([string]$Name)
+            $path = Join-Path $fixtureRoot $Name
+            if (!(Test-Path $path)) { throw "Missing fixture '$Name'." }
+            return Get-Content -Path $path -Raw
+        }
+
+        $installSuccess = Get-Fixture "install-success-en.txt"
+        if ((Get-WinGetOperationStatus -ExitCode 0 -StdOut $installSuccess -StdErr "" -Cancelled $false) -ne 'SUCCESS') {
+            Add-Failure "install-success-en.txt fixture should classify as SUCCESS."
+        }
+
+        $uptodateEn = Get-Fixture "upgrade-uptodate-en.txt"
+        $signal = 'None'
+        $status = Get-WinGetOperationStatus -ExitCode 0 -StdOut $uptodateEn -StdErr "" -Cancelled $false -Signal ([ref]$signal)
+        if ($status -ne 'UP TO DATE') {
+            Add-Failure "upgrade-uptodate-en.txt fixture should classify as UP TO DATE."
+        }
+
+        # Locale-independence: German/Spanish fixtures should classify on the HRESULT alone.
+        $uptodateDe = Get-Fixture "upgrade-uptodate-de.txt"
+        $signal = 'None'
+        $status = Get-WinGetOperationStatus -ExitCode -1978335189 -StdOut $uptodateDe -StdErr "" -Cancelled $false -Signal ([ref]$signal)
+        if ($status -ne 'UP TO DATE' -or $signal -ne 'ExitCode') {
+            Add-Failure "German up-to-date fixture should classify as UP TO DATE via ExitCode, got '$status'/'$signal'."
+        }
+        $uptodateEs = Get-Fixture "upgrade-uptodate-es.txt"
+        $signal = 'None'
+        $status = Get-WinGetOperationStatus -ExitCode -1978335190 -StdOut $uptodateEs -StdErr "" -Cancelled $false -Signal ([ref]$signal)
+        if ($status -ne 'UP TO DATE' -or $signal -ne 'ExitCode') {
+            Add-Failure "Spanish up-to-date fixture should classify as UP TO DATE via ExitCode, got '$status'/'$signal'."
+        }
+
+        $installFailure = Get-Fixture "install-failure-en.txt"
+        if ((Get-WinGetOperationStatus -ExitCode 1603 -StdOut $installFailure -StdErr "" -Cancelled $false) -ne 'FAILED') {
+            Add-Failure "install-failure-en.txt fixture should classify as FAILED."
+        }
+
+        $pinBlocking = Get-WinGetPinStatusFromText -Text (Get-Fixture "pin-list-blocking.txt") -PackageId "Google.Chrome"
+        if (-not $pinBlocking.IsPinned -or $pinBlocking.PinType -ne 'Blocking' -or $pinBlocking.Signal -ne 'Column') {
+            Add-Failure "pin-list-blocking.txt fixture should classify as Blocking via Column signal."
+        }
+        $pinGating = Get-WinGetPinStatusFromText -Text (Get-Fixture "pin-list-gating.txt") -PackageId "Mozilla.Firefox"
+        if (-not $pinGating.IsPinned -or $pinGating.PinType -ne 'Gating' -or $pinGating.Signal -ne 'Column') {
+            Add-Failure "pin-list-gating.txt fixture should classify as Gating via Column signal."
+        }
+        $pinPinning = Get-WinGetPinStatusFromText -Text (Get-Fixture "pin-list-pinning.txt") -PackageId "7zip.7zip"
+        if (-not $pinPinning.IsPinned -or $pinPinning.PinType -ne 'Pinned' -or $pinPinning.Signal -ne 'Column') {
+            Add-Failure "pin-list-pinning.txt fixture should classify as Pinned via Column signal."
+        }
+        $pinEmpty = Get-WinGetPinStatusFromText -Text (Get-Fixture "pin-list-empty.txt") -PackageId "Google.Chrome"
+        if ($pinEmpty.IsPinned -or $pinEmpty.PinType -ne 'None') {
+            Add-Failure "pin-list-empty.txt fixture should classify as not pinned."
+        }
+
+        $listText = Get-Fixture "list-updates-available.txt"
+        $listRecords = ConvertFrom-WinGetListText -Text $listText -PackageIds @("Google.Chrome", "Mozilla.Firefox") -ScannedAtUtc "2026-05-17T00:00:00.0000000Z"
+        if (-not $listRecords.ContainsKey("Google.Chrome") -or $listRecords["Google.Chrome"].AvailableVersion -ne "125.0") {
+            Add-Failure "list-updates-available.txt fixture should expose Google.Chrome's available version."
+        }
+        if (-not $listRecords.ContainsKey("Mozilla.Firefox") -or $listRecords["Mozilla.Firefox"].IsUpdateAvailable) {
+            Add-Failure "list-updates-available.txt fixture should mark Mozilla.Firefox as up to date."
+        }
+
+        $showFull = Get-Fixture "show-full-en.txt"
+        if ((Get-WinGetShowField -Text $showFull -Label "Publisher") -ne "Google LLC") {
+            Add-Failure "show-full-en.txt fixture should expose Publisher."
+        }
+        if ((Get-WinGetShowField -Text $showFull -Label "Installer Type") -ne "msi") {
+            Add-Failure "show-full-en.txt fixture should expose indented Installer Type."
+        }
+        if ((Get-WinGetShowField -Text $showFull -Label "Installer SHA256") -ne "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") {
+            Add-Failure "show-full-en.txt fixture should expose indented Installer SHA256."
+        }
+    }
+
     $upgradeArgs = New-WinGetPackageOperationArguments -Action "upgrade" -PackageId "Google.Chrome" -Silent $true -AcceptAgreements $true -IncludePinned $true
     if ($upgradeArgs -notcontains "--include-pinned") {
         Add-Failure "Upgrade arguments did not include --include-pinned when requested."

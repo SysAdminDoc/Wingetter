@@ -116,7 +116,9 @@ function Invoke-WingetterOfflinePackageDownload {
 
     $afterFiles = Get-WingetterOfflineCacheFiles -Directory $DownloadDirectory
     $downloadedFiles = Compare-WingetterOfflineCacheFiles -Before $beforeFiles -After $afterFiles
-    $status = Get-WinGetOperationStatus -ExitCode ([int]$exitCode) -StdOut $stdout -StdErr $stderr -Cancelled $cancelled
+    $signal = 'None'
+    $status = Get-WinGetOperationStatus -ExitCode ([int]$exitCode) -StdOut $stdout -StdErr $stderr -Cancelled $cancelled -Signal ([ref]$signal)
+    $exitCodeMeaning = Get-WinGetExitCodeMeaning -ExitCode ([int]$exitCode)
 
     $result = [ordered]@{
         TimestampUtc      = (Get-Date).ToUniversalTime().ToString("o")
@@ -126,7 +128,9 @@ function Invoke-WingetterOfflinePackageDownload {
         SourceName        = $SourceName
         Command           = "winget " + (Join-ProcessArguments -Arguments $arguments)
         ExitCode          = $exitCode
+        ExitCodeMeaning   = $exitCodeMeaning
         Status            = $status
+        StatusSignal      = $signal
         Cancelled         = $cancelled
         DownloadDirectory = $DownloadDirectory
         DownloadedFiles   = @($downloadedFiles)

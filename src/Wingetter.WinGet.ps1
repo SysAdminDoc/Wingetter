@@ -217,17 +217,60 @@ function Get-TextExcerpt {
     return $clean.Substring(0, $MaxLength)
 }
 
+# Documented WinGet HRESULT exit codes that classify as a non-failure no-op rather
+# than a real install/upgrade failure. Values come from the Microsoft Learn
+# "winget return codes" reference and are locale-independent across WinGet UI
+# languages. PowerShell surfaces $proc.ExitCode as an Int32, so the hex literals
+# below (which the parser stores as Int32) compare equal to the signed forms a
+# WinGet process actually returns; the inline comment lists the signed form for
+# reviewers.
+$Script:WinGetUpToDateExitCodes = @{
+    # APPINSTALLER_CLI_ERROR_NO_APPLICABLE_UPDATE_FOUND (signed: -1978335189).
+    0x8A15002B = 'NO_APPLICABLE_UPDATE_FOUND'
+    # APPINSTALLER_CLI_ERROR_PACKAGE_ALREADY_INSTALLED (signed: -1978335135).
+    0x8A150061 = 'PACKAGE_ALREADY_INSTALLED'
+    # APPINSTALLER_CLI_ERROR_UPDATE_NOT_APPLICABLE (signed: -1978335190).
+    0x8A15002A = 'UPDATE_NOT_APPLICABLE'
+}
+
+function Get-WinGetExitCodeMeaning {
+    param([int]$ExitCode)
+    if ($Script:WinGetUpToDateExitCodes.ContainsKey($ExitCode)) {
+        return $Script:WinGetUpToDateExitCodes[$ExitCode]
+    }
+    return $null
+}
+
 function Get-WinGetOperationStatus {
     param(
         [int]$ExitCode,
         [string]$StdOut,
         [string]$StdErr,
-        [bool]$Cancelled
+        [bool]$Cancelled,
+        [ref]$Signal
     )
-    if ($Cancelled) { return "CANCELLED" }
+    if ($PSBoundParameters.ContainsKey('Signal')) { $Signal.Value = 'None' }
+    if ($Cancelled) {
+        if ($PSBoundParameters.ContainsKey('Signal')) { $Signal.Value = 'Cancelled' }
+        return "CANCELLED"
+    }
+
+    $meaning = Get-WinGetExitCodeMeaning -ExitCode $ExitCode
+    if ($meaning) {
+        if ($PSBoundParameters.ContainsKey('Signal')) { $Signal.Value = 'ExitCode' }
+        return "UP TO DATE"
+    }
+
     $combined = "$StdOut`n$StdErr"
-    if ($combined -match "already installed|No available upgrade|No newer package|No applicable update") { return "UP TO DATE" }
-    if ($ExitCode -eq 0) { return "SUCCESS" }
+    if ($combined -match "already installed|No available upgrade|No newer package|No applicable update") {
+        if ($PSBoundParameters.ContainsKey('Signal')) { $Signal.Value = 'Text' }
+        return "UP TO DATE"
+    }
+    if ($ExitCode -eq 0) {
+        if ($PSBoundParameters.ContainsKey('Signal')) { $Signal.Value = 'ExitCode' }
+        return "SUCCESS"
+    }
+    if ($PSBoundParameters.ContainsKey('Signal')) { $Signal.Value = 'ExitCode' }
     return "FAILED"
 }
 
@@ -319,24 +362,28 @@ function Invoke-WinGetPackageOperation {
     Set-Content -Path $stdoutPath -Value $stdout -Encoding UTF8
     Set-Content -Path $stderrPath -Value $stderr -Encoding UTF8
 
-    $status = Get-WinGetOperationStatus -ExitCode ([int]$exitCode) -StdOut $stdout -StdErr $stderr -Cancelled $cancelled
+    $signal = 'None'
+    $status = Get-WinGetOperationStatus -ExitCode ([int]$exitCode) -StdOut $stdout -StdErr $stderr -Cancelled $cancelled -Signal ([ref]$signal)
+    $exitCodeMeaning = Get-WinGetExitCodeMeaning -ExitCode ([int]$exitCode)
     $result = [ordered]@{
-        TimestampUtc  = (Get-Date).ToUniversalTime().ToString("o")
-        Action        = $Action
-        PackageName   = $PackageName
-        PackageId     = $PackageId
-        SourceName    = $SourceName
-        Command       = "winget " + (Join-ProcessArguments -Arguments $arguments)
-        ExitCode      = $exitCode
-        Status        = $status
-        Cancelled     = $cancelled
-        StdOutPath    = $stdoutPath
-        StdErrPath    = $stderrPath
-        StdOutExcerpt = Get-TextExcerpt -Text $stdout
-        StdErrExcerpt = Get-TextExcerpt -Text $stderr
-        RunLogDir     = $RunLogDir
-        WinGetLogDir  = Get-WinGetLogDirectory
-        ResultPath    = $resultPath
+        TimestampUtc      = (Get-Date).ToUniversalTime().ToString("o")
+        Action            = $Action
+        PackageName       = $PackageName
+        PackageId         = $PackageId
+        SourceName        = $SourceName
+        Command           = "winget " + (Join-ProcessArguments -Arguments $arguments)
+        ExitCode          = $exitCode
+        ExitCodeMeaning   = $exitCodeMeaning
+        Status            = $status
+        StatusSignal      = $signal
+        Cancelled         = $cancelled
+        StdOutPath        = $stdoutPath
+        StdErrPath        = $stderrPath
+        StdOutExcerpt     = Get-TextExcerpt -Text $stdout
+        StdErrExcerpt     = Get-TextExcerpt -Text $stderr
+        RunLogDir         = $RunLogDir
+        WinGetLogDir      = Get-WinGetLogDirectory
+        ResultPath        = $resultPath
     }
     $result | ConvertTo-Json -Depth 5 | Set-Content -Path $resultPath -Encoding UTF8
 
@@ -526,6 +573,47 @@ function Get-WinGetInstalledCatalogPackages {
     }
 }
 
+function Get-WinGetPinTypeFromColumnValue {
+    param([string]$Value)
+    # The WinGet CLI emits non-localized pin-type tokens in the "Pin type" column
+    # (winget-cli source: Pinning::PinType ToString). Compare on the token directly
+    # so localization of surrounding prose ("There is a pinned package...") cannot
+    # mis-classify the pin.
+    $token = ($Value -as [string]).Trim()
+    if ([string]::IsNullOrWhiteSpace($token)) { return "" }
+    switch -Regex ($token) {
+        '^(?i)Blocking$'         { return "Blocking" }
+        '^(?i)Gating$'           { return "Gating" }
+        '^(?i)PinnedByManifest$' { return "PinnedByManifest" }
+        '^(?i)Pinning$'          { return "Pinned" }
+        '^(?i)Pinned$'           { return "Pinned" }
+        default                  { return "" }
+    }
+}
+
+function Get-WinGetPinRowFromText {
+    param(
+        [string]$Text,
+        [string]$PackageId
+    )
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $null }
+    foreach ($line in ($Text -split "`r?`n")) {
+        $index = $line.IndexOf($PackageId, [System.StringComparison]::OrdinalIgnoreCase)
+        if ($index -lt 0) { continue }
+        $afterId = $line.Substring($index + $PackageId.Length).Trim()
+        if ([string]::IsNullOrWhiteSpace($afterId)) { continue }
+        $parts = @($afterId -split '\s+' | Where-Object { $_ -and $_ -notmatch '^-+$' })
+        if ($parts.Count -lt 1) { continue }
+        $pinTypeToken = $parts[$parts.Count - 1]
+        return [PSCustomObject]@{
+            Line         = $line
+            PinTypeToken = [string]$pinTypeToken
+            VersionToken = if ($parts.Count -ge 2) { [string]$parts[$parts.Count - 2] } else { "" }
+        }
+    }
+    return $null
+}
+
 function Get-WinGetPinStatusFromText {
     param(
         [string]$Text,
@@ -535,24 +623,38 @@ function Get-WinGetPinStatusFromText {
     )
 
     $combined = if ($null -eq $Text) { "" } else { $Text }
-    $isPinned = ($ExitCode -eq 0 -and $combined -match [regex]::Escape($PackageId))
+    $row = Get-WinGetPinRowFromText -Text $combined -PackageId $PackageId
+    $isPinned = ($ExitCode -eq 0 -and $null -ne $row)
     $pinType = "None"
     $summary = "Not pinned"
+    $signal = "None"
 
     if ($TimedOut) {
         $summary = "Pin lookup timed out"
-    } elseif ($ExitCode -ne 0 -and !$isPinned) {
+        $signal = "Timeout"
+    } elseif ($ExitCode -ne 0 -and -not $isPinned) {
         $summary = "Pin lookup failed"
+        $signal = "ExitCode"
     } elseif ($isPinned) {
-        if ($combined -match "(?i)\bblocking\b") {
+        $columnPinType = Get-WinGetPinTypeFromColumnValue -Value $row.PinTypeToken
+        if ($columnPinType) {
+            $pinType = $columnPinType
+            $signal = "Column"
+        } elseif ($combined -match "(?i)\bblocking\b") {
             $pinType = "Blocking"
-            $summary = "Blocking pin"
-        } elseif ($combined -match "(?i)\bgating\b|\bversion\b|\binstalled\b") {
+            $signal = "Text"
+        } elseif ($combined -match "(?i)\bgating\b") {
             $pinType = "Gating"
-            $summary = "Version-gated pin"
+            $signal = "Text"
         } else {
             $pinType = "Pinned"
-            $summary = "Pinned"
+            $signal = "Text"
+        }
+        $summary = switch ($pinType) {
+            "Blocking"          { "Blocking pin" }
+            "Gating"            { "Version-gated pin" }
+            "PinnedByManifest"  { "Manifest-pinned" }
+            default             { "Pinned" }
         }
     }
 
@@ -562,6 +664,7 @@ function Get-WinGetPinStatusFromText {
         PinType   = $pinType
         Summary   = $summary
         ExitCode  = $ExitCode
+        Signal    = $signal
         Raw       = $combined
     }
 }

@@ -1,0 +1,19 @@
+Found Google Chrome [Google.Chrome]
+Version: 124.0.6367.119
+Publisher: Google LLC
+Publisher Url: https://www.google.com
+Author: Google LLC
+Moniker: chrome
+Description: A fast, secure, and free web browser.
+Homepage: https://www.google.com/chrome
+License: Proprietary
+Privacy Url: https://policies.google.com/privacy
+Tags:
+  browser
+  google
+Installer:
+  Installer Type: msi
+  Installer Locale: en-US
+  Installer Url: https://dl.google.com/chrome/install/GoogleChromeStandaloneEnterprise64.msi
+  Installer SHA256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  Product Code: {12345678-1234-1234-1234-123456789012}

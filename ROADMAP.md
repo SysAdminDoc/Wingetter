@@ -166,6 +166,24 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 - Sources: E03, E04, E06, E12, E13.
 - Completed 2026-05-17: added `profiles\gallery.json` plus hashed profile files under `profiles\gallery\`, `src\Wingetter.ProfileGallery.ps1` for strict schema/hash/package-source validation and review text, a GUI Profile Gallery dialog that verifies SHA256 and previews every package before selection-only import, and `tools\Test-ProfileGallery.ps1` plus CI coverage.
 
+## P1 - Reliability Followups
+
+### [x] R-020 - Locale-independent WinGet result and pin classification
+
+- Problem: `Get-WinGetOperationStatus` matches English phrases like "already installed", "No available upgrade", "No newer package", and "No applicable update"; `Get-WinGetPinStatusFromText` matches "blocking" / "gating" / "version"; if WinGet is localized (German, Spanish, etc.) these classifications silently drift to FAILED or to the wrong pin type. WinGet documents HRESULT exit codes that are locale-independent.
+- Build: introduce a documented HRESULT lookup table for "already installed", "no applicable upgrade", and similar non-failure outcomes; have `Get-WinGetOperationStatus` consult the exit code first and only fall back to English text patterns when the exit code is generic; have pin classification key off the `Pin type` column position instead of English words; record the matched signal (`ExitCode`, `Text`, or `None`) on the result for diagnosability.
+- Acceptance: an `UP TO DATE` result classifies correctly when stdout/stderr are empty but the WinGet HRESULT is one of the known no-op codes; a blocking-pin row classifies correctly when the `Pin type` column says `Blocking` regardless of surrounding English prose; existing English-text fixtures still pass.
+- Sources: L07, E01, E02.
+- Completed 2026-05-17: added `$Script:WinGetUpToDateExitCodes` HRESULT lookup, `Get-WinGetExitCodeMeaning`, and a `-Signal` ref output on `Get-WinGetOperationStatus`; rewrote `Get-WinGetPinStatusFromText` to drive off the `Pin type` column token (`Blocking` / `Gating` / `Pinning` / `PinnedByManifest`) with English-text only as fallback; install/upgrade and offline-cache result records now persist `ExitCodeMeaning` and `StatusSignal` for diagnosability.
+
+### [x] R-021 - Parser fixture coverage for WinGet output drift
+
+- Problem: WinGet output parsers (`Get-WinGetOperationStatus`, `Get-WinGetPinStatusFromText`, `ConvertFrom-WinGetListText`, `Get-WinGetShowField`) are validated against minimal inline strings; localized WinGet output, indented `winget show` blocks, and progress-bar noise are not represented, so regressions are easy to miss.
+- Build: add a fixture directory under `tools\fixtures\winget\` with representative captured outputs (English install success, English up-to-date, German up-to-date, Spanish up-to-date, blocking pin, gating pin, `winget list` with available updates, `winget show` with full installer block, `winget pin list` with no pins); extend `tools\Test-WinGetRunner.ps1` to load each fixture and verify the expected classification/parsed fields; keep fixtures readable plain text so future contributors can add new locales.
+- Acceptance: `tools\Test-WinGetRunner.ps1` exits zero against the fixtures and exits nonzero if any expected classification regresses; the fixtures directory is small enough to review by eye.
+- Sources: L07, L08, E01, E02.
+- Completed 2026-05-17: added `tools\fixtures\winget\` with English install success, English/German/Spanish up-to-date, install failure, blocking/gating/pinning/empty pin list, `winget list` with available updates, and full `winget show` fixtures plus a fixtures README; `tools\Test-WinGetRunner.ps1` now consumes each fixture and asserts the expected status, signal source, pin type, parsed list rows, and parsed show fields.
+
 ## Rejected Or Deferred
 
 - Parallel install as a near-term promise: the local WinGet 1.28.240 help output does not show a `--parallel` install option, so this remains deferred until verified in official docs or local help.

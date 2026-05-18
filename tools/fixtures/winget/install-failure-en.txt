@@ -1,0 +1,2 @@
+Installer failed with exit code: 1603
+Installer log available at: C:\Users\example\AppData\Local\Temp\WinGet\Google.Chrome.log
