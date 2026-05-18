@@ -77,7 +77,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 - `CLAUDE.md` still says `v0.1.0`; it is ignored/untracked and should not be treated as shipped project truth.
 - The repo README is now synced to 765 apps and 39 categories, but GitHub repo metadata may still need to be checked if it drifts outside git.
-- The checked-in `Wingetter.exe` is hash-pinned via `release\manifest.json`, and `tools\Build-WingetterExe.ps1` now concatenates the dot-sourced modules into a parser-clean bundled launcher (PS2EXE packaging is opt-in via `-RunPS2EXE`). `tools\Test-Bundle.ps1` exercises the builder in CI so module-list drift or concatenation errors fail the build immediately. Refreshing the checked-in `Wingetter.exe` is now: run the builder with `-RunPS2EXE`, then `Test-ReleaseArtifact.ps1 -Update`, then commit.
+- The checked-in `Wingetter.exe` is hash-pinned via `release\manifest.json`, and `tools\Build-WingetterExe.ps1` now concatenates the dot-sourced modules into a parser-clean bundled launcher (PS2EXE packaging is opt-in via `-RunPS2EXE`). `tools\Test-Bundle.ps1` exercises the builder in CI so module-list drift or concatenation errors fail the build immediately. Pushing a `v*.*.*` tag triggers `.github/workflows/release.yml`, which runs the full validation suite, installs PS2EXE, builds a fresh `Wingetter.exe` from the modular launcher, regenerates `release\manifest.json`, uploads both as workflow artifacts, and attaches them to a GitHub Release. The manifest update is NOT committed back to `main`; the maintainer downloads the regenerated manifest and commits it manually when bumping the tracked hash.
 - `ROADMAP.md` previously included good ideas but lacked prioritization, source IDs, saturation notes, and live repo reconciliation.
 - Catalog JSON, embedded module fallback sync, validation tooling, and CI now exist.
 - CI now covers catalog sync/counts, profile JSON helpers imported from modules, profile gallery hashes and catalog references, WinGet runner helpers imported from modules, source adapter boundaries, source policy behavior, update watcher classification, offline cache manifests, WinGet Configuration export generation, search metadata, visual/accessibility checks, and XAML loading. There is still no release build script or full GUI automation.
@@ -95,8 +95,7 @@ The remaining strategic threads are larger, multi-session efforts:
 
 1. Prototype Scoop, Chocolatey, and PowerShell Gallery adapters now that the source-adapter contract (R-014), source policy (R-015), and locale-independent classification (R-020) are stable. Network access to bucket/source manifests should be optional so CI does not depend on remote services.
 2. Continue moving UI-heavy workflow code in `src\Wingetter.Ui.ps1` (still the largest module) behind smaller functions in dedicated UI sub-modules; current monolith makes targeted reviews difficult.
-3. Add an actual PS2EXE build job (gated on a release tag) that produces a fresh `Wingetter.exe` from the modular launcher and updates `release/manifest.json` automatically.
-4. Publish a signed module manifest alongside each release so the launcher can hash-pin downloaded modules in addition to the existing size + head-line sanity check.
+3. Publish a signed module manifest alongside each release so the launcher can hash-pin downloaded modules in addition to the existing size + head-line sanity check.
 
 ## Source Trail
 
