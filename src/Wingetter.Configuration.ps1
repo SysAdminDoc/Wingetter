@@ -5,7 +5,22 @@
 function ConvertTo-WingetterYamlSingleQuotedValue {
     param([string]$Value)
     if ($null -eq $Value) { return "''" }
-    "'" + ([string]$Value -replace "'", "''") + "'"
+    # Single-quoted YAML scalars cannot embed literal line breaks; collapse any
+    # newlines (which can show up in catalog descriptions) into single spaces
+    # so the generated configuration is always parseable, then escape any
+    # embedded single quote per the YAML spec ('' inside '...').
+    $normalized = ([string]$Value) -replace "[\r\n]+", " "
+    "'" + ($normalized -replace "'", "''") + "'"
+}
+
+function Test-WingetterConfigurationPackageId {
+    # WinGet package identifiers follow `Publisher.Name[.Suffix]` with at most a
+    # narrow set of characters. Reject anything outside that set so the
+    # generated WinGet Configuration cannot contain an attacker-controlled
+    # YAML string with surprise characters (control chars, quotes, brackets).
+    param([string]$PackageId)
+    if ([string]::IsNullOrWhiteSpace($PackageId)) { return $false }
+    return [bool]([regex]::IsMatch($PackageId, '^[A-Za-z0-9][A-Za-z0-9._+\-]*$'))
 }
 
 function ConvertTo-WingetterConfigurationResourceId {
@@ -50,6 +65,9 @@ function ConvertTo-WingetterConfigurationYaml {
         $index++
         $packageId = [string]$package.WingetId
         if ([string]::IsNullOrWhiteSpace($packageId)) { continue }
+        if (-not (Test-WingetterConfigurationPackageId -PackageId $packageId)) {
+            throw "Package identifier '$packageId' contains characters that are not valid in a WinGet Configuration file."
+        }
         $name = if (![string]::IsNullOrWhiteSpace([string]$package.Name)) { [string]$package.Name } else { $packageId }
         $sourceName = if (![string]::IsNullOrWhiteSpace([string]$package.SourceName)) { [string]$package.SourceName } else { "winget" }
         $resourceId = ConvertTo-WingetterConfigurationResourceId -PackageId $packageId -Index $index

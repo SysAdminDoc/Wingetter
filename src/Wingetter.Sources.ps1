@@ -533,6 +533,15 @@ function Get-WingetterSourcePolicy {
         try {
             return ConvertTo-WingetterSourcePolicy -Policy (Get-Content -Path $Path -Raw | ConvertFrom-Json)
         } catch {
+            # Preserve the unparseable file as .corrupt before returning defaults
+            # so a malformed source-policy.json (truncated write, manual edit
+            # that produced invalid JSON) can be recovered manually and the
+            # user sees a warning rather than silently reverting to defaults.
+            if (Get-Command Move-WingetterCorruptFileAside -ErrorAction SilentlyContinue) {
+                Move-WingetterCorruptFileAside -Path $Path
+            } else {
+                Write-Warning "Source policy at '$Path' is not valid JSON; using defaults."
+            }
             return New-WingetterDefaultSourcePolicy
         }
     }
@@ -552,7 +561,12 @@ function Save-WingetterSourcePolicy {
     if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path $parent)) {
         New-Item -ItemType Directory -Path $parent -Force | Out-Null
     }
-    $normalized | ConvertTo-Json -Depth 8 | Set-Content -Path $Path -Encoding UTF8
+    $json = $normalized | ConvertTo-Json -Depth 8
+    if (Get-Command Set-WingetterFileAtomic -ErrorAction SilentlyContinue) {
+        Set-WingetterFileAtomic -Path $Path -Content $json -Encoding UTF8
+    } else {
+        Set-Content -Path $Path -Value $json -Encoding UTF8
+    }
     return $normalized
 }
 

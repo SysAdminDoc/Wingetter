@@ -94,6 +94,41 @@ if ($failures.Count -eq 0) {
                 Add-Failure "Unsafe profile failed with unexpected message: $($_.Exception.Message)"
             }
         }
+
+        # Oversized profile file should be rejected before parsing. Generate a
+        # >1MB file on disk, point an entry at it, and confirm the hash check
+        # never even runs.
+        $tempProfileDir = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-profile-bigtest-" + [System.Guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $tempProfileDir -Force | Out-Null
+        try {
+            $bigPath = Join-Path $tempProfileDir "big.wingetter.json"
+            $padding = "x" * (1MB + 1024)
+            Set-Content -Path $bigPath -Value ('{"Padding":"' + $padding + '"}') -Encoding UTF8
+            $bigHash = (Get-FileHash -Path $bigPath -Algorithm SHA256).Hash.ToUpperInvariant()
+            $bigEntry = [PSCustomObject]@{
+                Id                  = "oversized"
+                Name                = "Oversized"
+                Description         = ""
+                Publisher           = ""
+                Tags                = @()
+                ProfilePath         = "big.wingetter.json"
+                ResolvedProfilePath = $bigPath
+                Sha256              = $bigHash
+                PackageCount        = 0
+                SourceNames         = @()
+            }
+            $oversizedRejected = $false
+            try {
+                Get-WingetterProfileGalleryItem -Entry $bigEntry | Out-Null
+            } catch {
+                $oversizedRejected = ($_.Exception.Message -match "exceeds")
+            }
+            if (-not $oversizedRejected) {
+                Add-Failure "Oversized profile file was not rejected by the gallery size guard."
+            }
+        } finally {
+            Remove-Item -Path $tempProfileDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     } catch {
         Add-Failure "Profile gallery validation threw: $($_.Exception.Message)"
     }

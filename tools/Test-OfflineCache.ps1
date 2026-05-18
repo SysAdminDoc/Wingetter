@@ -74,6 +74,28 @@ if ($failures.Count -eq 0) {
         if ($scriptText -notmatch "Start-Process" -or $scriptText -notmatch "offline-manifest.json") {
             Add-Failure "Offline replay script did not include installer launch logic."
         }
+        # The replay script must require an explicit -Confirm gate and refuse
+        # paths outside the cache directory, so a stale manifest cannot
+        # silently launch installers from somewhere on disk.
+        if ($scriptText -notmatch "\[switch\]\`$Confirm") {
+            Add-Failure "Offline replay script does not require a -Confirm switch."
+        }
+        if ($scriptText -notmatch "Refusing to launch" -or $scriptText -notmatch "outside the cache directory") {
+            Add-Failure "Offline replay script does not refuse installer paths outside the cache directory."
+        }
+        if ($scriptText -notmatch "allowed installer extension") {
+            Add-Failure "Offline replay script does not constrain installer extensions."
+        }
+
+        # Executing the generated script without -Confirm must short-circuit
+        # so a misclick or scheduled job cannot run installers.
+        $invokeOutput = & pwsh -NoProfile -File $paths.ScriptPath -ManifestPath $paths.ManifestPath 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Add-Failure "Replay script returned non-zero exit ($LASTEXITCODE) when invoked without -Confirm."
+        }
+        if ($invokeOutput -notmatch "-Confirm") {
+            Add-Failure "Replay script did not print the -Confirm hint when invoked without the switch."
+        }
     } finally {
         Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
     }

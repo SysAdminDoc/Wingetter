@@ -191,15 +191,40 @@ function Export-WingetterOfflineReplayScript {
     # path is hard-coded into the generated PS1 below via PSScriptRoot, which is
     # the more robust default when the cache directory is later moved.
     [void]$ManifestPath
+    # The replay script intentionally requires `-Confirm` before launching any
+    # installer so a stale offline cache cannot run installers from an
+    # unattended scheduled task or one-line invocation. The script also
+    # constrains each launched installer to the manifest's cache directory and
+    # an explicit allow-list of installer extensions.
     $content = @'
 param(
-    [string]$ManifestPath = (Join-Path $PSScriptRoot "offline-manifest.json")
+    [string]$ManifestPath = (Join-Path $PSScriptRoot "offline-manifest.json"),
+    [switch]$Confirm
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+if (-not $Confirm) {
+    Write-Host "This script will launch the installers cached alongside it. Re-run with -Confirm to proceed." -ForegroundColor Yellow
+    return
+}
+
+if (!(Test-Path $ManifestPath)) {
+    throw "Manifest not found at $ManifestPath."
+}
 $manifest = Get-Content -Path $ManifestPath -Raw | ConvertFrom-Json
+$cacheRoot = $null
+if ($manifest.PSObject.Properties["CacheDirectory"]) {
+    $cacheRoot = [string]$manifest.CacheDirectory
+}
+if ([string]::IsNullOrWhiteSpace($cacheRoot)) {
+    $cacheRoot = Split-Path -Parent (Resolve-Path $ManifestPath).Path
+}
+$cacheRoot = (Resolve-Path -Path $cacheRoot -ErrorAction Stop).Path
+
+$allowedExtensions = @(".exe", ".msi", ".msix", ".msixbundle", ".appx", ".appxbundle")
+
 foreach ($package in @($manifest.Packages)) {
     $files = @($package.DownloadedFiles | Where-Object { $_ -and (Test-Path $_) })
     if ($files.Count -eq 0) {
@@ -207,10 +232,24 @@ foreach ($package in @($manifest.Packages)) {
         continue
     }
     foreach ($file in $files) {
-        $extension = [System.IO.Path]::GetExtension($file).ToLowerInvariant()
-        if ($extension -notin @(".exe", ".msi", ".msix", ".msixbundle", ".appx", ".appxbundle")) { continue }
-        Write-Host "Launching $($package.PackageId): $file"
-        Start-Process -FilePath $file -Wait
+        $resolved = $null
+        try { $resolved = (Resolve-Path -Path $file -ErrorAction Stop).Path } catch {
+            Write-Warning "Could not resolve installer path '$file': $($_.Exception.Message)"
+            continue
+        }
+        # Refuse to launch anything that escapes the manifest cache directory
+        # (e.g., a maliciously edited manifest pointing at C:\Windows\...).
+        if (-not $resolved.StartsWith($cacheRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            Write-Warning "Refusing to launch '$resolved' because it is outside the cache directory '$cacheRoot'."
+            continue
+        }
+        $extension = [System.IO.Path]::GetExtension($resolved).ToLowerInvariant()
+        if ($extension -notin $allowedExtensions) {
+            Write-Warning "Skipping '$resolved' because '$extension' is not in the allowed installer extension list."
+            continue
+        }
+        Write-Host "Launching $($package.PackageId): $resolved"
+        Start-Process -FilePath $resolved -Wait
     }
 }
 '@

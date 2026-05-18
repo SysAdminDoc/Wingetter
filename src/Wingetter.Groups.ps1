@@ -6,12 +6,41 @@ $Script:GroupsDir = "$env:APPDATA\Wingetter"
 $Script:GroupsFile = "$Script:GroupsDir\groups.json"
 if (!(Test-Path $Script:GroupsDir)) { New-Item -ItemType Directory -Path $Script:GroupsDir -Force | Out-Null }
 
+function Move-WingetterCorruptFileAside {
+    # When a settings file fails to parse we keep a single .corrupt sibling so
+    # the user can recover it manually, and surface a warning rather than
+    # silently overwriting their data on the next save.
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path) -or !(Test-Path $Path)) { return }
+    $corruptPath = "$Path.corrupt"
+    try {
+        if (Test-Path $corruptPath) { Remove-Item -Path $corruptPath -Force -ErrorAction SilentlyContinue }
+        Move-Item -Path $Path -Destination $corruptPath -Force -ErrorAction Stop
+        Write-Warning "Wingetter could not parse '$Path'; moved it to '$corruptPath' so a clean file can be written. The original is preserved for manual recovery."
+    } catch {
+        Write-Warning "Wingetter could not parse '$Path' and also could not move it aside: $($_.Exception.Message)"
+    }
+}
+
 function Get-SavedGroups {
     if (Test-Path $Script:GroupsFile) {
         try { return (Get-Content $Script:GroupsFile -Raw | ConvertFrom-Json) }
-        catch { return [PSCustomObject]@{} }
+        catch {
+            Move-WingetterCorruptFileAside -Path $Script:GroupsFile
+            return [PSCustomObject]@{}
+        }
     }
     return [PSCustomObject]@{}
+}
+
+function Save-WingetterGroupsFile {
+    param([hashtable]$Groups)
+    $json = $Groups | ConvertTo-Json -Depth 8
+    if (Get-Command Set-WingetterFileAtomic -ErrorAction SilentlyContinue) {
+        Set-WingetterFileAtomic -Path $Script:GroupsFile -Content $json -Encoding UTF8
+    } else {
+        Set-Content -Path $Script:GroupsFile -Value $json -Encoding UTF8
+    }
 }
 
 function Save-GroupToFile {
@@ -20,7 +49,7 @@ function Save-GroupToFile {
     $ht = @{}
     foreach ($prop in $groups.PSObject.Properties) { $ht[$prop.Name] = @($prop.Value) }
     $ht[$Name] = $PackageIds
-    $ht | ConvertTo-Json -Depth 5 | Set-Content -Path $Script:GroupsFile -Encoding UTF8
+    Save-WingetterGroupsFile -Groups $ht
 }
 
 function Remove-GroupFromFile {
@@ -28,7 +57,7 @@ function Remove-GroupFromFile {
     $groups = Get-SavedGroups
     $ht = @{}
     foreach ($prop in $groups.PSObject.Properties) { if ($prop.Name -ne $Name) { $ht[$prop.Name] = @($prop.Value) } }
-    $ht | ConvertTo-Json -Depth 5 | Set-Content -Path $Script:GroupsFile -Encoding UTF8
+    Save-WingetterGroupsFile -Groups $ht
 }
 
 function Export-GroupAsPS1 {
@@ -102,7 +131,7 @@ function Export-GroupAsJSON {
         AppCount   = $PackageIds.Count
         PackageIds = $PackageIds
     }
-    $obj | ConvertTo-Json -Depth 5 | Set-Content -Path $FilePath -Encoding UTF8
+    $obj | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
 }
 
 function Export-GroupAsWinGetJSON {
@@ -150,6 +179,8 @@ function Test-JsonPropertyPresence {
     if ($null -eq $InputObject) { return $false }
     return [bool]$InputObject.PSObject.Properties[$PropertyName]
 }
+
+$Script:WingetterImportMaxPackages = 5000
 
 function Import-PackageIdsFromJSON {
     param([object]$Content, [string]$FallbackGroupName = "Imported Group")
@@ -222,6 +253,13 @@ function Import-PackageIdsFromJSON {
             $seen[$id] = $true
             [void]$uniqueIds.Add($id)
         }
+    }
+
+    # Reject obviously oversized imports rather than spending memory parsing
+    # them. The actual install loop is serial and would never finish on tens
+    # of thousands of packages anyway; better to fail loud here.
+    if ($uniqueIds.Count -gt $Script:WingetterImportMaxPackages) {
+        throw "Imported profile contains $($uniqueIds.Count) packages, which exceeds the $($Script:WingetterImportMaxPackages)-package limit."
     }
 
     [PSCustomObject]@{

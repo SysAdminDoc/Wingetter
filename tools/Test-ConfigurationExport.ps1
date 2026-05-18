@@ -42,6 +42,44 @@ if ($failures.Count -eq 0) {
         }
     }
 
+    # Names with embedded newlines must be flattened so the generated YAML
+    # stays parseable (single-quoted YAML scalars cannot contain raw newlines).
+    $newlineEntries = @(
+        New-WingetterConfigurationPackageEntry -Name "Multi`r`nLine Tool" -PackageId "Multi.Tool" -SourceName "winget"
+    )
+    $newlineYaml = ConvertTo-WingetterConfigurationYaml -PackageEntries $newlineEntries
+    if ($newlineYaml -match "Install Multi\s+Line Tool[\r\n]+'") {
+        # The newline should be collapsed to a single space, never preserved
+        # inside the quoted scalar; this regex catches the broken shape.
+        Add-Failure "Configuration YAML preserved a raw newline inside a single-quoted scalar."
+    }
+    if ($newlineYaml -notmatch "Multi Line Tool") {
+        Add-Failure "Configuration YAML did not collapse a CR/LF in the package name."
+    }
+
+    # Invalid package identifiers must be rejected up-front so the YAML cannot
+    # contain attacker-controlled characters.
+    foreach ($badId in @("Bad Id With Space", "Bad;Id", "../Escape", "Bad`nNewline")) {
+        $rejected = $false
+        try {
+            ConvertTo-WingetterConfigurationYaml -PackageEntries @(
+                New-WingetterConfigurationPackageEntry -Name "Bad" -PackageId $badId -SourceName "winget"
+            ) | Out-Null
+        } catch {
+            $rejected = $_.Exception.Message -match "not valid in a WinGet Configuration"
+        }
+        if (-not $rejected) {
+            Add-Failure "Configuration YAML accepted an invalid package identifier: '$badId'"
+        }
+    }
+    # And confirm the helper still accepts well-formed identifiers.
+    if (-not (Test-WingetterConfigurationPackageId -PackageId "7zip.7zip")) {
+        Add-Failure "Test-WingetterConfigurationPackageId rejected a known-good identifier '7zip.7zip'."
+    }
+    if (Test-WingetterConfigurationPackageId -PackageId "") {
+        Add-Failure "Test-WingetterConfigurationPackageId accepted an empty identifier."
+    }
+
     $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-config-" + [System.Guid]::NewGuid().ToString("N") + ".winget")
     try {
         Export-WingetterConfigurationFile -PackageEntries $entries -FilePath $tempPath | Out-Null

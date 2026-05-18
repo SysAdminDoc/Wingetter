@@ -111,8 +111,13 @@ function Save-WingetterUpdateCheckResult {
     )
 
     if (!(Test-Path $LogRoot)) { New-Item -ItemType Directory -Path $LogRoot -Force | Out-Null }
-    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $path = Join-Path $LogRoot "$stamp-update-check.json"
+    # Millisecond precision + short GUID suffix: prevents two checks launched
+    # within the same second (manual trigger + scheduled task firing back to
+    # back, retries after transient WinGet failure) from clobbering each
+    # other's log files.
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    $entropy = [System.Guid]::NewGuid().ToString("N").Substring(0, 4)
+    $path = Join-Path $LogRoot "$stamp-$entropy-update-check.json"
     $Result | ConvertTo-Json -Depth 8 | Set-Content -Path $path -Encoding UTF8
     return $path
 }

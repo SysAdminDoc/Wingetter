@@ -117,6 +117,9 @@ function Get-WingetterProfileGalleryIndex {
     return [object[]]$entries.ToArray()
 }
 
+$Script:WingetterProfileMaxBytes = 1MB
+$Script:WingetterProfileMaxPackages = 2000
+
 function Get-WingetterProfileGalleryItem {
     [CmdletBinding()]
     param(
@@ -130,6 +133,14 @@ function Get-WingetterProfileGalleryItem {
         throw "Profile file '$($Entry.ProfilePath)' was not found."
     }
 
+    # Guard against oversized profile files before reading them into memory.
+    # The gallery is intended for small curated lists; a 1MB cap prevents a
+    # rogue or corrupted file from causing a multi-GB allocation when parsed.
+    $fileInfo = Get-Item -Path $Entry.ResolvedProfilePath -ErrorAction Stop
+    if ($fileInfo.Length -gt $Script:WingetterProfileMaxBytes) {
+        throw "Profile '$($Entry.Id)' is $([math]::Round($fileInfo.Length / 1KB, 1)) KB, which exceeds the $($Script:WingetterProfileMaxBytes / 1KB) KB gallery limit."
+    }
+
     $actualHash = (Get-FileHash -Path $Entry.ResolvedProfilePath -Algorithm SHA256).Hash.ToUpperInvariant()
     $expectedHash = ([string]$Entry.Sha256).ToUpperInvariant()
     if ([string]::IsNullOrWhiteSpace($expectedHash) -or $actualHash -ne $expectedHash) {
@@ -138,8 +149,15 @@ function Get-WingetterProfileGalleryItem {
 
     $content = Get-Content -Path $Entry.ResolvedProfilePath -Raw | ConvertFrom-Json
     $parsed = ConvertFrom-WingetterPublicProfileJson -Content $content
+    # Require an exact PackageCount match when the index declares one. A
+    # declared count that differs from the file's actual count is a strong
+    # signal that the index and the file are out of sync; refusing the import
+    # prevents partial selections from a tampered manifest.
     if ($Entry.PackageCount -gt 0 -and $parsed.PackageIds.Count -ne $Entry.PackageCount) {
         throw "Profile '$($Entry.Id)' declares $($Entry.PackageCount) packages but contains $($parsed.PackageIds.Count)."
+    }
+    if ($parsed.PackageIds.Count -gt $Script:WingetterProfileMaxPackages) {
+        throw "Profile '$($Entry.Id)' contains $($parsed.PackageIds.Count) packages, which exceeds the $($Script:WingetterProfileMaxPackages)-package gallery limit."
     }
 
     [PSCustomObject]@{
