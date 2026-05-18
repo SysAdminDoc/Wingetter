@@ -16,7 +16,7 @@ Wingetter is a Windows-first PowerShell/WPF GUI for discovering, selecting, grou
 - Generated catalog snapshots: `catalog/winget.json` and `catalog/groups.json`.
 - Embedded module fallback sync command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1`.
 - Validation command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1`.
-- CI workflow: `.github/workflows/validate.yml` runs catalog sync/count validation, profile JSON tests, profile gallery tests, WinGet runner helper tests, search metadata tests, package-source adapter tests, source policy tests, update watcher tests, offline cache tests, WinGet Configuration export tests, visual/accessibility tests, and WPF XAML load validation on Windows.
+- CI workflow: `.github/workflows/validate.yml` runs catalog sync/count validation, profile JSON tests, profile gallery tests, WinGet runner helper tests (including locale-independent classification fixtures under `tools\fixtures\winget\`), search metadata tests, package-source adapter tests, source policy tests, update watcher tests, offline cache tests, WinGet Configuration export tests, visual/accessibility tests, and WPF XAML load validation on Windows.
 - Built-in groups in code: Essential PC Setup, Web Developer, Python Developer, Creative Suite, Gaming PC, Privacy & Security, System Admin, Streaming Setup, Office & Productivity, and 3D Printing Workshop.
 - Persisted user groups: `%APPDATA%\Wingetter\groups.json`.
 - Public profile gallery index: `profiles/gallery.json`; checked-in profile files: `profiles/gallery/*.wingetter.json`.
@@ -80,7 +80,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 - `ROADMAP.md` previously included good ideas but lacked prioritization, source IDs, saturation notes, and live repo reconciliation.
 - Catalog JSON, embedded module fallback sync, validation tooling, and CI now exist.
 - CI now covers catalog sync/counts, profile JSON helpers imported from modules, profile gallery hashes and catalog references, WinGet runner helpers imported from modules, source adapter boundaries, source policy behavior, update watcher classification, offline cache manifests, WinGet Configuration export generation, search metadata, visual/accessibility checks, and XAML loading. There is still no release build script or full GUI automation.
-- Install/update result records now capture stderr and exit codes, but status and pin classification still use some English WinGet output phrases for "already current" and pin-type cases.
+- Install/update result records now persist exit code, exit-code meaning, status, and matched classification signal; classification keys off a documented HRESULT lookup first and only falls back to English text when the exit code is generic. Pin classification keys off the `Pin type` column token before any text fallback.
 - Fallback installed-app parsing still depends on text output when `Microsoft.WinGet.Client` is unavailable.
 - WinGet bootstrap no longer downloads GitHub/AppX assets directly, but still depends on PowerShell Gallery availability when the `Microsoft.WinGet.Client` repair path is needed.
 - Visual/accessibility validation now rejects `CornerRadius=999` regressions and checks baseline automation names, but deeper keyboard navigation and screen reader flow testing are still manual.

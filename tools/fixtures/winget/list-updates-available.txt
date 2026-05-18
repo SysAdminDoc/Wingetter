@@ -1,0 +1,4 @@
+Name            Id               Version    Available  Source
+---------------------------------------------------------------
+Google Chrome   Google.Chrome    124.0      125.0      winget
+Mozilla Firefox Mozilla.Firefox  123.0                 winget
