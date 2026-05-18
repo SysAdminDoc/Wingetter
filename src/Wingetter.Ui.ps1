@@ -2168,43 +2168,99 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
+    # Export formats are declared once, here, in a single array. The SaveFileDialog
+    # filter string and the post-selection dispatch are both derived from the
+    # same data, so adding/reordering a format is a single-line edit instead of
+    # three coordinated changes (filter string, switch case number, default
+    # file name). $exportFormats is read inside the Add_Click closure so any
+    # future runtime tweak (e.g., gating a format behind a feature flag) can
+    # rebuild the array without touching dialog wiring.
+    $exportFormats = @(
+        [ordered]@{
+            Label           = "WinGet Import JSON"
+            Extension       = ".json"
+            DefaultFileName = "WinGetPackages.json"
+            Handler         = {
+                param($BaseName, $Path, $SelectedIds)
+                Export-WingetterPackageSourceProfile -SourceAdapter $ui["PackageSource"] -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path
+                "Exported $($SelectedIds.Count) apps as official WinGet import JSON."
+            }
+        },
+        [ordered]@{
+            Label           = "Wingetter Group JSON"
+            Extension       = ".wingetter.json"
+            DefaultFileName = "WingetterGroup.wingetter.json"
+            Handler         = {
+                param($BaseName, $Path, $SelectedIds)
+                Export-GroupAsJSON -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path
+                "Exported $($SelectedIds.Count) apps as a Wingetter group JSON profile."
+            }
+        },
+        [ordered]@{
+            Label           = "PowerShell Script"
+            Extension       = ".ps1"
+            DefaultFileName = "Install-WingetterGroup.ps1"
+            Handler         = {
+                param($BaseName, $Path, $SelectedIds)
+                Export-GroupAsPS1 -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path -Silent $SilentCheck.IsChecked -AcceptAgreements $AcceptCheck.IsChecked
+                "Exported $($SelectedIds.Count) apps as a PowerShell installer."
+            }
+        },
+        [ordered]@{
+            Label           = "WinGet Configuration"
+            Extension       = ".winget"
+            DefaultFileName = "Wingetter.winget"
+            Handler         = {
+                param($BaseName, $Path, $SelectedIds)
+                # WinGet Configuration emits per-package metadata (Name +
+                # SourceName) that comes from the checkbox tags, so the
+                # caller-flattened $SelectedIds and $BaseName are inert for
+                # this handler; reference them so the analyzer sees the
+                # intent.
+                [void]$BaseName
+                [void]$SelectedIds
+                $entries = @()
+                foreach ($cb in $ui["AllCheckboxes"].Values) {
+                    if ($cb.IsChecked) {
+                        $entries += New-WingetterConfigurationPackageEntry `
+                            -Name $cb.Tag.Name `
+                            -PackageId $cb.Tag.WingetId `
+                            -SourceName (Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name)
+                    }
+                }
+                Export-WingetterConfigurationFile -PackageEntries $entries -FilePath $Path | Out-Null
+                "Exported $($entries.Count) apps as a WinGet Configuration file."
+            }
+        }
+    )
+
     $ExportBtn.Add_Click({
         $sel = & $GetSelectedIds
         if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before exporting."; return }
+        if (@($exportFormats).Count -eq 0) {
+            $ProgressText.Text = "No export formats are registered."
+            return
+        }
 
         $dlg = New-Object Microsoft.Win32.SaveFileDialog
-        $dlg.Filter = "WinGet Import JSON (*.json)|*.json|Wingetter Group JSON (*.wingetter.json)|*.wingetter.json|PowerShell Script (*.ps1)|*.ps1|WinGet Configuration (*.winget)|*.winget"
-        $dlg.FileName = "WinGetPackages.json"
+        $dlg.Filter = (($exportFormats | ForEach-Object { "$($_.Label) (*$($_.Extension))|*$($_.Extension)" }) -join "|")
+        $dlg.FileName = $exportFormats[0].DefaultFileName
 
         if ($dlg.ShowDialog() -eq $true) {
             $baseName = [System.IO.Path]::GetFileNameWithoutExtension($dlg.FileName)
-
-            switch ($dlg.FilterIndex) {
-                1 {
-                    Export-WingetterPackageSourceProfile -SourceAdapter $ui["PackageSource"] -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName
-                    $ProgressText.Text = "Exported $($sel.Count) apps as official WinGet import JSON."
+            $formatIndex = $dlg.FilterIndex - 1
+            if ($formatIndex -lt 0 -or $formatIndex -ge @($exportFormats).Count) {
+                $ProgressText.Text = "Unknown export format selected (index $($dlg.FilterIndex))."
+                return
+            }
+            $format = $exportFormats[$formatIndex]
+            try {
+                $message = & $format.Handler $baseName $dlg.FileName $sel
+                if (-not [string]::IsNullOrWhiteSpace([string]$message)) {
+                    $ProgressText.Text = [string]$message
                 }
-                2 {
-                    Export-GroupAsJSON -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName
-                    $ProgressText.Text = "Exported $($sel.Count) apps as a Wingetter group JSON profile."
-                }
-                3 {
-                    Export-GroupAsPS1 -GroupName $baseName -PackageIds $sel -FilePath $dlg.FileName -Silent $SilentCheck.IsChecked -AcceptAgreements $AcceptCheck.IsChecked
-                    $ProgressText.Text = "Exported $($sel.Count) apps as a PowerShell installer."
-                }
-                4 {
-                    $entries = @()
-                    foreach ($cb in $ui["AllCheckboxes"].Values) {
-                        if ($cb.IsChecked) {
-                            $entries += New-WingetterConfigurationPackageEntry `
-                                -Name $cb.Tag.Name `
-                                -PackageId $cb.Tag.WingetId `
-                                -SourceName (Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name)
-                        }
-                    }
-                    Export-WingetterConfigurationFile -PackageEntries $entries -FilePath $dlg.FileName | Out-Null
-                    $ProgressText.Text = "Exported $($entries.Count) apps as a WinGet Configuration file."
-                }
+            } catch {
+                $ProgressText.Text = "Export failed: $($_.Exception.Message)"
             }
         }
     }.GetNewClosure())

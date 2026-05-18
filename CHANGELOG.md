@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Changed: `ExportBtn` selection-export now drives the SaveFileDialog filter and dispatch from a single `$exportFormats` array (Label/Extension/DefaultFileName/Handler), so adding or reordering an export format is a one-line edit instead of three separately maintained parts. The four existing formats produce byte-identical output.
 - Added: Hash-pinned launcher module downloads. `Wingetter.ps1` carries an embedded `$Script:WingetterModuleHashes` table with the canonical SHA256 of every `src\Wingetter.*.ps1` module and refuses to dot-source any downloaded module whose hash differs (catches tampered mirrors, redirected URLs, and `%TEMP%` cache poisoning). `tools\Sync-LauncherManifest.ps1` regenerates the table; `tools\Test-LauncherManifest.ps1` enforces it in CI and probes both the positive and negative verification paths.
 - Added: `.github/workflows/release.yml` - tag-triggered (`v*.*.*`) GitHub Actions workflow that runs the full validation suite, installs PS2EXE, builds a fresh `Wingetter.exe` from the modular launcher, regenerates `release\manifest.json`, uploads both as workflow artifacts, and attaches them to the GitHub Release.
 - Added: Automated accessibility sweep in `tools\Test-VisualAccessibility.ps1` over every named focusable XAML control (Button / TextBox / ComboBox / CheckBox / ToggleButton / ListBox / RadioButton); requires an accessible label source on every control and refuses `Focusable="False"` / `IsTabStop="False"` outside style template parts.

@@ -168,6 +168,14 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 
 ## P1 - Reliability Followups
 
+### [x] R-030 - Data-driven export dispatch and SaveDialog filter binding
+
+- Problem: `ExportBtn` in `src\Wingetter.Ui.ps1` declared four export formats via a single `$dlg.Filter` string with order-sensitive segments, then dispatched via `switch ($dlg.FilterIndex) { 1 {…} 2 {…} 3 {…} 4 {…} }`. Adding, removing, or reordering a format required the maintainer to keep three things synchronized: the filter string segments, the numbered switch cases, and the default file name. A future commit that adds a "WinGet PS1 (export pinned)" format at filter index 1 would silently shift every other case to the wrong handler.
+- Build: replace the dual declaration with a single `$exportFormats` array of records (`Label` / `Extension` / `DefaultFileName` / `Handler` scriptblock). Build the `$dlg.Filter` string by joining `"$Label|*$Extension"` across the array, dispatch by indexing into the same array with `$dlg.FilterIndex - 1`, and verify the array isn't empty before showing the dialog. The dispatch becomes structural rather than positional.
+- Acceptance: each of the four existing formats still produces the same output. Adding a fifth format would require a single new entry in the array (no separate switch case, no separate filter-string segment edit). The bundle, XAML, analyzer, and accessibility tests stay green.
+- Sources: cross-module audit 2026-05-18 (deferred polish item).
+- Completed 2026-05-18: replaced the dual filter-string + positional `switch` block in `ExportBtn.Add_Click` with a single `$exportFormats` array of `[ordered]@{ Label; Extension; DefaultFileName; Handler }` records; the dialog's `Filter` and `FileName` are now derived from the array, and dispatch is `$exportFormats[$dlg.FilterIndex - 1]` with explicit bounds checking and an exception-to-status-line fallback. Handlers return their own success message so each format's wording stays alongside its logic. Each of the four formats produces identical output; PSScriptAnalyzer, the bundle, the launcher manifest, and the accessibility sweep all stay green.
+
 ### [x] R-029 - Hash-pinned launcher module downloads
 
 - Problem: `Wingetter.ps1` downloads 11 PS1 modules from `raw.githubusercontent.com` and dot-sources them; the R-026 hardening pass added size + head-line sanity checks and per-launch staging directories with 3-retry backoff, but the launcher still has no way to detect a module that was successfully fetched yet altered at the source - for example via a mirror URL set through `WINGETTER_MODULE_BASE_URL`, or via a forked-and-tampered repository, or via a local cache that some other process wrote into. TLS-to-GitHub is the only current integrity guarantee.
