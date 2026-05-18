@@ -63,6 +63,10 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
 
+      - name: Verify release artifacts
+        shell: pwsh
+        run: pwsh -NoProfile -File .\tools\Test-ReleaseArtifact.ps1
+
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: pwsh -NoProfile -File .\tools\Test-Analyzer.ps1 -InstallIfMissing

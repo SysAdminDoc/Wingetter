@@ -1,0 +1,30 @@
+{
+  "schema": "Wingetter.ReleaseArtifactManifest.v1",
+  "version": "v6.1.0",
+  "generatedAtUtc": "2026-05-18T00:00:00Z",
+  "build": {
+    "source": "Wingetter.ps1 launcher plus the dot-sourced modules under src/ at the v6.1.0 tag",
+    "tool": "PS2EXE",
+    "notes": "Wingetter.exe is built from Wingetter.ps1 using PS2EXE on a Windows host with PowerShell 5.1 or 7+. The current Wingetter.exe predates the module split: it was produced from the monolithic v6.1.0 launcher. Rebuilding from the modular launcher requires either bundling the src/ modules into the EXE or relying on the launcher's raw-GitHub module-download path."
+  },
+  "artifacts": [
+    {
+      "path": "Wingetter.exe",
+      "sha256": "762C7CA71CDA2CB70EB31D18A810B7A6E358E46BCB1668E9C293CD7FF8AEF498",
+      "size": 245760,
+      "description": "PS2EXE-packaged Wingetter launcher built from v6.1.0."
+    },
+    {
+      "path": "Wingetter.ico",
+      "sha256": "465FA1FFBA9B60E5A82CEF8253EE003FFEDD51971A43722FDC2B9B656E71BC91",
+      "size": 10107,
+      "description": "Application icon bundled with Wingetter.exe."
+    },
+    {
+      "path": "icon.ico",
+      "sha256": "0EF19199CDC4F250BC568976AB1B3BE41ADA054814CEC0CCDEBD32520930AFA6",
+      "size": 15086,
+      "description": "Repository-level icon used by the launcher at runtime and the README header."
+    }
+  ]
+}

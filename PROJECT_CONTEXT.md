@@ -16,7 +16,7 @@ Wingetter is a Windows-first PowerShell/WPF GUI for discovering, selecting, grou
 - Generated catalog snapshots: `catalog/winget.json` and `catalog/groups.json`.
 - Embedded module fallback sync command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1`.
 - Validation command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1`.
-- CI workflow: `.github/workflows/validate.yml` runs catalog sync/count validation, profile JSON tests, profile gallery tests, WinGet runner helper tests (including locale-independent classification fixtures under `tools\fixtures\winget\`), search metadata tests, package-source adapter tests, source policy tests, update watcher tests, offline cache tests, WinGet Configuration export tests, visual/accessibility tests, WPF XAML load validation, and PSScriptAnalyzer (via `tools\Test-Analyzer.ps1` under pwsh) on Windows.
+- CI workflow: `.github/workflows/validate.yml` runs catalog sync/count validation, profile JSON tests, profile gallery tests, WinGet runner helper tests (including locale-independent classification fixtures under `tools\fixtures\winget\`), search metadata tests, package-source adapter tests, source policy tests, update watcher tests, offline cache tests, WinGet Configuration export tests, visual/accessibility tests, WPF XAML load validation, release artifact hash verification (via `tools\Test-ReleaseArtifact.ps1`), and PSScriptAnalyzer (via `tools\Test-Analyzer.ps1` under pwsh) on Windows.
 - Built-in groups in code: Essential PC Setup, Web Developer, Python Developer, Creative Suite, Gaming PC, Privacy & Security, System Admin, Streaming Setup, Office & Productivity, and 3D Printing Workshop.
 - Persisted user groups: `%APPDATA%\Wingetter\groups.json`.
 - Public profile gallery index: `profiles/gallery.json`; checked-in profile files: `profiles/gallery/*.wingetter.json`.
@@ -77,6 +77,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 - `CLAUDE.md` still says `v0.1.0`; it is ignored/untracked and should not be treated as shipped project truth.
 - The repo README is now synced to 765 apps and 39 categories, but GitHub repo metadata may still need to be checked if it drifts outside git.
+- The checked-in `Wingetter.exe` now has a SHA256-pinned manifest at `release\manifest.json` that CI verifies on every push, but the build itself still requires a manual PS2EXE step on a Windows host. A consolidated `tools\Build-WingetterExe.ps1` is a future improvement.
 - `ROADMAP.md` previously included good ideas but lacked prioritization, source IDs, saturation notes, and live repo reconciliation.
 - Catalog JSON, embedded module fallback sync, validation tooling, and CI now exist.
 - CI now covers catalog sync/counts, profile JSON helpers imported from modules, profile gallery hashes and catalog references, WinGet runner helpers imported from modules, source adapter boundaries, source policy behavior, update watcher classification, offline cache manifests, WinGet Configuration export generation, search metadata, visual/accessibility checks, and XAML loading. There is still no release build script or full GUI automation.
