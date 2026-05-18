@@ -2395,7 +2395,15 @@ function Show-WinGetInstallerGUI {
             $sourceName = Get-WingetterPackageCatalogSourceName -App $_.Tag -DefaultSource $ui["PackageSource"].Name
             Get-WingetterPackageSourceInstallCommand -SourceAdapter $ui["PackageSource"] -PackageId $_.Tag.WingetId -SourceName $sourceName -Silent ([bool]$SilentCheck.IsChecked) -AcceptAgreements ([bool]$AcceptCheck.IsChecked)
         }
-        [System.Windows.Clipboard]::SetText(($cmds -join "`n")); $ProgressText.Text = "Copied $($sel.Count) winget commands to the clipboard."
+        # Clipboard.SetText can throw CLIPBRD_E_CANT_OPEN when another process
+        # holds the clipboard (e.g., remote desktop, password manager). Surface
+        # the failure so the user does not believe they captured the commands.
+        try {
+            [System.Windows.Clipboard]::SetText(($cmds -join "`n"))
+            $ProgressText.Text = "Copied $($sel.Count) winget commands to the clipboard."
+        } catch {
+            $ProgressText.Text = "Could not copy to the clipboard (another app may be holding it). Try again in a moment."
+        }
     }.GetNewClosure())
 
     $CancelBtn.Add_Click({ $ui["Cancelled"] = $true; $ProgressText.Text = "Stopping after the current package..." }.GetNewClosure())

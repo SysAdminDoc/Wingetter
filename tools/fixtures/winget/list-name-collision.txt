@@ -1,0 +1,4 @@
+Name             Id              Version Available Source
+----------------------------------------------------------
+Test Tools 2025  TestTools.Pro   2.0.0             winget
+Other Test       Test            1.0.0             winget

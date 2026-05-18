@@ -89,7 +89,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 ## Strategic Direction
 
-R-020..R-025 advanced the "trustworthy setup cockpit" phase: locale-independent classification, fixture-based parser tests, PSScriptAnalyzer CI gate, release artifact hash verification, a reproducible bundle/build script for `Wingetter.exe`, and adversarial edge-case coverage for profile imports (which uncovered and fixed a real `Sources = []` classification bug).
+R-020..R-026 advanced the "trustworthy setup cockpit" phase: locale-independent classification, fixture-based parser tests, PSScriptAnalyzer CI gate, release artifact hash verification, a reproducible bundle/build script for `Wingetter.exe`, adversarial edge-case coverage for profile imports (which uncovered and fixed a real `Sources = []` classification bug), and an audit-driven defensive hardening pass covering process disposal, async stream races, log-timestamp collisions, parser column collisions, atomic settings writes, corrupt-file recovery, profile/import size caps, YAML safety, offline-replay confirm-gating, clipboard error transparency, and launcher download integrity.
 
 The remaining strategic threads are larger, multi-session efforts:
 

@@ -16,7 +16,12 @@ function Test-WinGet {
 function New-WinGetBootstrapLogPath {
     $root = Join-Path $env:APPDATA "Wingetter\logs"
     if (!(Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
-    $path = Join-Path $root ("winget-bootstrap-" + (Get-Date -Format "yyyyMMdd-HHmmss") + ".jsonl")
+    # Millisecond precision + short entropy so concurrent Install-WinGet calls
+    # never share a log file. The Script-scope variable remains as the
+    # "last log path" hint but the function's primary contract is the return.
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    $entropy = [System.Guid]::NewGuid().ToString("N").Substring(0, 4)
+    $path = Join-Path $root ("winget-bootstrap-$stamp-$entropy.jsonl")
     $Script:LastBootstrapLogPath = $path
     return $path
 }
@@ -151,6 +156,7 @@ function Invoke-WinGetCapture {
     $stderr = ""
     $exitCode = -1
     $timedOut = $false
+    $proc = $null
 
     try {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
@@ -169,11 +175,18 @@ function Invoke-WinGetCapture {
             try { $proc.Kill() } catch {}
             try { $proc.WaitForExit() } catch {}
         }
-        $stdout = $stdoutTask.GetAwaiter().GetResult()
-        $stderr = $stderrTask.GetAwaiter().GetResult()
+        # Kill() can race with the async ReadToEndAsync tasks, surfacing an
+        # IOException or OperationCanceledException. Treat those as "no output
+        # captured" rather than letting them propagate out of the capture path.
+        try { $stdout = $stdoutTask.GetAwaiter().GetResult() } catch { $stdout = "" }
+        try { $stderr = $stderrTask.GetAwaiter().GetResult() } catch { $stderr = "" }
         $exitCode = if ($timedOut) { -1 } else { $proc.ExitCode }
     } catch {
         $stderr = $_.Exception.Message
+    } finally {
+        if ($null -ne $proc) {
+            try { $proc.Dispose() } catch {}
+        }
     }
 
     return [PSCustomObject]@{
@@ -317,15 +330,21 @@ function Invoke-WinGetPackageOperation {
     $arguments = New-WinGetPackageOperationArguments -Action $Action -PackageId $PackageId -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned
 
     $safeId = Get-SafeFileName -Value $PackageId
-    $stamp = Get-Date -Format "yyyyMMdd-HHmmssfff"
-    $stdoutPath = Join-Path $RunLogDir "$stamp-$safeId.stdout.log"
-    $stderrPath = Join-Path $RunLogDir "$stamp-$safeId.stderr.log"
-    $resultPath = Join-Path $RunLogDir "$stamp-$safeId.result.json"
+    # 7-digit fractional seconds (100-ns ticks) avoids collisions when two
+    # operations launch within the same millisecond (e.g., from a UI that fans
+    # out installs in a tight loop). Adding a short random suffix keeps the
+    # path unique even if the clock has the same tick value across runs.
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fffffff"
+    $entropy = [System.Guid]::NewGuid().ToString("N").Substring(0, 4)
+    $stdoutPath = Join-Path $RunLogDir "$stamp-$entropy-$safeId.stdout.log"
+    $stderrPath = Join-Path $RunLogDir "$stamp-$entropy-$safeId.stderr.log"
+    $resultPath = Join-Path $RunLogDir "$stamp-$entropy-$safeId.result.json"
 
     $stdout = ""
     $stderr = ""
     $exitCode = $null
     $cancelled = $false
+    $proc = $null
 
     try {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
@@ -351,12 +370,19 @@ function Invoke-WinGetPackageOperation {
         }
 
         try { $proc.WaitForExit() } catch {}
-        $stdout = $stdoutTask.GetAwaiter().GetResult()
-        $stderr = $stderrTask.GetAwaiter().GetResult()
+        # Async stream readers can throw after Kill() races them; capture
+        # whatever was buffered before cancellation rather than letting the
+        # exception bubble out and abort the install loop.
+        try { $stdout = $stdoutTask.GetAwaiter().GetResult() } catch { $stdout = "" }
+        try { $stderr = $stderrTask.GetAwaiter().GetResult() } catch { $stderr = "" }
         $exitCode = if ($cancelled) { -1 } else { $proc.ExitCode }
     } catch {
         $stderr = $_.Exception.Message
         $exitCode = -1
+    } finally {
+        if ($null -ne $proc) {
+            try { $proc.Dispose() } catch {}
+        }
     }
 
     Set-Content -Path $stdoutPath -Value $stdout -Encoding UTF8
@@ -385,7 +411,7 @@ function Invoke-WinGetPackageOperation {
         WinGetLogDir      = Get-WinGetLogDirectory
         ResultPath        = $resultPath
     }
-    $result | ConvertTo-Json -Depth 5 | Set-Content -Path $resultPath -Encoding UTF8
+    $result | ConvertTo-Json -Depth 8 | Set-Content -Path $resultPath -Encoding UTF8
 
     return [PSCustomObject]$result
 }
@@ -396,6 +422,31 @@ function Get-WinGetShowField {
     $match = [regex]::Match($Text, $pattern)
     if ($match.Success) { return $match.Groups["value"].Value.Trim() }
     return ""
+}
+
+function Find-WinGetPackageIdColumn {
+    param([string]$Line, [string]$PackageId)
+    # Return the column index where $PackageId appears as a whitespace-delimited
+    # token, or -1 if no such occurrence exists. WinGet's tabular output places
+    # the Id column AFTER the Name column, so when a package id is a substring
+    # of another row's name (e.g., "Test" inside "Other Test"), the real Id
+    # column is the RIGHTMOST word-boundary occurrence; preferring the last
+    # match instead of the first one keeps the parser correct on those rows.
+    if ([string]::IsNullOrEmpty($Line) -or [string]::IsNullOrEmpty($PackageId)) { return -1 }
+    $result = -1
+    $startIndex = 0
+    while ($startIndex -lt $Line.Length) {
+        $found = $Line.IndexOf($PackageId, $startIndex, [System.StringComparison]::OrdinalIgnoreCase)
+        if ($found -lt 0) { break }
+        $before = if ($found -eq 0) { ' ' } else { $Line[$found - 1] }
+        $afterPos = $found + $PackageId.Length
+        $after = if ($afterPos -ge $Line.Length) { ' ' } else { $Line[$afterPos] }
+        if ([char]::IsWhiteSpace([char]$before) -and ([char]::IsWhiteSpace([char]$after) -or $afterPos -eq $Line.Length)) {
+            $result = $found
+        }
+        $startIndex = $found + 1
+    }
+    return $result
 }
 
 function Get-WinGetInstalledVersion {
@@ -413,7 +464,11 @@ function Get-WinGetInstalledVersion {
     if ($capture.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($capture.StdOut)) { return "" }
 
     foreach ($line in ($capture.StdOut -split "`r?`n")) {
-        $index = $line.IndexOf($PackageId, [System.StringComparison]::OrdinalIgnoreCase)
+        # Skip separator rows so a package id that happens to contain only
+        # hyphens (impossible in practice, but cheap to guard) cannot pick up
+        # the dashed separator that follows the header row.
+        if ($line -match '^\s*-+\s*$') { continue }
+        $index = Find-WinGetPackageIdColumn -Line $line -PackageId $PackageId
         if ($index -ge 0) {
             $afterId = $line.Substring($index + $PackageId.Length).Trim()
             if ($afterId) {
@@ -430,6 +485,33 @@ function Get-WingetterInstalledCachePath {
     $root = Join-Path $env:APPDATA "Wingetter"
     if (!(Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
     return (Join-Path $root "installed-cache.json")
+}
+
+function Set-WingetterFileAtomic {
+    # Write $Content to $Path via a sibling temp file + Move-Item -Force. Avoids
+    # leaving a partially-written file behind when two writers race (concurrent
+    # installed-app scans, scheduled task firing alongside the UI, etc.) or
+    # when the process is interrupted between the open and the close.
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Content,
+        [string]$Encoding = "UTF8"
+    )
+    $directory = Split-Path -Parent $Path
+    if (![string]::IsNullOrWhiteSpace($directory) -and !(Test-Path $directory)) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+    $tempName = ".$([System.IO.Path]::GetFileName($Path)).$([System.Guid]::NewGuid().ToString('N')).tmp"
+    $tempPath = if ($directory) { Join-Path $directory $tempName } else { $tempName }
+    try {
+        Set-Content -Path $tempPath -Value $Content -Encoding $Encoding -ErrorAction Stop
+        Move-Item -Path $tempPath -Destination $Path -Force -ErrorAction Stop
+    } catch {
+        if (Test-Path $tempPath) {
+            try { Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue } catch {}
+        }
+        throw
+    }
 }
 
 function ConvertFrom-WinGetPackageObject {
@@ -482,36 +564,53 @@ function ConvertFrom-WinGetListText {
     if ([string]::IsNullOrWhiteSpace($Text)) { return $records }
 
     foreach ($line in ($Text -split "`r?`n")) {
+        if ($line -match '^\s*-+\s*$') { continue }
+        # On a given row, multiple package ids in the search set may match at
+        # different column boundaries (e.g., a short id that appears inside the
+        # Name column and a long id that is the Id column for the same row).
+        # Pick the LONGEST unconsumed match so the actual Id column wins over
+        # any incidental Name-column collision.
+        $bestId = $null
+        $bestIndex = -1
+        $bestLength = -1
         foreach ($packageId in $PackageIds) {
             if ($records.ContainsKey($packageId)) { continue }
-            $index = $line.IndexOf($packageId, [System.StringComparison]::OrdinalIgnoreCase)
+            $index = Find-WinGetPackageIdColumn -Line $line -PackageId $packageId
             if ($index -lt 0) { continue }
-
-            $name = $line.Substring(0, $index).Trim()
-            $afterId = $line.Substring($index + $packageId.Length).Trim()
-            if (!$afterId) { continue }
-            $parts = @($afterId -split '\s+' | Where-Object { $_ })
-            if ($parts.Count -eq 0 -or $parts[0] -match '^-+$') { continue }
-
-            $installedVersion = [string]$parts[0]
-            $source = ""
-            $availableVersion = ""
-            if ($parts.Count -ge 2) {
-                $source = [string]$parts[$parts.Count - 1]
-                if ($parts.Count -ge 3) { $availableVersion = [string]$parts[1] }
+            if ($packageId.Length -gt $bestLength) {
+                $bestId = $packageId
+                $bestIndex = $index
+                $bestLength = $packageId.Length
             }
+        }
+        if ($null -eq $bestId) { continue }
+        $packageId = $bestId
+        $index = $bestIndex
 
-            $records[$packageId] = [PSCustomObject]@{
-                PackageId        = $packageId
-                Name             = $name
-                InstalledVersion = $installedVersion
-                AvailableVersion = $availableVersion
-                Source           = $source
-                Scope            = ""
-                IsUpdateAvailable = -not [string]::IsNullOrWhiteSpace($availableVersion)
-                DetectionMethod  = "winget list"
-                ScannedAtUtc     = $ScannedAtUtc
-            }
+        $name = $line.Substring(0, $index).Trim()
+        $afterId = $line.Substring($index + $packageId.Length).Trim()
+        if (!$afterId) { continue }
+        $parts = @($afterId -split '\s+' | Where-Object { $_ })
+        if ($parts.Count -eq 0 -or $parts[0] -match '^-+$') { continue }
+
+        $installedVersion = [string]$parts[0]
+        $source = ""
+        $availableVersion = ""
+        if ($parts.Count -ge 2) {
+            $source = [string]$parts[$parts.Count - 1]
+            if ($parts.Count -ge 3) { $availableVersion = [string]$parts[1] }
+        }
+
+        $records[$packageId] = [PSCustomObject]@{
+            PackageId        = $packageId
+            Name             = $name
+            InstalledVersion = $installedVersion
+            AvailableVersion = $availableVersion
+            Source           = $source
+            Scope            = ""
+            IsUpdateAvailable = -not [string]::IsNullOrWhiteSpace($availableVersion)
+            DetectionMethod  = "winget list"
+            ScannedAtUtc     = $ScannedAtUtc
         }
     }
 
@@ -555,14 +654,17 @@ function Get-WinGetInstalledCatalogPackages {
 
     $cachePath = Get-WingetterInstalledCachePath
     try {
-        [ordered]@{
+        $cacheJson = [ordered]@{
             scannedAtUtc    = $scannedAtUtc
             detectionMethod = $method
             sourceName      = $SourceName
             error           = $errorMessage
             packages        = @($records.Values)
-        } | ConvertTo-Json -Depth 6 | Set-Content -Path $cachePath -Encoding UTF8
-    } catch {}
+        } | ConvertTo-Json -Depth 8
+        Set-WingetterFileAtomic -Path $cachePath -Content $cacheJson -Encoding UTF8
+    } catch {
+        Write-Warning "Failed to persist installed-cache.json: $($_.Exception.Message)"
+    }
 
     [PSCustomObject]@{
         Packages        = $records
@@ -598,7 +700,8 @@ function Get-WinGetPinRowFromText {
     )
     if ([string]::IsNullOrWhiteSpace($Text)) { return $null }
     foreach ($line in ($Text -split "`r?`n")) {
-        $index = $line.IndexOf($PackageId, [System.StringComparison]::OrdinalIgnoreCase)
+        if ($line -match '^\s*-+\s*$') { continue }
+        $index = Find-WinGetPackageIdColumn -Line $line -PackageId $PackageId
         if ($index -lt 0) { continue }
         $afterId = $line.Substring($index + $PackageId.Length).Trim()
         if ([string]::IsNullOrWhiteSpace($afterId)) { continue }

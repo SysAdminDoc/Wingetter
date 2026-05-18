@@ -18,6 +18,7 @@ Each fixture pairs a representative `winget` output with an expected classificat
 - `pin-list-empty.txt` - "There are no pins configured."
 - `list-updates-available.txt` - `winget list` with two catalog packages, one with an available update.
 - `show-full-en.txt` - `winget show` output with full installer block (publisher, installer type/URL/SHA256, homepage).
+- `list-name-collision.txt` - `winget list` with a package whose ID (`Test`) is a substring of another row's ID (`TestTools.Pro`) and of the column-name word "Test". Exercises the column-boundary matcher so a substring match on the longer ID is not mistaken for the shorter one.
 
 When adding a new locale fixture for `UP TO DATE` classification, pair it with the
 exit code that WinGet returns for that locale's run; classification should pass on

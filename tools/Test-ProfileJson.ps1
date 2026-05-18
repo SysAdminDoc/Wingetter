@@ -207,6 +207,42 @@ if ($failures.Count -eq 0) {
             Add-Failure "Unrecognized JSON payload was not rejected with the expected error message."
         }
 
+        # Excessively large payloads should be rejected up-front so a malicious
+        # or corrupt JSON cannot cause runaway memory use or hang the UI on
+        # tens of thousands of fake packages.
+        $excessive = [PSCustomObject]@{
+            Schema     = "Wingetter.Group.v1"
+            PackageIds = @(1..($Script:WingetterImportMaxPackages + 5) | ForEach-Object { "Big.$_" })
+        }
+        $oversizedRejected = $false
+        try {
+            Import-PackageIdsFromJSON -Content $excessive -FallbackGroupName "Big" | Out-Null
+        } catch {
+            $oversizedRejected = $_.Exception.Message -match "exceeds the"
+        }
+        if (-not $oversizedRejected) {
+            Add-Failure "Oversized import payload was not rejected by Import-PackageIdsFromJSON."
+        }
+
+        # Corrupt groups file should be moved aside (with a warning) and the
+        # subsequent read should return an empty object rather than throwing.
+        $corruptDir = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-corrupt-test-" + [System.Guid]::NewGuid().ToString("N"))
+        New-Item -ItemType Directory -Path $corruptDir -Force | Out-Null
+        try {
+            $corruptFile = Join-Path $corruptDir "groups.json"
+            Set-Content -Path $corruptFile -Value "{not json" -Encoding UTF8
+            Move-WingetterCorruptFileAside -Path $corruptFile 3>$null
+            if (Test-Path $corruptFile) {
+                Add-Failure "Move-WingetterCorruptFileAside did not move the source file aside."
+            }
+            $movedAsidePath = "$corruptFile.corrupt"
+            if (!(Test-Path $movedAsidePath)) {
+                Add-Failure "Move-WingetterCorruptFileAside did not produce a .corrupt sibling."
+            }
+        } finally {
+            Remove-Item -Path $corruptDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
         $installedRecords = @{
             "Google.Chrome" = [PSCustomObject]@{
                 InstalledVersion = "124.0"

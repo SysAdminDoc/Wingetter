@@ -171,6 +171,41 @@ if ($failures.Count -eq 0) {
         if ((Get-WinGetShowField -Text $showFull -Label "Installer SHA256") -ne "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") {
             Add-Failure "show-full-en.txt fixture should expose indented Installer SHA256."
         }
+
+        # Column-boundary collision: a package id that is a strict substring of
+        # another row's id (Test vs TestTools.Pro) must classify the correct
+        # row. Without word-boundary anchoring the parser would assign
+        # TestTools.Pro's version to Test.
+        $collisionText = Get-Fixture "list-name-collision.txt"
+        $collisionRecords = ConvertFrom-WinGetListText -Text $collisionText -PackageIds @("Test", "TestTools.Pro") -ScannedAtUtc "2026-05-18T00:00:00.0000000Z"
+        if (-not $collisionRecords.ContainsKey("Test") -or $collisionRecords["Test"].InstalledVersion -ne "1.0.0") {
+            Add-Failure "list-name-collision.txt fixture: 'Test' package version was not isolated from TestTools.Pro."
+        }
+        if (-not $collisionRecords.ContainsKey("TestTools.Pro") -or $collisionRecords["TestTools.Pro"].InstalledVersion -ne "2.0.0") {
+            Add-Failure "list-name-collision.txt fixture: 'TestTools.Pro' row was not parsed correctly."
+        }
+        # And the helper itself: substring-only matches do not count.
+        if ((Find-WinGetPackageIdColumn -Line "Other Test       Test            1.0.0             winget" -PackageId "TestTools") -ne -1) {
+            Add-Failure "Find-WinGetPackageIdColumn returned a positive index for a non-token substring."
+        }
+        if ((Find-WinGetPackageIdColumn -Line "Other Test       Test            1.0.0             winget" -PackageId "Test") -lt 0) {
+            Add-Failure "Find-WinGetPackageIdColumn did not find a real token-boundary match."
+        }
+    }
+
+    # Atomic file write: write to a path, kill the temp file mid-flight is not
+    # representative without race injection, so just verify that the helper
+    # writes the destination and leaves no .tmp siblings on success.
+    $atomicDir = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-atomic-test-" + [System.Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $atomicDir -Force | Out-Null
+    try {
+        $atomicTarget = Join-Path $atomicDir "atomic.json"
+        Set-WingetterFileAtomic -Path $atomicTarget -Content '{"ok":true}' -Encoding UTF8
+        if (-not (Test-Path $atomicTarget)) { Add-Failure "Set-WingetterFileAtomic did not write the target file." }
+        $stragglers = @(Get-ChildItem -Path $atomicDir -Filter ".*.tmp" -Force -ErrorAction SilentlyContinue)
+        if ($stragglers.Count -gt 0) { Add-Failure "Set-WingetterFileAtomic left $($stragglers.Count) temp file(s) behind." }
+    } finally {
+        Remove-Item -Path $atomicDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     $upgradeArgs = New-WinGetPackageOperationArguments -Action "upgrade" -PackageId "Google.Chrome" -Silent $true -AcceptAgreements $true -IncludePinned $true
