@@ -168,6 +168,14 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 
 ## P1 - Reliability Followups
 
+### [x] R-023 - Verifiable release artifact manifest
+
+- Problem: `Wingetter.exe` and `Wingetter.ico` are checked into the repository root with no provenance. There is no record of what produced them, no integrity hash to catch an accidental binary swap, and no tool to verify that the binaries on `main` match the binaries a contributor downloads.
+- Build: capture SHA256, size, and source description for each checked-in release artifact in `release\manifest.json`; add `tools\Test-ReleaseArtifact.ps1` that recomputes the hashes and fails when they drift from the manifest; document how the executable is currently produced (PS2EXE from the `Wingetter.ps1` launcher and the `src\` modules at `v6.1.0`); wire the verifier into `.github/workflows/validate.yml` so an accidental binary edit triggers CI failure.
+- Acceptance: `tools\Test-ReleaseArtifact.ps1` exits zero against the current tree and exits nonzero if the checked-in `Wingetter.exe` or `Wingetter.ico` is mutated without updating the manifest.
+- Sources: L01, L09, L11.
+- Completed 2026-05-18: added `release\manifest.json` with the `Wingetter.ReleaseArtifactManifest.v1` schema, SHA256+size for `Wingetter.exe`, `Wingetter.ico`, and `icon.ico`, build provenance notes; added `tools\Test-ReleaseArtifact.ps1` (with `-Update` to regenerate hashes when the binary changes intentionally); added `release\README.md` documenting verification, update, and PS2EXE build steps; wired the verifier into `.github/workflows/validate.yml`.
+
 ### [x] R-020 - Locale-independent WinGet result and pin classification
 
 - Problem: `Get-WinGetOperationStatus` matches English phrases like "already installed", "No available upgrade", "No newer package", and "No applicable update"; `Get-WinGetPinStatusFromText` matches "blocking" / "gating" / "version"; if WinGet is localized (German, Spanish, etc.) these classifications silently drift to FAILED or to the wrong pin type. WinGet documents HRESULT exit codes that are locale-independent.

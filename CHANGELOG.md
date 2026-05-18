@@ -4,6 +4,8 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: Verifiable release artifact manifest at `release\manifest.json` with SHA256 hashes for `Wingetter.exe`, `Wingetter.ico`, and `icon.ico`, plus `tools\Test-ReleaseArtifact.ps1` (with `-Update` mode) and a CI step that fails on unexplained binary changes.
+- Added: `release\README.md` documenting how to verify, update, and (re)build the checked-in `Wingetter.exe` from `Wingetter.ps1` via PS2EXE.
 - Added: PSScriptAnalyzer CI gate with a project-tuned `PSScriptAnalyzerSettings.psd1` and `tools\Test-Analyzer.ps1` runner that enforces `PSAvoidAssignmentToAutomaticVariable`, `PSReviewUnusedParameter`, and security/correctness rules.
 - Changed: Renamed shadowed `$profile`, `$error`, `$args`, and `$sender` variables across modules and tools; documented intentionally inert adapter/symmetry parameters with `[void]$param` markers.
 - Added: Locale-independent WinGet result classification using documented HRESULTs, with the matched signal (`ExitCode`/`Text`/`Cancelled`/`None`) and exit-code meaning persisted on per-package result records.
