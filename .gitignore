@@ -3,3 +3,5 @@
 *.tmp
 .vs/
 CLAUDE.md
+AGENTS.md
+release/Wingetter.bundled.ps1

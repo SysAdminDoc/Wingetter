@@ -168,6 +168,14 @@ Wingetter should become the simplest trustworthy Windows setup cockpit for power
 
 ## P1 - Reliability Followups
 
+### [x] R-024 - Reproducible Wingetter.exe build script
+
+- Problem: `release\README.md` documents the PS2EXE build steps in prose, but there is no script that actually performs the build, so the dot-sourced modular launcher cannot be packaged into a standalone EXE without manual concatenation. As a result the checked-in `Wingetter.exe` still represents the pre-module-split v6.1.0 launcher, not the current `src\` modules.
+- Build: add `tools\Build-WingetterExe.ps1` that concatenates the dot-sourced modules in the order declared by `Wingetter.ps1` into a single bundled script, parses the bundle to catch concatenation errors, optionally invokes PS2EXE if available, and writes the bundle to `release\Wingetter.bundled.ps1` for inspection; add `tools\Test-Bundle.ps1` that parses the bundle and verifies it includes every module + a `Start-Wingetter` call.
+- Acceptance: `tools\Test-Bundle.ps1` produces a parser-clean bundled script from the current `src\` tree and fails if a referenced module is missing or the bundle no longer parses.
+- Sources: L01, L09, L11.
+- Completed 2026-05-18: added `tools\Build-WingetterExe.ps1` that reads the canonical module list from `Wingetter.ps1`, concatenates the dot-sourced modules under `src\` (with module section markers), parses the bundle, optionally runs PS2EXE when `-RunPS2EXE` is supplied, and writes to `release\Wingetter.bundled.ps1` by default (gitignored); added `tools\Test-Bundle.ps1` that drives the builder, parses the generated bundle, asserts every expected module section is present, and verifies the final `Start-Wingetter` call; wired bundle validation into `.github/workflows/validate.yml`.
+
 ### [x] R-023 - Verifiable release artifact manifest
 
 - Problem: `Wingetter.exe` and `Wingetter.ico` are checked into the repository root with no provenance. There is no record of what produced them, no integrity hash to catch an accidental binary swap, and no tool to verify that the binaries on `main` match the binaries a contributor downloads.

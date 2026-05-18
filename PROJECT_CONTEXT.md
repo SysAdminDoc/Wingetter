@@ -77,7 +77,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 - `CLAUDE.md` still says `v0.1.0`; it is ignored/untracked and should not be treated as shipped project truth.
 - The repo README is now synced to 765 apps and 39 categories, but GitHub repo metadata may still need to be checked if it drifts outside git.
-- The checked-in `Wingetter.exe` now has a SHA256-pinned manifest at `release\manifest.json` that CI verifies on every push, but the build itself still requires a manual PS2EXE step on a Windows host. A consolidated `tools\Build-WingetterExe.ps1` is a future improvement.
+- The checked-in `Wingetter.exe` is hash-pinned via `release\manifest.json`, and `tools\Build-WingetterExe.ps1` now concatenates the dot-sourced modules into a parser-clean bundled launcher (PS2EXE packaging is opt-in via `-RunPS2EXE`). `tools\Test-Bundle.ps1` exercises the builder in CI so module-list drift or concatenation errors fail the build immediately. Refreshing the checked-in `Wingetter.exe` is now: run the builder with `-RunPS2EXE`, then `Test-ReleaseArtifact.ps1 -Update`, then commit.
 - `ROADMAP.md` previously included good ideas but lacked prioritization, source IDs, saturation notes, and live repo reconciliation.
 - Catalog JSON, embedded module fallback sync, validation tooling, and CI now exist.
 - CI now covers catalog sync/counts, profile JSON helpers imported from modules, profile gallery hashes and catalog references, WinGet runner helpers imported from modules, source adapter boundaries, source policy behavior, update watcher classification, offline cache manifests, WinGet Configuration export generation, search metadata, visual/accessibility checks, and XAML loading. There is still no release build script or full GUI automation.
