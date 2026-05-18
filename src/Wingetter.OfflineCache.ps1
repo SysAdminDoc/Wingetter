@@ -186,6 +186,11 @@ function Export-WingetterOfflineReplayScript {
         [string]$ScriptPath
     )
 
+    # ManifestPath is taken at call time for symmetry with other Export-* helpers
+    # and so the generated replay script can advertise its own default. The actual
+    # path is hard-coded into the generated PS1 below via PSScriptRoot, which is
+    # the more robust default when the cache directory is later moved.
+    [void]$ManifestPath
     $content = @'
 param(
     [string]$ManifestPath = (Join-Path $PSScriptRoot "offline-manifest.json")

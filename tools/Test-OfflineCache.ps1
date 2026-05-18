@@ -31,9 +31,9 @@ foreach ($moduleName in @(
 }
 
 if ($failures.Count -eq 0) {
-    $args = New-WingetterOfflineDownloadArguments -PackageId "Internal.Tool" -DownloadDirectory "C:\Cache" -SourceName "corp" -AcceptAgreements $true
+    $downloadArgs = New-WingetterOfflineDownloadArguments -PackageId "Internal.Tool" -DownloadDirectory "C:\Cache" -SourceName "corp" -AcceptAgreements $true
     foreach ($expected in @("download", "--id", "Internal.Tool", "--exact", "--download-directory", "C:\Cache", "--source", "corp", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity", "--verbose-logs")) {
-        if ($args -notcontains $expected) {
+        if ($downloadArgs -notcontains $expected) {
             Add-Failure "Offline download arguments did not include '$expected'."
         }
     }

@@ -1762,10 +1762,10 @@ function Show-WinGetInstallerGUI {
                 & $ShowPackageDetails $localApp
                 $e.Handled = $true
             }.GetNewClosure())
-            $appBorder.Add_MouseEnter({ param($s,$e); $hc=$ui["HoverBg"]; if($hc){ $s.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($hc) } }.GetNewClosure())
-            $appBorder.Add_MouseLeave({ param($s,$e); $cb=$s.Child.Children[0]; if($cb.IsChecked){ $sc=$ui["SelectedBg"]; if($sc){$s.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($sc)}}else{$s.Background=[System.Windows.Media.Brushes]::Transparent} }.GetNewClosure())
-            $checkbox.Add_Checked({ param($sender,$e); $sc=$ui["SelectedBg"]; if($sc){$sender.Parent.Parent.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($sc)}; & $UpdateSelectedCount }.GetNewClosure())
-            $checkbox.Add_Unchecked({ param($sender,$e); $sender.Parent.Parent.Background=[System.Windows.Media.Brushes]::Transparent; & $UpdateSelectedCount }.GetNewClosure())
+            $appBorder.Add_MouseEnter({ param($source) $hc=$ui["HoverBg"]; if($hc){ $source.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($hc) } }.GetNewClosure())
+            $appBorder.Add_MouseLeave({ param($source) $cb=$source.Child.Children[0]; if($cb.IsChecked){ $sc=$ui["SelectedBg"]; if($sc){$source.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($sc)}}else{$source.Background=[System.Windows.Media.Brushes]::Transparent} }.GetNewClosure())
+            $checkbox.Add_Checked({ param($source) $sc=$ui["SelectedBg"]; if($sc){$source.Parent.Parent.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($sc)}; & $UpdateSelectedCount }.GetNewClosure())
+            $checkbox.Add_Unchecked({ param($source) $source.Parent.Parent.Background=[System.Windows.Media.Brushes]::Transparent; & $UpdateSelectedCount }.GetNewClosure())
 
             [void]$appsStack.Children.Add($appBorder)
             $ui["AllCheckboxes"][$app.WingetId] = $checkbox
@@ -1779,13 +1779,14 @@ function Show-WinGetInstallerGUI {
         }
 
         $catCbList = $categoryCheckboxList.ToArray()
-        $catSelectAll.Add_Click({ param($sender,$e); $isChecked=$sender.IsChecked; foreach($cb in $catCbList){if($cb.Parent.Parent.Visibility -eq 'Visible'){$cb.IsChecked=$isChecked}} }.GetNewClosure())
+        $catSelectAll.Add_Click({ param($source) $isChecked=$source.IsChecked; foreach($cb in $catCbList){if($cb.Parent.Parent.Visibility -eq 'Visible'){$cb.IsChecked=$isChecked}} }.GetNewClosure())
 
         # Collapse/expand on header click
         $localAppsStack = $appsStack
         $localArrow = $collapseArrow
         $headerBorder.Add_MouseLeftButtonDown({
-            param($s, $e)
+            param($source, $e)
+            [void]$source
             if ($localAppsStack.Visibility -eq [System.Windows.Visibility]::Visible) {
                 $localAppsStack.Visibility = [System.Windows.Visibility]::Collapsed
                 $localArrow.Text = [string][char]0x25B6
@@ -1844,14 +1845,14 @@ function Show-WinGetInstallerGUI {
         $sideBtn.Child = $sideBtnGrid
 
         $sideBtn.Add_MouseEnter({
-            param($s,$e)
+            param($s)
             if ($ui["ActiveSidebarRow"] -ne $s) {
                 $t = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
                 $s.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString($t["SidebarHover"])
             }
         }.GetNewClosure())
         $sideBtn.Add_MouseLeave({
-            param($s,$e)
+            param($s)
             if ($ui["ActiveSidebarRow"] -ne $s) {
                 $s.Background = [System.Windows.Media.Brushes]::Transparent
             }
@@ -2292,11 +2293,11 @@ function Show-WinGetInstallerGUI {
             $cancelGalleryBtn = $galleryWin.FindName("CancelGalleryBtn")
             $gallerySelection = @{ Item = $null }
 
-            foreach ($profile in $profiles) {
+            foreach ($entry in $profiles) {
                 $item = New-Object System.Windows.Controls.ListBoxItem
-                $item.Content = "$($profile.Name) ($($profile.PackageCount))"
-                $item.Tag = $profile
-                $item.ToolTip = $profile.Description
+                $item.Content = "$($entry.Name) ($($entry.PackageCount))"
+                $item.Tag = $entry
+                $item.ToolTip = $entry.Description
                 $profilesList.Items.Add($item) | Out-Null
             }
 
@@ -2307,7 +2308,7 @@ function Show-WinGetInstallerGUI {
                 if ($null -eq $selected -or $null -eq $selected.Tag) { return }
 
                 try {
-                    $galleryItem = Get-WingetterProfileGalleryItem -Profile $selected.Tag
+                    $galleryItem = Get-WingetterProfileGalleryItem -Entry $selected.Tag
                     $gallerySelection["Item"] = $galleryItem
                     $profileTitle.Text = "$($galleryItem.Name) - $(@($galleryItem.PackageEntries).Count) packages"
                     $previewBox.Text = ConvertTo-WingetterProfileGalleryPreviewText -GalleryItem $galleryItem
@@ -2980,7 +2981,7 @@ function Show-WinGetInstallerGUI {
             $path = $item.CachePath
             if ((Test-Path $path) -and ([System.IO.FileInfo]::new($path)).Length -gt 100) {
                 $done.Enqueue(@{ Index = $item.Index; Path = $path })
-                [void]$counter.AddOrUpdate("count", 1, [Func[string,int,int]]{ param($k,$v) $v + 1 })
+                [void]$counter.AddOrUpdate("count", 1, [Func[string,int,int]]{ param($k,$v) [void]$k; $v + 1 })
                 continue
             }
             try {
@@ -2992,7 +2993,7 @@ function Show-WinGetInstallerGUI {
                     $done.Enqueue(@{ Index = $item.Index; Path = $path })
                 }
             } catch {}
-            [void]$counter.AddOrUpdate("count", 1, [Func[string,int,int]]{ param($k,$v) $v + 1 })
+            [void]$counter.AddOrUpdate("count", 1, [Func[string,int,int]]{ param($k,$v) [void]$k; $v + 1 })
         }
     }
 

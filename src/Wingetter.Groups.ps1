@@ -108,6 +108,10 @@ function Export-GroupAsJSON {
 function Export-GroupAsWinGetJSON {
     param([string]$GroupName, [string[]]$PackageIds, [string]$FilePath)
 
+    # GroupName is accepted for caller symmetry with Export-Group; the official
+    # WinGet import/export schema has no top-level group field, so the value is
+    # intentionally not embedded in the exported JSON.
+    [void]$GroupName
     $wingetVersion = try { (winget --version 2>$null) } catch { $null }
     $packages = @($PackageIds | ForEach-Object {
         [ordered]@{ PackageIdentifier = $_ }
