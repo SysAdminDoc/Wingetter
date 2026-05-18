@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: `.github/workflows/release.yml` - tag-triggered (`v*.*.*`) GitHub Actions workflow that runs the full validation suite, installs PS2EXE, builds a fresh `Wingetter.exe` from the modular launcher, regenerates `release\manifest.json`, uploads both as workflow artifacts, and attaches them to the GitHub Release.
 - Added: Automated accessibility sweep in `tools\Test-VisualAccessibility.ps1` over every named focusable XAML control (Button / TextBox / ComboBox / CheckBox / ToggleButton / ListBox / RadioButton); requires an accessible label source on every control and refuses `Focusable="False"` / `IsTabStop="False"` outside style template parts.
 - Added: `AutomationProperties.Name` on `GroupCombo` ("Saved package groups"), `GroupNameBox` ("Group name"), `ProfilesList` ("Available profile gallery profiles"), and `PreviewBox` ("Profile package review") so screen readers can describe these previously-unlabeled controls.
 - Fixed: `Invoke-WinGetCapture` and `Invoke-WinGetPackageOperation` now dispose the launched process in a `finally` block and tolerate async stream-reader exceptions thrown when `Kill()` races the redirected stdout/stderr readers, so a cancelled or timed-out install no longer leaks file handles or surfaces a raw `OperationCanceledException`.

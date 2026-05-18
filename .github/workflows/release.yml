@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g. v6.2.0). Optional; defaults to the workflow ref."
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-exe:
+    name: Build Wingetter.exe
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: resolve_tag
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $ref = "${{ github.ref }}"
+            if ($ref.StartsWith("refs/tags/")) {
+              $tag = $ref.Substring("refs/tags/".Length)
+            }
+          }
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            throw "Could not resolve a release tag from the workflow inputs or refs."
+          }
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Resolved release tag: $tag"
+
+      - name: Run pre-release validation suite
+        shell: pwsh
+        run: |
+          $scripts = @(
+            "tools/Test-Catalog.ps1",
+            "tools/Test-ProfileJson.ps1",
+            "tools/Test-ProfileGallery.ps1",
+            "tools/Test-WinGetRunner.ps1",
+            "tools/Test-SearchMetadata.ps1",
+            "tools/Test-PackageSources.ps1",
+            "tools/Test-SourcePolicy.ps1",
+            "tools/Test-UpdateWatcher.ps1",
+            "tools/Test-OfflineCache.ps1",
+            "tools/Test-ConfigurationExport.ps1",
+            "tools/Test-VisualAccessibility.ps1",
+            "tools/Test-ReleaseArtifact.ps1",
+            "tools/Test-Bundle.ps1"
+          )
+          foreach ($script in $scripts) {
+            Write-Host "==> $script"
+            & pwsh -NoProfile -File $script
+            if ($LASTEXITCODE -ne 0) { throw "$script failed (exit $LASTEXITCODE)" }
+          }
+
+      - name: Install PS2EXE
+        shell: pwsh
+        run: |
+          if (-not (Get-Module -ListAvailable -Name PS2EXE)) {
+            Install-Module -Name PS2EXE -Force -Scope CurrentUser -Repository PSGallery -AllowClobber -ErrorAction Stop
+          }
+          $version = (Get-Module -ListAvailable -Name PS2EXE | Sort-Object Version -Descending | Select-Object -First 1).Version
+          Write-Host "PS2EXE version: $version"
+
+      - name: Build Wingetter.exe
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./tools/Build-WingetterExe.ps1 -RunPS2EXE
+          if ($LASTEXITCODE -ne 0) { throw "Build-WingetterExe.ps1 failed (exit $LASTEXITCODE)" }
+          if (-not (Test-Path "./Wingetter.exe")) { throw "Build did not produce ./Wingetter.exe" }
+
+      - name: Refresh release manifest
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File ./tools/Test-ReleaseArtifact.ps1 -Update
+          if ($LASTEXITCODE -ne 0) { throw "Test-ReleaseArtifact.ps1 -Update failed (exit $LASTEXITCODE)" }
+          # Sanity-check that the manifest now matches the freshly-built binary.
+          pwsh -NoProfile -File ./tools/Test-ReleaseArtifact.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Refreshed manifest does not verify against the build output." }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wingetter-${{ steps.resolve_tag.outputs.tag }}
+          path: |
+            Wingetter.exe
+            release/manifest.json
+            release/Wingetter.bundled.ps1
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.resolve_tag.outputs.tag }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            Wingetter.exe
+            release/manifest.json
