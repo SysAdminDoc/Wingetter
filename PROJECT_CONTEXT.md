@@ -89,12 +89,14 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 ## Strategic Direction
 
-The next phase should move Wingetter from "modularized WinGet GUI" to "trustworthy setup cockpit":
+R-020..R-025 advanced the "trustworthy setup cockpit" phase: locale-independent classification, fixture-based parser tests, PSScriptAnalyzer CI gate, release artifact hash verification, a reproducible bundle/build script for `Wingetter.exe`, and adversarial edge-case coverage for profile imports (which uncovered and fixed a real `Sources = []` classification bug).
 
-1. Add deeper tests for import/export edge cases, install-result fixtures, pin-output fixtures, installed-app parsing, and source-adapter behavior.
-2. Continue moving UI-heavy workflow code behind smaller functions now that the source is split into modules.
-3. Prototype Scoop, Chocolatey, and PowerShell Gallery adapters only after source policy and WinGet adapter behavior are stable.
-4. Add release/build reproducibility for the checked-in executable.
+The remaining strategic threads are larger, multi-session efforts:
+
+1. Prototype Scoop, Chocolatey, and PowerShell Gallery adapters now that the source-adapter contract (R-014), source policy (R-015), and locale-independent classification (R-020) are stable. Network access to bucket/source manifests should be optional so CI does not depend on remote services.
+2. Continue moving UI-heavy workflow code in `src\Wingetter.Ui.ps1` (still the largest module) behind smaller functions in dedicated UI sub-modules; current monolith makes targeted reviews difficult.
+3. Replace the still-manual keyboard navigation and screen reader testing with an automated check that parses the WPF XAML and asserts `TabIndex`, `KeyboardNavigation.TabNavigation`, and automation-name coverage on every focusable control.
+4. Add an actual PS2EXE build job (gated on a release tag) that produces a fresh `Wingetter.exe` from the modular launcher and updates `release/manifest.json` automatically.
 
 ## Source Trail
 
