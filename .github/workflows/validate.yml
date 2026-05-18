@@ -67,6 +67,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File .\tools\Test-ReleaseArtifact.ps1
 
+      - name: Validate launcher bundle
+        shell: pwsh
+        run: pwsh -NoProfile -File .\tools\Test-Bundle.ps1
+
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: pwsh -NoProfile -File .\tools\Test-Analyzer.ps1 -InstallIfMissing
