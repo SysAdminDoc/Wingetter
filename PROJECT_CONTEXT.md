@@ -89,13 +89,13 @@ Wingetter is now a launcher plus dot-sourced modules:
 
 ## Strategic Direction
 
-R-020..R-027 advanced the "trustworthy setup cockpit" phase: locale-independent classification, fixture-based parser tests, PSScriptAnalyzer CI gate, release artifact hash verification, a reproducible bundle/build script for `Wingetter.exe`, adversarial edge-case coverage for profile imports (which uncovered and fixed a real `Sources = []` classification bug), an audit-driven defensive hardening pass covering process disposal, async stream races, log-timestamp collisions, parser column collisions, atomic settings writes, corrupt-file recovery, profile/import size caps, YAML safety, offline-replay confirm-gating, clipboard error transparency, launcher download integrity, and now a full accessibility sweep over every named focusable XAML control.
+R-020..R-029 advanced the "trustworthy setup cockpit" phase: locale-independent classification, fixture-based parser tests, PSScriptAnalyzer CI gate, release artifact hash verification, a reproducible bundle/build script for `Wingetter.exe`, adversarial edge-case coverage for profile imports (which uncovered and fixed a real `Sources = []` classification bug), an audit-driven defensive hardening pass covering process disposal, async stream races, log-timestamp collisions, parser column collisions, atomic settings writes, corrupt-file recovery, profile/import size caps, YAML safety, offline-replay confirm-gating, clipboard error transparency, launcher download integrity, and now a full accessibility sweep over every named focusable XAML control.
 
 The remaining strategic threads are larger, multi-session efforts:
 
 1. Prototype Scoop, Chocolatey, and PowerShell Gallery adapters now that the source-adapter contract (R-014), source policy (R-015), and locale-independent classification (R-020) are stable. Network access to bucket/source manifests should be optional so CI does not depend on remote services.
 2. Continue moving UI-heavy workflow code in `src\Wingetter.Ui.ps1` (still the largest module) behind smaller functions in dedicated UI sub-modules; current monolith makes targeted reviews difficult.
-3. Publish a signed module manifest alongside each release so the launcher can hash-pin downloaded modules in addition to the existing size + head-line sanity check.
+3. Optionally publish a digitally signed launcher (Authenticode) so the embedded SHA256 manifest itself is also verifiable; the current launcher pins module hashes but the launcher script itself is only TLS-trusted on download.
 
 ## Source Trail
 

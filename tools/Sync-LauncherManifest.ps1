@@ -1,0 +1,65 @@
+param(
+    [string]$LauncherPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1"),
+    [string]$SourceDir = (Join-Path $PSScriptRoot "..\src")
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+if (!(Test-Path $LauncherPath)) {
+    Write-Host "Missing launcher at $LauncherPath." -ForegroundColor Red
+    exit 1
+}
+if (!(Test-Path $SourceDir)) {
+    Write-Host "Missing source directory at $SourceDir." -ForegroundColor Red
+    exit 1
+}
+
+$launcherText = Get-Content -Path $LauncherPath -Raw
+$listMatch = [regex]::Match($launcherText, '(?ms)\$Script:WingetterModuleFiles\s*=\s*@\((?<list>.*?)\)')
+if (-not $listMatch.Success) {
+    Write-Host "Could not locate `$Script:WingetterModuleFiles in $LauncherPath." -ForegroundColor Red
+    exit 1
+}
+$moduleFiles = @(
+    ($listMatch.Groups['list'].Value -split ',') |
+        ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
+        Where-Object { $_ -and $_.EndsWith('.ps1') }
+)
+
+$rows = New-Object System.Collections.Generic.List[string]
+foreach ($file in $moduleFiles) {
+    $modulePath = Join-Path $SourceDir $file
+    if (!(Test-Path $modulePath)) {
+        Write-Host "Missing module file '$modulePath'." -ForegroundColor Red
+        exit 1
+    }
+    $hash = (Get-FileHash -Path $modulePath -Algorithm SHA256).Hash.ToUpperInvariant()
+    $rows.Add("    '$file' = '$hash'")
+}
+
+$nl = [Environment]::NewLine
+$replacement = "# BEGIN WingetterModuleHashes" + $nl +
+    "`$Script:WingetterModuleHashes = @{" + $nl +
+    (($rows -join $nl)) + $nl +
+    "}" + $nl +
+    "# END WingetterModuleHashes"
+
+# Replace the entire BEGIN/END block. Anchored markers make the replacement
+# idempotent and avoid the regex-replace footgun where the body itself
+# contains characters that look like regex metacharacters.
+$blockPattern = '(?ms)# BEGIN WingetterModuleHashes.*?# END WingetterModuleHashes'
+$blockMatch = [regex]::Match($launcherText, $blockPattern)
+if (-not $blockMatch.Success) {
+    Write-Host "Could not locate BEGIN/END WingetterModuleHashes markers in launcher." -ForegroundColor Red
+    exit 1
+}
+$updated = $launcherText.Substring(0, $blockMatch.Index) + $replacement + $launcherText.Substring($blockMatch.Index + $blockMatch.Length)
+
+if ($updated -eq $launcherText) {
+    Write-Host "Launcher hashtable is already current."
+    exit 0
+}
+
+Set-Content -Path $LauncherPath -Value $updated -Encoding UTF8 -NoNewline
+Write-Host "Updated $LauncherPath with refreshed module hashes for $($moduleFiles.Count) module(s)."
