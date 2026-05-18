@@ -136,8 +136,8 @@ foreach ($file in $scriptFiles) {
     $parseErrors = $null
     [System.Management.Automation.Language.Parser]::ParseInput($fileText, [ref]$tokens, [ref]$parseErrors) | Out-Null
     if ($parseErrors.Count -gt 0) {
-        foreach ($error in $parseErrors) {
-            Add-Failure "PowerShell parser error in '$file' at line $($error.Extent.StartLineNumber): $($error.Message)"
+        foreach ($parseError in $parseErrors) {
+            Add-Failure "PowerShell parser error in '$file' at line $($parseError.Extent.StartLineNumber): $($parseError.Message)"
         }
     }
 }

@@ -16,7 +16,7 @@ Wingetter is a Windows-first PowerShell/WPF GUI for discovering, selecting, grou
 - Generated catalog snapshots: `catalog/winget.json` and `catalog/groups.json`.
 - Embedded module fallback sync command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1`.
 - Validation command: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1`.
-- CI workflow: `.github/workflows/validate.yml` runs catalog sync/count validation, profile JSON tests, profile gallery tests, WinGet runner helper tests (including locale-independent classification fixtures under `tools\fixtures\winget\`), search metadata tests, package-source adapter tests, source policy tests, update watcher tests, offline cache tests, WinGet Configuration export tests, visual/accessibility tests, and WPF XAML load validation on Windows.
+- CI workflow: `.github/workflows/validate.yml` runs catalog sync/count validation, profile JSON tests, profile gallery tests, WinGet runner helper tests (including locale-independent classification fixtures under `tools\fixtures\winget\`), search metadata tests, package-source adapter tests, source policy tests, update watcher tests, offline cache tests, WinGet Configuration export tests, visual/accessibility tests, WPF XAML load validation, and PSScriptAnalyzer (via `tools\Test-Analyzer.ps1` under pwsh) on Windows.
 - Built-in groups in code: Essential PC Setup, Web Developer, Python Developer, Creative Suite, Gaming PC, Privacy & Security, System Admin, Streaming Setup, Office & Productivity, and 3D Printing Workshop.
 - Persisted user groups: `%APPDATA%\Wingetter\groups.json`.
 - Public profile gallery index: `profiles/gallery.json`; checked-in profile files: `profiles/gallery/*.wingetter.json`.
@@ -84,7 +84,7 @@ Wingetter is now a launcher plus dot-sourced modules:
 - Fallback installed-app parsing still depends on text output when `Microsoft.WinGet.Client` is unavailable.
 - WinGet bootstrap no longer downloads GitHub/AppX assets directly, but still depends on PowerShell Gallery availability when the `Microsoft.WinGet.Client` repair path is needed.
 - Visual/accessibility validation now rejects `CornerRadius=999` regressions and checks baseline automation names, but deeper keyboard navigation and screen reader flow testing are still manual.
-- PSScriptAnalyzer reports warning-level issues: automatic variable shadowing, empty catch blocks, stale encoding assumptions, and other maintainability warnings.
+- PSScriptAnalyzer now runs in CI against `src\`, `tools\`, and `Wingetter.ps1` using `PSScriptAnalyzerSettings.psd1` (focused IncludeRules set). The previously reported automatic-variable shadowing (`$profile`, `$error`, `$args`, `$sender`) and write-only parameter findings have been fixed. Style-level rules (verb conventions, `SupportsShouldProcess` on internal helpers) and `PSAvoidUsingEmptyCatchBlock` for legitimate fire-and-forget cleanup are intentionally not enforced.
 
 ## Strategic Direction
 

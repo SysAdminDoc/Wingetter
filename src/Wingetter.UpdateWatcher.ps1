@@ -11,9 +11,9 @@ function Get-WingetterUpdateWatcherLogRoot {
 function Test-WingetterMeteredNetwork {
     try {
         [Windows.Networking.Connectivity.NetworkInformation, Windows.Networking.Connectivity, ContentType = WindowsRuntime] | Out-Null
-        $profile = [Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile()
-        if ($null -eq $profile) { return $false }
-        $cost = $profile.GetConnectionCost()
+        $networkProfile = [Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile()
+        if ($null -eq $networkProfile) { return $false }
+        $cost = $networkProfile.GetConnectionCost()
         if ($null -eq $cost) { return $false }
         return ($cost.NetworkCostType.ToString() -ne "Unrestricted" -or [bool]$cost.Roaming -or [bool]$cost.OverDataLimit)
     } catch {

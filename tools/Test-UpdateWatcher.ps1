@@ -101,9 +101,9 @@ if ($failures.Count -eq 0) {
         Add-Failure "Metered-network skip flag was not preserved."
     }
 
-    $args = New-WingetterUpdateWatcherTaskActionArguments -ScriptPath "C:\Wingetter\tools\Invoke-UpdateCheck.ps1" -SkipMeteredNetwork $true -Toast $true -KeepLogs 7
+    $taskArgs = New-WingetterUpdateWatcherTaskActionArguments -ScriptPath "C:\Wingetter\tools\Invoke-UpdateCheck.ps1" -SkipMeteredNetwork $true -Toast $true -KeepLogs 7
     foreach ($expected in @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "-SkipMeteredNetwork", "-Toast", "-KeepLogs", "7")) {
-        if ($args -notcontains $expected) {
+        if ($taskArgs -notcontains $expected) {
             Add-Failure "Scheduled task action arguments did not include '$expected'."
         }
     }

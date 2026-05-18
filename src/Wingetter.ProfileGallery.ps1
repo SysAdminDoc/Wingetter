@@ -87,11 +87,11 @@ function Get-WingetterProfileGalleryIndex {
         throw "Unsupported profile gallery index schema '$($index.Schema)'."
     }
 
-    $profiles = [System.Collections.ArrayList]::new()
-    foreach ($profile in @($index.Profiles)) {
-        $profilePath = [string]$profile.ProfilePath
+    $entries = [System.Collections.ArrayList]::new()
+    foreach ($entry in @($index.Profiles)) {
+        $profilePath = [string]$entry.ProfilePath
         if ([string]::IsNullOrWhiteSpace($profilePath)) {
-            throw "Profile gallery entry '$($profile.Id)' is missing ProfilePath."
+            throw "Profile gallery entry '$($entry.Id)' is missing ProfilePath."
         }
 
         $resolvedProfilePath = if ([System.IO.Path]::IsPathRooted($profilePath)) {
@@ -100,48 +100,53 @@ function Get-WingetterProfileGalleryIndex {
             Join-Path $rootPath $profilePath
         }
 
-        [void]$profiles.Add([PSCustomObject]@{
-            Id                  = [string]$profile.Id
-            Name                = [string]$profile.Name
-            Description         = [string]$profile.Description
-            Publisher           = [string]$profile.Publisher
-            Tags                = [string[]]@($profile.Tags | ForEach-Object { [string]$_ })
+        [void]$entries.Add([PSCustomObject]@{
+            Id                  = [string]$entry.Id
+            Name                = [string]$entry.Name
+            Description         = [string]$entry.Description
+            Publisher           = [string]$entry.Publisher
+            Tags                = [string[]]@($entry.Tags | ForEach-Object { [string]$_ })
             ProfilePath         = $profilePath
             ResolvedProfilePath = $resolvedProfilePath
-            Sha256              = ([string]$profile.Sha256).ToUpperInvariant()
-            PackageCount        = [int]$profile.PackageCount
-            SourceNames         = [string[]]@($profile.SourceNames | ForEach-Object { [string]$_ })
+            Sha256              = ([string]$entry.Sha256).ToUpperInvariant()
+            PackageCount        = [int]$entry.PackageCount
+            SourceNames         = [string[]]@($entry.SourceNames | ForEach-Object { [string]$_ })
         })
     }
 
-    return [object[]]$profiles.ToArray()
+    return [object[]]$entries.ToArray()
 }
 
 function Get-WingetterProfileGalleryItem {
-    param([object]$Profile)
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [Alias("Profile")]
+        [object]$Entry
+    )
 
-    if ($null -eq $Profile) { throw "Profile gallery item is required." }
-    if ([string]::IsNullOrWhiteSpace([string]$Profile.ResolvedProfilePath) -or !(Test-Path $Profile.ResolvedProfilePath)) {
-        throw "Profile file '$($Profile.ProfilePath)' was not found."
+    if ($null -eq $Entry) { throw "Profile gallery item is required." }
+    if ([string]::IsNullOrWhiteSpace([string]$Entry.ResolvedProfilePath) -or !(Test-Path $Entry.ResolvedProfilePath)) {
+        throw "Profile file '$($Entry.ProfilePath)' was not found."
     }
 
-    $actualHash = (Get-FileHash -Path $Profile.ResolvedProfilePath -Algorithm SHA256).Hash.ToUpperInvariant()
-    $expectedHash = ([string]$Profile.Sha256).ToUpperInvariant()
+    $actualHash = (Get-FileHash -Path $Entry.ResolvedProfilePath -Algorithm SHA256).Hash.ToUpperInvariant()
+    $expectedHash = ([string]$Entry.Sha256).ToUpperInvariant()
     if ([string]::IsNullOrWhiteSpace($expectedHash) -or $actualHash -ne $expectedHash) {
-        throw "Profile '$($Profile.Id)' failed SHA256 verification."
+        throw "Profile '$($Entry.Id)' failed SHA256 verification."
     }
 
-    $content = Get-Content -Path $Profile.ResolvedProfilePath -Raw | ConvertFrom-Json
+    $content = Get-Content -Path $Entry.ResolvedProfilePath -Raw | ConvertFrom-Json
     $parsed = ConvertFrom-WingetterPublicProfileJson -Content $content
-    if ($Profile.PackageCount -gt 0 -and $parsed.PackageIds.Count -ne $Profile.PackageCount) {
-        throw "Profile '$($Profile.Id)' declares $($Profile.PackageCount) packages but contains $($parsed.PackageIds.Count)."
+    if ($Entry.PackageCount -gt 0 -and $parsed.PackageIds.Count -ne $Entry.PackageCount) {
+        throw "Profile '$($Entry.Id)' declares $($Entry.PackageCount) packages but contains $($parsed.PackageIds.Count)."
     }
 
     [PSCustomObject]@{
-        Id             = $Profile.Id
-        Name           = if (![string]::IsNullOrWhiteSpace($parsed.Name)) { $parsed.Name } else { $Profile.Name }
-        Description    = if (![string]::IsNullOrWhiteSpace($parsed.Description)) { $parsed.Description } else { $Profile.Description }
-        Publisher      = if (![string]::IsNullOrWhiteSpace($parsed.Publisher)) { $parsed.Publisher } else { $Profile.Publisher }
+        Id             = $Entry.Id
+        Name           = if (![string]::IsNullOrWhiteSpace($parsed.Name)) { $parsed.Name } else { $Entry.Name }
+        Description    = if (![string]::IsNullOrWhiteSpace($parsed.Description)) { $parsed.Description } else { $Entry.Description }
+        Publisher      = if (![string]::IsNullOrWhiteSpace($parsed.Publisher)) { $parsed.Publisher } else { $Entry.Publisher }
         Tags           = $parsed.Tags
         PackageEntries = $parsed.PackageEntries
         PackageIds     = $parsed.PackageIds
@@ -181,24 +186,24 @@ function Test-WingetterProfileGallery {
     )
 
     $failures = [System.Collections.ArrayList]::new()
-    foreach ($profile in @($Profiles)) {
+    foreach ($entry in @($Profiles)) {
         try {
-            $item = Get-WingetterProfileGalleryItem -Profile $profile
+            $item = Get-WingetterProfileGalleryItem -Entry $entry
             if (!$item.Verified) {
-                [void]$failures.Add("Profile '$($profile.Id)' did not verify.")
+                [void]$failures.Add("Profile '$($entry.Id)' did not verify.")
             }
             foreach ($packageId in @($item.PackageIds)) {
                 if ($CatalogPackageIds.Count -gt 0 -and !$CatalogPackageIds.ContainsKey($packageId)) {
-                    [void]$failures.Add("Profile '$($profile.Id)' references package '$packageId' that is not in the catalog.")
+                    [void]$failures.Add("Profile '$($entry.Id)' references package '$packageId' that is not in the catalog.")
                 }
             }
             foreach ($sourceName in @($item.SourceNames)) {
                 if ([string]::IsNullOrWhiteSpace([string]$sourceName)) {
-                    [void]$failures.Add("Profile '$($profile.Id)' has a package without an explicit source.")
+                    [void]$failures.Add("Profile '$($entry.Id)' has a package without an explicit source.")
                 }
             }
         } catch {
-            [void]$failures.Add("Profile '$($profile.Id)' failed validation: $($_.Exception.Message)")
+            [void]$failures.Add("Profile '$($entry.Id)' failed validation: $($_.Exception.Message)")
         }
     }
 

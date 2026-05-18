@@ -150,6 +150,11 @@ function Get-WingetterWinGetSourceAdapter {
                 [scriptblock]$ShouldCancel = { $false },
                 [scriptblock]$PumpUi = {}
             )
+            # AcceptAgreements and IncludePinned are part of the install/upgrade/
+            # uninstall adapter contract but do not apply to uninstall; reference
+            # them so the analyzer treats them as intentionally inert.
+            [void]$AcceptAgreements
+            [void]$IncludePinned
             Invoke-WinGetPackageOperation -Action "uninstall" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $false -IncludePinned $false -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
         }
         ExportProfile = {
