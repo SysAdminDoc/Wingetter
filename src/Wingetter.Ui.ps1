@@ -665,7 +665,7 @@ function Show-WinGetInstallerGUI {
                         <Button x:Name="DeselectAllBtn" Style="{StaticResource ToolBtn}" Content="Clear Visible" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <ComboBox x:Name="GroupCombo" Width="220" FontSize="11.5" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="GroupCombo" Width="220" FontSize="11.5" Margin="0,0,8,0" VerticalAlignment="Center" AutomationProperties.Name="Saved package groups"/>
                         <Button x:Name="LoadGroupBtn" Style="{StaticResource ToolBtn}" Content="Apply Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="SaveGroupBtn" Style="{StaticResource ToolBtn}" Content="Save Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="DeleteGroupBtn" Style="{StaticResource ToolBtn}" Content="Delete" Margin="0,0,12,0" FontSize="11.5" Cursor="Hand" ToolTip="Delete the selected saved group"/>
@@ -2095,7 +2095,7 @@ function Show-WinGetInstallerGUI {
         <TextBlock Text="Save the current selection as a reusable group" Foreground="#f0f6fb" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
         <TextBlock Text="Wingetter will keep the exact package IDs so you can reload this setup later." Foreground="#90a4b8" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap" MaxWidth="340"/>
         <TextBlock Text="Group name" Foreground="#c4d2df" FontSize="12" Margin="0,0,0,6"/>
-        <TextBox x:Name="GroupNameBox" FontSize="13" Padding="10,8" Background="#08131f" Foreground="#eff6fb" BorderBrush="#24374a" BorderThickness="1"/>
+        <TextBox x:Name="GroupNameBox" FontSize="13" Padding="10,8" Background="#08131f" Foreground="#eff6fb" BorderBrush="#24374a" BorderThickness="1" AutomationProperties.Name="Group name"/>
         <TextBlock Text="$($sel.Count) selected apps will be included." Foreground="#7a90a6" FontSize="11.5" Margin="0,10,0,0"/>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
             <Button x:Name="OkBtn" Content="Save Group" Padding="20,7" Margin="0,0,8,0" FontSize="12" IsDefault="True" Background="#1fb879" Foreground="White" BorderThickness="0" Cursor="Hand"/>
@@ -2256,7 +2256,7 @@ function Show-WinGetInstallerGUI {
                 <ColumnDefinition Width="16"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <ListBox x:Name="ProfilesList" Grid.Column="0" Background="#08131f" Foreground="#dbe7f1" BorderBrush="#24374a" BorderThickness="1" Padding="4"/>
+            <ListBox x:Name="ProfilesList" Grid.Column="0" Background="#08131f" Foreground="#dbe7f1" BorderBrush="#24374a" BorderThickness="1" Padding="4" AutomationProperties.Name="Available profile gallery profiles"/>
             <Border Grid.Column="2" Background="#08131f" BorderBrush="#24374a" BorderThickness="1" CornerRadius="8" Padding="14">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -2264,7 +2264,7 @@ function Show-WinGetInstallerGUI {
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <TextBlock x:Name="ProfileTitle" Text="Choose a profile" Foreground="#f0f6fb" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <TextBox x:Name="PreviewBox" Grid.Row="1" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="#071018" Foreground="#dbe7f1" BorderBrush="#1d2a3a" FontFamily="Consolas" FontSize="12.5" Padding="10"/>
+                    <TextBox x:Name="PreviewBox" Grid.Row="1" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="#071018" Foreground="#dbe7f1" BorderBrush="#1d2a3a" FontFamily="Consolas" FontSize="12.5" Padding="10" AutomationProperties.Name="Profile package review"/>
                 </Grid>
             </Border>
         </Grid>

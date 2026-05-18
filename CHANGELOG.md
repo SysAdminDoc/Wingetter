@@ -4,6 +4,8 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: Automated accessibility sweep in `tools\Test-VisualAccessibility.ps1` over every named focusable XAML control (Button / TextBox / ComboBox / CheckBox / ToggleButton / ListBox / RadioButton); requires an accessible label source on every control and refuses `Focusable="False"` / `IsTabStop="False"` outside style template parts.
+- Added: `AutomationProperties.Name` on `GroupCombo` ("Saved package groups"), `GroupNameBox` ("Group name"), `ProfilesList` ("Available profile gallery profiles"), and `PreviewBox` ("Profile package review") so screen readers can describe these previously-unlabeled controls.
 - Fixed: `Invoke-WinGetCapture` and `Invoke-WinGetPackageOperation` now dispose the launched process in a `finally` block and tolerate async stream-reader exceptions thrown when `Kill()` races the redirected stdout/stderr readers, so a cancelled or timed-out install no longer leaks file handles or surfaces a raw `OperationCanceledException`.
 - Fixed: Per-package install/upgrade log files, the WinGet bootstrap log, and update-check logs all use 7-digit fractional-second timestamps plus a short GUID suffix; concurrent installs or a manual+scheduled update check colliding on the same second can no longer overwrite each other's logs.
 - Fixed: `ConvertFrom-WinGetListText`, `Get-WinGetInstalledVersion`, and `Get-WinGetPinRowFromText` now anchor package-id matches to whitespace column boundaries via a new `Find-WinGetPackageIdColumn` helper and pick the LONGEST unconsumed match on each row, so a short id that happens to be a substring of another row's Name column no longer steals that row's version. Added a `list-name-collision.txt` fixture.

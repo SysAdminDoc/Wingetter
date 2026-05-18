@@ -84,19 +84,19 @@ Wingetter is now a launcher plus dot-sourced modules:
 - Install/update result records now persist exit code, exit-code meaning, status, and matched classification signal; classification keys off a documented HRESULT lookup first and only falls back to English text when the exit code is generic. Pin classification keys off the `Pin type` column token before any text fallback.
 - Fallback installed-app parsing still depends on text output when `Microsoft.WinGet.Client` is unavailable.
 - WinGet bootstrap no longer downloads GitHub/AppX assets directly, but still depends on PowerShell Gallery availability when the `Microsoft.WinGet.Client` repair path is needed.
-- Visual/accessibility validation now rejects `CornerRadius=999` regressions and checks baseline automation names, but deeper keyboard navigation and screen reader flow testing are still manual.
+- Visual/accessibility validation now rejects `CornerRadius=999` regressions and sweeps every named focusable XAML control for an accessible label source (Content/Text/ToolTip/AutomationProperties.Name) and disallows `Focusable="False"` / `IsTabStop="False"` outside style template parts. Deeper screen-reader flow testing (live narration of multi-step install/update flows) is still manual.
 - PSScriptAnalyzer now runs in CI against `src\`, `tools\`, and `Wingetter.ps1` using `PSScriptAnalyzerSettings.psd1` (focused IncludeRules set). The previously reported automatic-variable shadowing (`$profile`, `$error`, `$args`, `$sender`) and write-only parameter findings have been fixed. Style-level rules (verb conventions, `SupportsShouldProcess` on internal helpers) and `PSAvoidUsingEmptyCatchBlock` for legitimate fire-and-forget cleanup are intentionally not enforced.
 
 ## Strategic Direction
 
-R-020..R-026 advanced the "trustworthy setup cockpit" phase: locale-independent classification, fixture-based parser tests, PSScriptAnalyzer CI gate, release artifact hash verification, a reproducible bundle/build script for `Wingetter.exe`, adversarial edge-case coverage for profile imports (which uncovered and fixed a real `Sources = []` classification bug), and an audit-driven defensive hardening pass covering process disposal, async stream races, log-timestamp collisions, parser column collisions, atomic settings writes, corrupt-file recovery, profile/import size caps, YAML safety, offline-replay confirm-gating, clipboard error transparency, and launcher download integrity.
+R-020..R-027 advanced the "trustworthy setup cockpit" phase: locale-independent classification, fixture-based parser tests, PSScriptAnalyzer CI gate, release artifact hash verification, a reproducible bundle/build script for `Wingetter.exe`, adversarial edge-case coverage for profile imports (which uncovered and fixed a real `Sources = []` classification bug), an audit-driven defensive hardening pass covering process disposal, async stream races, log-timestamp collisions, parser column collisions, atomic settings writes, corrupt-file recovery, profile/import size caps, YAML safety, offline-replay confirm-gating, clipboard error transparency, launcher download integrity, and now a full accessibility sweep over every named focusable XAML control.
 
 The remaining strategic threads are larger, multi-session efforts:
 
 1. Prototype Scoop, Chocolatey, and PowerShell Gallery adapters now that the source-adapter contract (R-014), source policy (R-015), and locale-independent classification (R-020) are stable. Network access to bucket/source manifests should be optional so CI does not depend on remote services.
 2. Continue moving UI-heavy workflow code in `src\Wingetter.Ui.ps1` (still the largest module) behind smaller functions in dedicated UI sub-modules; current monolith makes targeted reviews difficult.
-3. Replace the still-manual keyboard navigation and screen reader testing with an automated check that parses the WPF XAML and asserts `TabIndex`, `KeyboardNavigation.TabNavigation`, and automation-name coverage on every focusable control.
-4. Add an actual PS2EXE build job (gated on a release tag) that produces a fresh `Wingetter.exe` from the modular launcher and updates `release/manifest.json` automatically.
+3. Add an actual PS2EXE build job (gated on a release tag) that produces a fresh `Wingetter.exe` from the modular launcher and updates `release/manifest.json` automatically.
+4. Publish a signed module manifest alongside each release so the launcher can hash-pin downloaded modules in addition to the existing size + head-line sanity check.
 
 ## Source Trail
 
