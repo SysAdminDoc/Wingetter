@@ -55,7 +55,8 @@ jobs:
             "tools/Test-ConfigurationExport.ps1",
             "tools/Test-VisualAccessibility.ps1",
             "tools/Test-ReleaseArtifact.ps1",
-            "tools/Test-Bundle.ps1"
+            "tools/Test-Bundle.ps1",
+            "tools/Test-LauncherManifest.ps1"
           )
           foreach ($script in $scripts) {
             Write-Host "==> $script"

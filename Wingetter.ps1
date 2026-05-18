@@ -30,6 +30,43 @@ $Script:WingetterModuleFiles = @(
     "Wingetter.App.ps1"
 )
 
+# Canonical SHA256 of each module under `src/` at the time this launcher was
+# released. The download path verifies each fetched module against this table
+# before dot-sourcing so a tampered mirror, redirected URL, or cache-poisoning
+# attack cannot inject code via WINGETTER_MODULE_BASE_URL or %TEMP%.
+#
+# Maintainer workflow: when any `src/Wingetter.*.ps1` file changes, run
+#   pwsh -NoProfile -File .\tools\Sync-LauncherManifest.ps1
+# to refresh this hashtable. `tools\Test-LauncherManifest.ps1` enforces it in
+# CI so the table never drifts from the modules on disk.
+# BEGIN WingetterModuleHashes
+$Script:WingetterModuleHashes = @{
+    'Wingetter.Common.ps1' = 'DF527A00DF7B6C3CB13BC4A674694A842C33706AE516A76FD024644D46158E3F'
+    'Wingetter.Catalog.ps1' = '03B4E753D4709DC12934407B4D91801BA759BCE63D5EFD7AB1F1914283C53488'
+    'Wingetter.WinGet.ps1' = 'E483B4CB1707B9E4DDE0924268DE4C9C0B1255BE12E1C63F635B74B700C8A6BD'
+    'Wingetter.Groups.ps1' = 'EDA230D40D1A22F2DFC5C8467A01602230B8E10FFBFFE4F5866F55B7BF8426EB'
+    'Wingetter.ProfileGallery.ps1' = '82916B24ADDF76C4FEDA4F7B12E945F01ADF650B97D8E8D77EEE4F6C97D87DC0'
+    'Wingetter.Sources.ps1' = '4AB3841ADEF984ED51A277801480C251802EFCBBBEAB0D2FBA110267EBFD945A'
+    'Wingetter.OfflineCache.ps1' = 'E6864BA585E1C3B1AE27DB741DBEB34801CA28DDD45B342CAA9DB7B39C5D32C7'
+    'Wingetter.Configuration.ps1' = '2A5BCF60D9F65944A0B81CB06A46B1C1FC948D254D450A3822EC72D446E6EBC6'
+    'Wingetter.UpdateWatcher.ps1' = '8440AD94B6388B7BA19B72FF9F58670C1123014B761D0CBAF7FF8F9274CDD479'
+    'Wingetter.Ui.ps1' = '0C709E7CAA20E1319869193D2A3804B28CC1537BC4356267D7AC6E1B9BAA66DB'
+    'Wingetter.App.ps1' = 'CC89FD7D93EA85BF465F8E7169219251F14F4AC4D429F0F35AA4666C6F7F8BB4'
+}
+# END WingetterModuleHashes
+
+function Test-WingetterModuleHash {
+    param([string]$Path, [string]$FileName)
+    $expected = $Script:WingetterModuleHashes[$FileName]
+    if ([string]::IsNullOrWhiteSpace($expected)) {
+        throw "Wingetter launcher has no expected SHA256 for module '$FileName'."
+    }
+    $actual = (Get-FileHash -Path $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant()
+    if ($actual -ne $expected.ToUpperInvariant()) {
+        throw "Wingetter module '$FileName' SHA256 mismatch. Expected $expected, got $actual. The downloaded module will not be loaded."
+    }
+}
+
 function Test-WingetterModuleDirectory {
     param([string]$Path)
     if ([string]::IsNullOrWhiteSpace($Path) -or !(Test-Path $Path)) { return $false }
@@ -87,6 +124,10 @@ function Get-WingetterModuleDirectory {
                 if ($head -notmatch '^\s*#') {
                     throw "Module '$file' did not begin with a comment header; the download may be corrupted or redirected."
                 }
+                # Hash-pin the staged file against the launcher's embedded
+                # manifest BEFORE renaming it into place, so a tampered or
+                # wrong-source module never lands at $target.
+                Test-WingetterModuleHash -Path $stagePath -FileName $file
                 Move-Item -Path $stagePath -Destination $target -Force -ErrorAction Stop
                 $success = $true
             } catch {
