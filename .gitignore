@@ -5,3 +5,7 @@
 CLAUDE.md
 AGENTS.md
 release/Wingetter.bundled.ps1
+
+# Markdown files local-only (except README)
+*.md
+!README.md
