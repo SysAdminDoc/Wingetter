@@ -1,13 +1,3 @@
-<!-- codex-branding:start -->
-<p align="center"><img src="icon.png" width="128" alt="Wingetter"></p>
-
-<p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-v6.1.0-58A6FF?style=for-the-badge">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-4ade80?style=for-the-badge">
-  <img alt="Platform" src="https://img.shields.io/badge/platform-PowerShell-58A6FF?style=for-the-badge">
-</p>
-<!-- codex-branding:end -->
-
 # Wingetter
 
 A powerful PowerShell GUI application for discovering, selecting, and bulk installing Windows software using [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/winget/). Think Ninite, but with 765 apps and full winget integration.
