@@ -5,3 +5,9 @@
 CLAUDE.md
 AGENTS.md
 release/Wingetter.bundled.ps1
+
+# AI artifacts
+.ai/
+PROJECT_CONTEXT.md
+CONTINUATION_PROMPT.md
+RESEARCH_FEATURE_PLAN*.md
