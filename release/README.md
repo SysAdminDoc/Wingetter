@@ -12,8 +12,10 @@ pwsh -NoProfile -File .\tools\Test-ReleaseArtifact.ps1
 ```
 
 The verifier reads `release/manifest.json`, recomputes SHA256 against each
-listed `path`, and exits nonzero on the first mismatch. The repository-level
-validation command also runs this check:
+listed `path`, regenerates the bundled launcher from the current modular source,
+checks that the manifest and `Wingetter.exe` version metadata reference that
+bundle hash, and compares the recorded Authenticode status with the live EXE.
+The repository-level validation command also runs this check:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-Validation.ps1
@@ -22,15 +24,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-Validation.ps
 ## Updating
 
 When a new `Wingetter.exe` is checked in (typically at release tag time), update
-`release/manifest.json` with the new hash and size and bump the `version` and
-`generatedAtUtc` fields. The same tool can regenerate the hashes for you:
+`release/manifest.json` with the new hash, size, bundled-source hash, PS2EXE
+version, EXE metadata, and Authenticode status. The same tool can regenerate the
+manifest for you:
 
 ```powershell
 pwsh -NoProfile -File .\tools\Test-ReleaseArtifact.ps1 -Update
 ```
 
-`-Update` rewrites `release/manifest.json` from the live file hashes; commit the
-result alongside the binary change.
+`-Update` rewrites `release/manifest.json` from the live file hashes and current
+source bundle; commit the result alongside the binary change.
 
 ## Building
 
@@ -46,6 +49,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-Validation.ps
 
 `tools\Build-WingetterExe.ps1` rebuilds from the current modular source by
 concatenating the `src\` modules into a parser-checked bundled launcher before
-PS2EXE packages it. If no code-signing certificate is available, keep the
-unsigned state explicit in `release\manifest.json` and rely on the checked
-SHA256/size contract.
+PS2EXE packages it. The build embeds the bundled launcher SHA256 into EXE
+version metadata and signs with a local code-signing certificate when one is
+available. If no certificate is available, keep the unsigned state explicit in
+`release\manifest.json` and rely on the checked SHA256, size, bundled-source
+hash, and Authenticode status contract.

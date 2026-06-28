@@ -2,11 +2,60 @@ param(
     [string]$RepoRoot = (Join-Path $PSScriptRoot ".."),
     [string]$BundleOutput,
     [string]$ExeOutput,
-    [switch]$RunPS2EXE
+    [switch]$RunPS2EXE,
+    [string]$CodeSigningCertificateThumbprint,
+    [switch]$SkipCodeSigning
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function Get-WingetterFileSha256 {
+    param([string]$Path)
+
+    $hashCommand = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+    if ($hashCommand) {
+        return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant()
+    }
+
+    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    $stream = [System.IO.File]::OpenRead($resolvedPath)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($stream)
+            return ([System.BitConverter]::ToString($hashBytes)).Replace("-", "").ToUpperInvariant()
+        } finally {
+            if ($sha256 -is [System.IDisposable]) { $sha256.Dispose() }
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
+function Get-WingetterCodeSigningCertificate {
+    param(
+        [string]$Thumbprint,
+        [bool]$Skip
+    )
+
+    if ($Skip) { return $null }
+    $certificates = @()
+    foreach ($storePath in @("Cert:\CurrentUser\My", "Cert:\LocalMachine\My")) {
+        try {
+            if (Test-Path $storePath) {
+                $certificates += @(Get-ChildItem -Path $storePath -CodeSigningCert -ErrorAction SilentlyContinue)
+            }
+        } catch {}
+    }
+
+    if (![string]::IsNullOrWhiteSpace($Thumbprint)) {
+        $normalizedThumbprint = ($Thumbprint -replace '\s', '').ToUpperInvariant()
+        return @($certificates | Where-Object { (($_.Thumbprint -replace '\s', '').ToUpperInvariant()) -eq $normalizedThumbprint } | Select-Object -First 1)
+    }
+
+    return @($certificates | Where-Object { $_.NotAfter -gt (Get-Date) } | Sort-Object NotAfter -Descending | Select-Object -First 1)
+}
 
 $repoRoot = (Resolve-Path $RepoRoot).Path
 $launcherPath = Join-Path $repoRoot "Wingetter.ps1"
@@ -68,10 +117,12 @@ if ($parseErrors.Count -gt 0) {
 }
 
 Write-Host "Bundle written to $BundleOutput ($($bundle.Length) bytes, $($moduleFiles.Count) modules)."
+$bundleHash = Get-WingetterFileSha256 -Path $BundleOutput
+Write-Host "Bundle SHA256: $bundleHash"
 
 if (-not $RunPS2EXE) {
     Write-Host "Skipped PS2EXE packaging (pass -RunPS2EXE to build Wingetter.exe)."
-    exit 0
+    return
 }
 
 if ([string]::IsNullOrWhiteSpace($ExeOutput)) {
@@ -84,16 +135,33 @@ if (-not (Get-Module -ListAvailable -Name PS2EXE)) {
     Write-Host "  Install-Module PS2EXE -Scope CurrentUser" -ForegroundColor Yellow
     exit 1
 }
+$ps2exeModule = Get-Module -ListAvailable -Name PS2EXE | Sort-Object Version -Descending | Select-Object -First 1
 Import-Module PS2EXE -Force | Out-Null
 
 $ps2exeArgs = @{
-    InputFile  = $BundleOutput
-    OutputFile = $ExeOutput
-    Title      = "Wingetter"
-    Product    = "Wingetter"
-    NoConsole  = $true
+    InputFile    = $BundleOutput
+    OutputFile   = $ExeOutput
+    Title        = "Wingetter"
+    Product      = "Wingetter"
+    Description  = "Wingetter bundled launcher SHA256 $bundleHash"
+    Company      = "SysAdminDoc"
+    Copyright    = "MIT"
+    Trademark    = "Wingetter"
+    Version      = "6.1.0.0"
+    NoConsole    = $true
+    STA          = $true
+    DPIAware     = $true
+    SupportOS    = $true
 }
 if (Test-Path $iconPath) { $ps2exeArgs["IconFile"] = $iconPath }
 Invoke-PS2EXE @ps2exeArgs
 
-Write-Host "Wingetter.exe written to $ExeOutput. Run tools\Test-ReleaseArtifact.ps1 -Update to refresh the manifest."
+$certificate = Get-WingetterCodeSigningCertificate -Thumbprint $CodeSigningCertificateThumbprint -Skip ([bool]$SkipCodeSigning)
+if ($certificate) {
+    $signature = Set-AuthenticodeSignature -FilePath $ExeOutput -Certificate $certificate -TimestampServer "http://timestamp.digicert.com" -ErrorAction Stop
+    Write-Host "Wingetter.exe signed with certificate $($certificate.Thumbprint); Authenticode status: $($signature.Status)."
+} else {
+    Write-Host "No code-signing certificate available; Wingetter.exe remains unsigned and the release manifest must record that state."
+}
+
+Write-Host "Wingetter.exe written to $ExeOutput with PS2EXE $($ps2exeModule.Version). Run tools\Test-ReleaseArtifact.ps1 -Update to refresh the manifest."
