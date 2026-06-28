@@ -2,6 +2,15 @@
 
 ## Research-Driven Additions
 
+### P0
+
+- [ ] P0 - Restore the one-command validation contract
+  Why: `tools\Invoke-Validation.ps1` is the repo's safety gate and currently fails in the working tree on UI smoke, launcher manifest, and analyzer checks.
+  Evidence: `tools\Invoke-Validation.ps1`; `tools\Test-UiSmoke.ps1`; `tools\Test-LauncherManifest.ps1`; `src/Wingetter.Ui.ps1:3591`; local validation run on 2026-06-28.
+  Touches: `src\Wingetter.Ui.ps1`, `Wingetter.ps1`, `tools\Sync-LauncherManifest.ps1`, `tools\Test-UiSmoke.ps1`, `PSScriptAnalyzerSettings.psd1`.
+  Acceptance: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-Validation.ps1` exits 0; UI smoke captures all required screenshots; launcher module hashes match disk; analyzer has no findings.
+  Complexity: M
+
 ### P1
 
 - [ ] P1 - Add UI automation and screenshot accessibility smoke tests
@@ -70,3 +79,33 @@
   Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.Resources.ps1` (new), `tools\Test-UiSmoke.ps1`.
   Acceptance: user-facing strings are centralized after UI smoke tests land; existing English UI behavior and accessibility names remain unchanged; no locale is added until extraction is covered.
   Complexity: L
+
+### P2
+
+- [ ] P2 - Add catalog freshness audit against live WinGet metadata
+  Why: Static catalog validation catches local drift, but it does not prove all 765 curated IDs still resolve, still belong to the expected source, or still have trustworthy detail metadata.
+  Evidence: `tools\Test-Catalog.ps1:192-279`; `catalog/winget.json`; Microsoft `winget show` docs; `microsoft/winget-cli` v1.29.280 source behavior.
+  Touches: `tools\Test-Catalog.ps1`, `tools\Invoke-Validation.ps1`, `catalog\winget.json`, `src\Wingetter.Catalog.ps1`.
+  Acceptance: a bounded opt-in audit samples or checks catalog IDs with `winget show --id --exact --source`, reports missing/renamed/source-drift/detail-metadata failures, caches results to avoid slow default validation, and never mutates the catalog automatically.
+  Complexity: M
+
+- [ ] P2 - Add profile/run lockfile exports for reproducible rebuilds
+  Why: Profiles and migration reports record IDs/source/version state, but a rebuild can still drift when upstream manifests, installer hashes, or preserved WinGet 1.29 custom arguments change.
+  Evidence: `src/Wingetter.Groups.ps1:137-269`; `src/Wingetter.OfflineCache.ps1:175-361`; WinGet 1.29 preserved custom/override release notes; Ninite/Patch My PC reporting patterns.
+  Touches: `src\Wingetter.Groups.ps1`, `src\Wingetter.OfflineCache.ps1`, `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ProfileJson.ps1`, `tools\Test-OfflineCache.ps1`.
+  Acceptance: after reviewed install/update/offline-cache runs, Wingetter can export a lockfile with package ID, source, resolved version, installer URL/hash when available, selected safe options, timestamp, and warnings; import shows drift before selecting packages.
+  Complexity: L
+
+- [ ] P2 - Persist window bounds with DPI and monitor safety checks
+  Why: The main window currently starts centered at fixed 1450x920 dimensions, and package-manager users report off-screen or unstable window placement after UI changes and display scaling differences.
+  Evidence: `src/Wingetter.Ui.ps1:780-781`; UniGetUI issue #4799.
+  Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.Common.ps1`, `tools\Test-UiSmoke.ps1`.
+  Acceptance: Wingetter saves main-window size/position/state under `%APPDATA%\Wingetter`, restores only when the bounds intersect a current monitor working area, clamps to minimum dimensions, and smoke tests cover invalid/off-screen saved bounds.
+  Complexity: S
+
+- [ ] P2 - Normalize noisy installer progress in operation logs
+  Why: WinGet 1.29 `--no-progress` reduces CLI noise, but older WinGet builds and individual installers can still emit spinner/progress streams that make GUI logs hard to follow.
+  Evidence: `src/Wingetter.WinGet.ps1:171-188`; `src/Wingetter.Ui.ps1:325-526`; UniGetUI issue #5004.
+  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`.
+  Acceptance: captured stdout/stderr records keep raw logs on disk but the GUI/log summary collapses repeated spinner/progress-only lines, preserves meaningful installer output, and tests cover common `|/-\` and carriage-return progress patterns.
+  Complexity: M
