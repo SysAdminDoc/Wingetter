@@ -274,6 +274,147 @@ function New-WingetterRunLogDirectory {
     return $path
 }
 
+function New-WingetterRunPlan {
+    param(
+        [ValidateSet("install", "upgrade")]
+        [string]$Action,
+        [object[]]$SelectedPackages,
+        [hashtable]$InstalledRecords = @{},
+        [object]$SourcePolicy = $null,
+        [hashtable]$PinStatusesById = @{},
+        [bool]$IncludePinned = $false,
+        [string]$ProfileName = "Manual selection"
+    )
+
+    $items = New-Object System.Collections.ArrayList
+    $summary = [ordered]@{
+        total           = 0
+        runnable        = 0
+        skipped         = 0
+        blocked         = 0
+        unresolved      = 0
+        current         = 0
+        updateAvailable = 0
+        pinned          = 0
+    }
+
+    foreach ($package in @($SelectedPackages)) {
+        $summary.total++
+        $packageId = if ($package.WingetId) { [string]$package.WingetId } elseif ($package.PackageId) { [string]$package.PackageId } else { "" }
+        $name = if ($package.Name) { [string]$package.Name } else { $packageId }
+        $sourceName = if ($package.SourceName) { [string]$package.SourceName } else { "winget" }
+        $installed = if ($InstalledRecords -and $InstalledRecords.ContainsKey($packageId)) { $InstalledRecords[$packageId] } else { $null }
+        $pinStatus = if ($PinStatusesById -and $PinStatusesById.ContainsKey($packageId)) { $PinStatusesById[$packageId] } else { $null }
+        $isInstalled = ($null -ne $installed)
+        $isUpdateAvailable = ($isInstalled -and [bool]$installed.IsUpdateAvailable)
+        $status = "READY"
+        $plannedAction = if ($Action -eq "upgrade") { "Upgrade" } else { "Install" }
+        $reason = "Ready to run."
+        $canRun = $true
+        $policyAllowed = $true
+        $policyReason = ""
+
+        if ([string]::IsNullOrWhiteSpace($packageId)) {
+            $status = "UNRESOLVED"
+            $plannedAction = "Skip"
+            $reason = "Missing package identifier."
+            $canRun = $false
+        } elseif (Get-Command Test-WingetterPackageAllowedBySourcePolicy -ErrorAction SilentlyContinue) {
+            $policyCheck = Test-WingetterPackageAllowedBySourcePolicy -Policy $SourcePolicy -PackageId $packageId -SourceName $sourceName
+            $policyAllowed = [bool]$policyCheck.Allowed
+            $policyReason = [string]$policyCheck.Reason
+            if (!$policyAllowed) {
+                $status = "BLOCKED"
+                $plannedAction = "Skip"
+                $reason = $policyReason
+                $canRun = $false
+            }
+        }
+
+        if ($canRun -and $Action -eq "upgrade") {
+            if (!$isInstalled) {
+                $status = "NOT_INSTALLED"
+                $plannedAction = "Skip"
+                $reason = "Package is not detected as installed."
+                $canRun = $false
+            } elseif (!$isUpdateAvailable) {
+                $status = "CURRENT"
+                $plannedAction = "Skip"
+                $reason = "Installed package is already current."
+                $canRun = $false
+            }
+        } elseif ($canRun -and $Action -eq "install" -and $isInstalled) {
+            $status = if ($isUpdateAvailable) { "INSTALLED_UPDATE_AVAILABLE" } else { "INSTALLED_CURRENT" }
+            $plannedAction = "Skip"
+            $reason = if ($isUpdateAvailable) { "Already installed; update is available in update mode." } else { "Already installed." }
+            $canRun = $false
+        }
+
+        if ($pinStatus -and $pinStatus.IsPinned) {
+            $summary.pinned++
+            if ($canRun -and $Action -eq "upgrade" -and !$IncludePinned) {
+                $status = "PINNED"
+                $plannedAction = "Skip"
+                $reason = $pinStatus.Summary
+                $canRun = $false
+            }
+        }
+
+        if ($isUpdateAvailable) { $summary.updateAvailable++ }
+        switch ($status) {
+            "BLOCKED" { $summary.blocked++ }
+            "UNRESOLVED" { $summary.unresolved++ }
+            "CURRENT" { $summary.current++ }
+            "INSTALLED_CURRENT" { $summary.current++ }
+        }
+        if ($canRun) { $summary.runnable++ } else { $summary.skipped++ }
+
+        [void]$items.Add([PSCustomObject][ordered]@{
+            Name             = $name
+            PackageId        = $packageId
+            SourceName       = $sourceName
+            RequestedAction  = $Action
+            PlannedAction    = $plannedAction
+            Status           = $status
+            Reason           = $reason
+            CanRun           = [bool]$canRun
+            SelectedForRun   = [bool]$canRun
+            IsInstalled      = [bool]$isInstalled
+            IsUpdateAvailable = [bool]$isUpdateAvailable
+            InstalledVersion = if ($installed) { [string]$installed.InstalledVersion } else { "" }
+            AvailableVersion = if ($installed) { [string]$installed.AvailableVersion } else { "" }
+            PinStatus        = if ($pinStatus) { [string]$pinStatus.Summary } else { "" }
+            PinType          = if ($pinStatus) { [string]$pinStatus.PinType } else { "None" }
+            SourceAllowed    = [bool]$policyAllowed
+            SourceReason     = $policyReason
+        })
+    }
+
+    [PSCustomObject][ordered]@{
+        Schema          = "Wingetter.RunPlan.v1"
+        GeneratedAtUtc  = (Get-Date).ToUniversalTime().ToString("o")
+        ProfileName     = $ProfileName
+        RequestedAction = $Action
+        IncludePinned   = [bool]$IncludePinned
+        Summary         = [PSCustomObject]$summary
+        Packages        = @($items)
+    }
+}
+
+function Export-WingetterRunPlan {
+    param(
+        [object]$RunPlan,
+        [string]$FilePath
+    )
+
+    $parent = Split-Path -Parent $FilePath
+    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+    $RunPlan | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+    return $FilePath
+}
+
 function Get-WinGetLogDirectory {
     $path = Join-Path $env:LOCALAPPDATA "Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\DiagOutputDir"
     if (Test-Path $path) { return $path }

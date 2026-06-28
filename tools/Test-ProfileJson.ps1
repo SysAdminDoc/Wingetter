@@ -277,6 +277,14 @@ if ($failures.Count -eq 0) {
                 StdErrExcerpt = "failed"
             }
         )
+        $runPlan = [PSCustomObject]@{
+            Schema = "Wingetter.RunPlan.v1"
+            Summary = [PSCustomObject]@{ runnable = 1; skipped = 1; blocked = 0 }
+            Packages = @(
+                [PSCustomObject]@{ Name = "Google Chrome"; PackageId = "Google.Chrome"; PlannedAction = "Install"; Status = "READY"; Reason = "Ready to run." },
+                [PSCustomObject]@{ Name = "Mozilla Firefox"; PackageId = "Mozilla.Firefox"; PlannedAction = "Skip"; Status = "INSTALLED_CURRENT"; Reason = "Already installed." }
+            )
+        }
         $report = New-WingetterMigrationReport `
             -ProfileName "Smoke" `
             -SelectedPackages @(
@@ -286,7 +294,8 @@ if ($failures.Count -eq 0) {
             -RunResults $runResults `
             -InstalledRecords $installedRecords `
             -ImportWarnings @("one warning") `
-            -RunLogDir $tempDir
+            -RunLogDir $tempDir `
+            -RunPlan $runPlan
         if ($report.schema -ne "Wingetter.MigrationReport.v1") {
             Add-Failure "Migration report has the wrong schema."
         }
@@ -296,6 +305,9 @@ if ($failures.Count -eq 0) {
         if (@($report.packages).Count -ne 2 -or $report.packages[0].installedVersion -ne "124.0") {
             Add-Failure "Migration report did not include package version state."
         }
+        if ($report.runPlan.Schema -ne "Wingetter.RunPlan.v1" -or $report.runPlan.Summary.runnable -ne 1) {
+            Add-Failure "Migration report did not include the preflight run plan."
+        }
         $reportPath = Join-Path $tempDir "migration-report.json"
         Export-WingetterMigrationReport -Report $report -FilePath $reportPath
         $roundTripReport = Get-Content -Path $reportPath -Raw | ConvertFrom-Json
@@ -303,7 +315,7 @@ if ($failures.Count -eq 0) {
             Add-Failure "Migration report JSON export did not round trip."
         }
         $markdown = ConvertTo-WingetterMigrationMarkdown -Report $report
-        if ($markdown -notmatch "Wingetter Migration Report" -or $markdown -notmatch "Google.Chrome") {
+        if ($markdown -notmatch "Wingetter Migration Report" -or $markdown -notmatch "Google.Chrome" -or $markdown -notmatch "Preflight Plan") {
             Add-Failure "Migration report Markdown export did not include expected content."
         }
     } finally {

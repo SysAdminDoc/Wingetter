@@ -278,7 +278,8 @@ function New-WingetterMigrationReport {
         [object[]]$RunResults,
         [hashtable]$InstalledRecords = @{},
         [string[]]$ImportWarnings = @(),
-        [string]$RunLogDir = ""
+        [string]$RunLogDir = "",
+        [object]$RunPlan = $null
     )
 
     $generatedUtc = (Get-Date).ToUniversalTime().ToString("o")
@@ -327,6 +328,7 @@ function New-WingetterMigrationReport {
         profileName    = $ProfileName
         runLogDir      = $RunLogDir
         importWarnings = @($ImportWarnings)
+        runPlan        = $RunPlan
         summary        = [ordered]@{
             selected  = @($SelectedPackages).Count
             succeeded = [int]$statusCounts["SUCCESS"]
@@ -347,6 +349,9 @@ function ConvertTo-WingetterMigrationMarkdown {
     [void]$sb.AppendLine("- Generated UTC: $($Report.generatedUtc)")
     [void]$sb.AppendLine("- Profile: $($Report.profileName)")
     [void]$sb.AppendLine("- Run log directory: $($Report.runLogDir)")
+    if ($Report.runPlan) {
+        [void]$sb.AppendLine("- Preflight plan: $($Report.runPlan.Summary.runnable) runnable, $($Report.runPlan.Summary.skipped) skipped, $($Report.runPlan.Summary.blocked) blocked")
+    }
     [void]$sb.AppendLine("- Selected: $($Report.summary.selected)")
     [void]$sb.AppendLine("- Succeeded: $($Report.summary.succeeded)")
     [void]$sb.AppendLine("- Skipped/current: $($Report.summary.skipped)")
@@ -356,6 +361,17 @@ function ConvertTo-WingetterMigrationMarkdown {
         [void]$sb.AppendLine("")
         [void]$sb.AppendLine("## Import Warnings")
         foreach ($warning in @($Report.importWarnings)) { [void]$sb.AppendLine("- $warning") }
+    }
+    if ($Report.runPlan) {
+        [void]$sb.AppendLine("")
+        [void]$sb.AppendLine("## Preflight Plan")
+        [void]$sb.AppendLine("")
+        [void]$sb.AppendLine("| Package | ID | Plan | Status | Reason |")
+        [void]$sb.AppendLine("|---|---|---|---|---|")
+        foreach ($package in @($Report.runPlan.Packages)) {
+            $reason = ([string]$package.Reason) -replace '\|', '\|'
+            [void]$sb.AppendLine("| $($package.Name) | $($package.PackageId) | $($package.PlannedAction) | $($package.Status) | $reason |")
+        }
     }
     [void]$sb.AppendLine("")
     [void]$sb.AppendLine("## Packages")

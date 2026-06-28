@@ -4,13 +4,6 @@
 
 ### P1
 
-- [ ] P1 - Add a preflight run plan
-  Why: Users should know before execution which selected packages are already current, pinned, blocked by source policy, unavailable, missing metadata, or likely to update.
-  Evidence: Ninite skip-current reporting; WinGet import/export warning model; `src/Wingetter.WinGet.ps1:818-870`; `src/Wingetter.UpdateWatcher.ps1:184-205`.
-  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Sources.ps1`, `src\Wingetter.Ui.ps1`, `src\Wingetter.Groups.ps1`, `tools\Test-WinGetRunner.ps1`.
-  Acceptance: clicking install/update first builds a reviewable JSON-backed plan with per-package action/status/reason/source/pin/version fields; blocked or unresolved packages are removable before execution; final migration report includes the plan.
-  Complexity: L
-
 - [ ] P1 - Add UI automation and screenshot accessibility smoke tests
   Why: Current tests parse XAML and control labels but do not exercise dark/light themes, profile/gallery dialogs, update mode, empty states, overflow, or screen-reader flow.
   Evidence: `tools\Test-VisualAccessibility.ps1`; `tools\Test-Xaml.ps1`; `src/Wingetter.Ui.ps1:624-680`; Chocolatey GUI issue #645; UniGetUI v2026.2.2 UI-state release notes.

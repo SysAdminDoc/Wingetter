@@ -23,6 +23,17 @@ if (!(Test-Path $modulePath)) {
     }
 }
 
+$sourcesModulePath = Join-Path $SourceDir "Wingetter.Sources.ps1"
+if (!(Test-Path $sourcesModulePath)) {
+    Add-Failure "Missing source module 'Wingetter.Sources.ps1'."
+} else {
+    try {
+        . (Resolve-Path $sourcesModulePath).Path
+    } catch {
+        Add-Failure "Could not import 'Wingetter.Sources.ps1': $($_.Exception.Message)"
+    }
+}
+
 if ($failures.Count -eq 0) {
     $joined = Join-ProcessArguments -Arguments @("install", "--id", "Example.Package", "--exact", "--custom", "value with spaces")
     if ($joined -ne 'install --id Example.Package --exact --custom "value with spaces"') {
@@ -243,6 +254,68 @@ if ($failures.Count -eq 0) {
         if ($cleanListArgs -notcontains $expectedListArg) {
             Add-Failure "WinGet 1.29 list arguments did not include '$expectedListArg'."
         }
+    }
+
+    $policy = [PSCustomObject]@{
+        CorporateMode        = $true
+        RequireAllowedSource = $true
+        AllowedSources       = @([PSCustomObject]@{ Name = "winget"; Type = "Microsoft.PreIndexed.Package"; Argument = ""; TrustLevel = "Trusted"; Explicit = $false; Private = $false; Header = "" })
+        PrivateSources       = @()
+    }
+    $installedRecords = @{
+        "Google.Chrome" = [PSCustomObject]@{
+            PackageId = "Google.Chrome"; InstalledVersion = "124.0"; AvailableVersion = "125.0"; IsUpdateAvailable = $true
+            Source = "winget"; Scope = "machine"; DetectionMethod = "fixture"; ScannedAtUtc = "2026-06-27T00:00:00.0000000Z"
+        }
+        "Mozilla.Firefox" = [PSCustomObject]@{
+            PackageId = "Mozilla.Firefox"; InstalledVersion = "115.0"; AvailableVersion = ""; IsUpdateAvailable = $false
+            Source = "winget"; Scope = "user"; DetectionMethod = "fixture"; ScannedAtUtc = "2026-06-27T00:00:00.0000000Z"
+        }
+    }
+    $pinStatuses = @{
+        "Google.Chrome" = [PSCustomObject]@{ PackageId = "Google.Chrome"; IsPinned = $true; PinType = "Blocking"; Summary = "Blocking pin" }
+    }
+    $planPackages = @(
+        [PSCustomObject]@{ Name = "Google Chrome"; WingetId = "Google.Chrome"; SourceName = "winget" },
+        [PSCustomObject]@{ Name = "Mozilla Firefox"; WingetId = "Mozilla.Firefox"; SourceName = "winget" },
+        [PSCustomObject]@{ Name = "Internal Tool"; WingetId = "Internal.Tool"; SourceName = "corp" },
+        [PSCustomObject]@{ Name = "New App"; WingetId = "Example.NewApp"; SourceName = "winget" }
+    )
+    $installPlan = New-WingetterRunPlan -Action "install" -SelectedPackages $planPackages -InstalledRecords $installedRecords -SourcePolicy $policy -PinStatusesById $pinStatuses -IncludePinned $false -ProfileName "Fixture"
+    $installById = @{}
+    foreach ($item in @($installPlan.Packages)) { $installById[[string]$item.PackageId] = $item }
+    if (!$installById["Example.NewApp"].CanRun -or $installById["Example.NewApp"].PlannedAction -ne "Install") {
+        Add-Failure "Install preflight plan did not mark a new allowed package as runnable."
+    }
+    if ($installById["Mozilla.Firefox"].CanRun -or $installById["Mozilla.Firefox"].Status -ne "INSTALLED_CURRENT") {
+        Add-Failure "Install preflight plan did not skip an already installed/current package."
+    }
+    if ($installById["Internal.Tool"].CanRun -or $installById["Internal.Tool"].Status -ne "BLOCKED" -or $installById["Internal.Tool"].SourceAllowed) {
+        Add-Failure "Install preflight plan did not block a disallowed corporate source package."
+    }
+
+    $upgradePlan = New-WingetterRunPlan -Action "upgrade" -SelectedPackages $planPackages -InstalledRecords $installedRecords -SourcePolicy $policy -PinStatusesById $pinStatuses -IncludePinned $false -ProfileName "Fixture"
+    $upgradeById = @{}
+    foreach ($item in @($upgradePlan.Packages)) { $upgradeById[[string]$item.PackageId] = $item }
+    if ($upgradeById["Google.Chrome"].CanRun -or $upgradeById["Google.Chrome"].Status -ne "PINNED") {
+        Add-Failure "Upgrade preflight plan did not skip a pinned update when include-pinned is disabled."
+    }
+    if ($upgradeById["Mozilla.Firefox"].CanRun -or $upgradeById["Mozilla.Firefox"].Status -ne "CURRENT") {
+        Add-Failure "Upgrade preflight plan did not skip a current installed package."
+    }
+    $includePinnedPlan = New-WingetterRunPlan -Action "upgrade" -SelectedPackages @($planPackages[0]) -InstalledRecords $installedRecords -SourcePolicy $policy -PinStatusesById $pinStatuses -IncludePinned $true -ProfileName "Fixture"
+    if (-not $includePinnedPlan.Packages[0].CanRun -or $includePinnedPlan.Packages[0].PlannedAction -ne "Upgrade") {
+        Add-Failure "Upgrade preflight plan did not allow a pinned update when include-pinned is enabled."
+    }
+    $planPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-plan-" + [System.Guid]::NewGuid().ToString("N") + ".json")
+    try {
+        Export-WingetterRunPlan -RunPlan $installPlan -FilePath $planPath | Out-Null
+        $savedPlan = Get-Content -Path $planPath -Raw | ConvertFrom-Json
+        if ($savedPlan.Schema -ne "Wingetter.RunPlan.v1" -or $savedPlan.Summary.blocked -lt 1) {
+            Add-Failure "Exported preflight plan JSON did not preserve schema and summary."
+        }
+    } finally {
+        Remove-Item -Path $planPath -Force -ErrorAction SilentlyContinue
     }
 
     $showSample = @"

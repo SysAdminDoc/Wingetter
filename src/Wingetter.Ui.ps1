@@ -322,6 +322,8 @@ function Start-WingetterOperationWorker {
         [object]$SourcePolicy = $null,
         [string]$ProfileName = "Manual selection",
         [string[]]$ImportWarnings = @(),
+        [string]$RunLogDir = "",
+        [object]$RunPlan = $null,
         [string]$ModuleDirectory = (Get-WingetterUiModuleDirectory)
     )
 
@@ -350,6 +352,8 @@ function Start-WingetterOperationWorker {
             $sourcePolicy,
             [string]$profileName,
             [string[]]$importWarnings,
+            [string]$runLogDir,
+            $runPlan,
             [string]$moduleDirectory
         )
 
@@ -371,7 +375,9 @@ function Start-WingetterOperationWorker {
             }
 
             if ($mode -eq "OfflineDownload") {
-                $runLogDir = New-WingetterRunLogDirectory -Action "download"
+                if ([string]::IsNullOrWhiteSpace($runLogDir)) {
+                    $runLogDir = New-WingetterRunLogDirectory -Action "download"
+                }
                 $downloadResults = [System.Collections.ArrayList]::new()
                 $total = @($selectedPackages).Count
                 $current = 0
@@ -427,7 +433,9 @@ function Start-WingetterOperationWorker {
             }
 
             $sourceAdapter = Get-WingetterPackageSourceAdapter -Name $packageSourceName
-            $runLogDir = New-WingetterRunLogDirectory -Action $operation
+            if ([string]::IsNullOrWhiteSpace($runLogDir)) {
+                $runLogDir = New-WingetterRunLogDirectory -Action $operation
+            }
             $runResults = [System.Collections.ArrayList]::new()
             $total = @($selectedPackages).Count
             $current = 0
@@ -506,7 +514,8 @@ function Start-WingetterOperationWorker {
                 -RunResults $runResults.ToArray() `
                 -InstalledRecords $installedById `
                 -ImportWarnings $importWarnings `
-                -RunLogDir $runLogDir
+                -RunLogDir $runLogDir `
+                -RunPlan $runPlan
             $reportPath = Join-Path $runLogDir "migration-report.json"
             try { Export-WingetterMigrationReport -Report $report -FilePath $reportPath } catch {}
 
@@ -551,6 +560,8 @@ function Start-WingetterOperationWorker {
     [void]$ps.AddArgument($SourcePolicy)
     [void]$ps.AddArgument($ProfileName)
     [void]$ps.AddArgument($ImportWarnings)
+    [void]$ps.AddArgument($RunLogDir)
+    [void]$ps.AddArgument($RunPlan)
     [void]$ps.AddArgument($ModuleDirectory)
 
     [PSCustomObject]@{
@@ -561,6 +572,159 @@ function Start-WingetterOperationWorker {
         Handle      = $ps.BeginInvoke()
         DoneMessage = $null
     }
+}
+
+function Show-WingetterRunPlanDialog {
+    param(
+        [object]$RunPlan,
+        [System.Windows.Window]$Owner = $null
+    )
+
+    $bc = [System.Windows.Media.BrushConverter]::new()
+    $window = New-Object System.Windows.Window
+    $window.Title = "Review Wingetter Run Plan"
+    $window.Width = 860
+    $window.Height = 560
+    $window.MinWidth = 720
+    $window.MinHeight = 440
+    $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
+    $window.Background = $bc.ConvertFromString("#071018")
+    if ($Owner) {
+        $window.Owner = $Owner
+        $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterOwner
+    }
+
+    $root = New-Object System.Windows.Controls.DockPanel
+    $root.Margin = [System.Windows.Thickness]::new(18)
+    $window.Content = $root
+
+    $header = New-Object System.Windows.Controls.StackPanel
+    $header.Margin = [System.Windows.Thickness]::new(0, 0, 0, 12)
+    [System.Windows.Controls.DockPanel]::SetDock($header, [System.Windows.Controls.Dock]::Top)
+    [void]$root.Children.Add($header)
+
+    $title = New-Object System.Windows.Controls.TextBlock
+    $title.Text = "Preflight run plan"
+    $title.FontSize = 20
+    $title.FontWeight = [System.Windows.FontWeights]::SemiBold
+    $title.Foreground = $bc.ConvertFromString("#f8fafc")
+    [void]$header.Children.Add($title)
+
+    $summary = New-Object System.Windows.Controls.TextBlock
+    $summary.Margin = [System.Windows.Thickness]::new(0, 6, 0, 0)
+    $summary.FontSize = 12
+    $summary.Foreground = $bc.ConvertFromString("#94a7bc")
+    $summary.Text = "$($RunPlan.Summary.runnable) runnable, $($RunPlan.Summary.skipped) skipped, $($RunPlan.Summary.blocked) blocked, $($RunPlan.Summary.current) current."
+    [void]$header.Children.Add($summary)
+
+    $buttonBar = New-Object System.Windows.Controls.StackPanel
+    $buttonBar.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+    $buttonBar.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+    $buttonBar.Margin = [System.Windows.Thickness]::new(0, 12, 0, 0)
+    [System.Windows.Controls.DockPanel]::SetDock($buttonBar, [System.Windows.Controls.Dock]::Bottom)
+    [void]$root.Children.Add($buttonBar)
+
+    $runButton = New-Object System.Windows.Controls.Button
+    $runButton.Content = "Run Selected"
+    $runButton.Padding = [System.Windows.Thickness]::new(16, 8, 16, 8)
+    $runButton.Margin = [System.Windows.Thickness]::new(0, 0, 8, 0)
+    $runButton.IsDefault = $true
+    [void]$buttonBar.Children.Add($runButton)
+
+    $cancelButton = New-Object System.Windows.Controls.Button
+    $cancelButton.Content = "Cancel"
+    $cancelButton.Padding = [System.Windows.Thickness]::new(16, 8, 16, 8)
+    $cancelButton.IsCancel = $true
+    [void]$buttonBar.Children.Add($cancelButton)
+
+    $scroll = New-Object System.Windows.Controls.ScrollViewer
+    $scroll.VerticalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Auto
+    $scroll.Background = $bc.ConvertFromString("#0b1725")
+    $scroll.Padding = [System.Windows.Thickness]::new(8)
+    [void]$root.Children.Add($scroll)
+
+    $list = New-Object System.Windows.Controls.StackPanel
+    $scroll.Content = $list
+    $checks = New-Object System.Collections.ArrayList
+
+    foreach ($item in @($RunPlan.Packages)) {
+        $row = New-Object System.Windows.Controls.Border
+        $row.Margin = [System.Windows.Thickness]::new(0, 0, 0, 8)
+        $row.Padding = [System.Windows.Thickness]::new(10)
+        $row.CornerRadius = [System.Windows.CornerRadius]::new(6)
+        $row.BorderThickness = [System.Windows.Thickness]::new(1)
+        $row.BorderBrush = $bc.ConvertFromString("#1f3145")
+        $row.Background = if ($item.CanRun) { $bc.ConvertFromString("#0d1b2b") } else { $bc.ConvertFromString("#111827") }
+
+        $grid = New-Object System.Windows.Controls.Grid
+        $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = [System.Windows.GridLength]::Auto
+        $col1 = New-Object System.Windows.Controls.ColumnDefinition; $col1.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+        $col2 = New-Object System.Windows.Controls.ColumnDefinition; $col2.Width = [System.Windows.GridLength]::Auto
+        $grid.ColumnDefinitions.Add($col0); $grid.ColumnDefinitions.Add($col1); $grid.ColumnDefinitions.Add($col2)
+        $row.Child = $grid
+
+        $check = New-Object System.Windows.Controls.CheckBox
+        $check.IsChecked = [bool]$item.SelectedForRun
+        $check.IsEnabled = [bool]$item.CanRun
+        $check.Tag = $item.PackageId
+        $check.Margin = [System.Windows.Thickness]::new(0, 3, 12, 0)
+        [System.Windows.Controls.Grid]::SetColumn($check, 0)
+        [void]$grid.Children.Add($check)
+        [void]$checks.Add($check)
+
+        $textStack = New-Object System.Windows.Controls.StackPanel
+        [System.Windows.Controls.Grid]::SetColumn($textStack, 1)
+        [void]$grid.Children.Add($textStack)
+
+        $nameText = New-Object System.Windows.Controls.TextBlock
+        $nameText.Text = "$($item.Name) [$($item.PackageId)]"
+        $nameText.Foreground = $bc.ConvertFromString("#e5edf5")
+        $nameText.FontWeight = [System.Windows.FontWeights]::SemiBold
+        $nameText.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        [void]$textStack.Children.Add($nameText)
+
+        $detailText = New-Object System.Windows.Controls.TextBlock
+        $detailText.Text = "Source: $($item.SourceName)  Installed: $($item.InstalledVersion)  Available: $($item.AvailableVersion)  Pin: $($item.PinStatus)"
+        $detailText.Foreground = $bc.ConvertFromString("#94a7bc")
+        $detailText.FontSize = 11
+        $detailText.Margin = [System.Windows.Thickness]::new(0, 4, 0, 0)
+        $detailText.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        [void]$textStack.Children.Add($detailText)
+
+        $reasonText = New-Object System.Windows.Controls.TextBlock
+        $reasonText.Text = $item.Reason
+        $reasonText.Foreground = if ($item.CanRun) { $bc.ConvertFromString("#9fd3ff") } else { $bc.ConvertFromString("#ffbf69") }
+        $reasonText.FontSize = 11
+        $reasonText.Margin = [System.Windows.Thickness]::new(0, 4, 0, 0)
+        $reasonText.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        [void]$textStack.Children.Add($reasonText)
+
+        $status = New-Object System.Windows.Controls.TextBlock
+        $status.Text = "$($item.PlannedAction) / $($item.Status)"
+        $status.Foreground = if ($item.CanRun) { $bc.ConvertFromString("#78ddb1") } else { $bc.ConvertFromString("#ffbf69") }
+        $status.FontWeight = [System.Windows.FontWeights]::SemiBold
+        $status.FontSize = 11
+        $status.Margin = [System.Windows.Thickness]::new(12, 2, 0, 0)
+        [System.Windows.Controls.Grid]::SetColumn($status, 2)
+        [void]$grid.Children.Add($status)
+
+        [void]$list.Children.Add($row)
+    }
+
+    $runButton.Add_Click({
+        foreach ($item in @($RunPlan.Packages)) {
+            $match = @($checks | Where-Object { [string]$_.Tag -eq [string]$item.PackageId } | Select-Object -First 1)
+            $item.SelectedForRun = ($match.Count -gt 0 -and [bool]$match[0].IsChecked -and [bool]$item.CanRun)
+        }
+        $window.DialogResult = $true
+        $window.Close()
+    }.GetNewClosure())
+    $cancelButton.Add_Click({
+        $window.DialogResult = $false
+        $window.Close()
+    }.GetNewClosure())
+
+    return ([bool]$window.ShowDialog())
 }
 
 function Show-WinGetInstallerGUI {
@@ -3002,37 +3166,16 @@ function Show-WinGetInstallerGUI {
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can install packages. Use 'Install WinGet' and try again.", "WinGet Required", "OK", "Warning"); return }
         $selected = @()
-        $blockedByPolicy = @()
         foreach ($cb in $ui["AllCheckboxes"].Values) {
             if ($cb.IsChecked) {
                 $sourceName = Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name
-                $policyCheck = Test-WingetterPackageAllowedBySourcePolicy -Policy $ui["SourcePolicy"] -PackageId $cb.Tag.WingetId -SourceName $sourceName
-                if (!$policyCheck.Allowed) {
-                    $blockedByPolicy += "$($cb.Tag.Name) [$sourceName]"
-                } else {
-                    $selected += [PSCustomObject]@{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName }
-                }
+                $selected += [PSCustomObject]@{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName }
             }
-        }
-        if ($blockedByPolicy.Count -gt 0) {
-            [System.Windows.MessageBox]::Show("Corporate source policy blocked: $($blockedByPolicy -join ', ')", "Source Policy Blocked", "OK", "Warning")
-            $ProgressText.Text = "Corporate source policy blocked $($blockedByPolicy.Count) selected package(s)."
-            return
         }
         if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }
 
-        # Show log panel and clear previous entries
-        $LogEntriesPanel.Children.Clear()
-        $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
-        $LogToggleBtn.Content = "Hide"
-        $ui["Cancelled"] = $false
-        & $SetOperationRunningState $true
-
         $isUpdate = $ui["IsUpdateMode"]
         $operation = if ($isUpdate) { "upgrade" } else { "install" }
-        $ProgressBar.Value = 0
-        $ProgressPercent.Text = "0%"
-        $ProgressText.Text = if ($isUpdate) { "Preparing update run..." } else { "Preparing install run..." }
         $profileName = "Manual selection"
         try {
             if ($ui["IsUpdateMode"]) {
@@ -3042,10 +3185,58 @@ function Show-WinGetInstallerGUI {
             }
         } catch {}
 
+        $pinStatuses = @{}
+        foreach ($pinId in @($ui["PinnedIds"].Keys)) {
+            $pinType = [string]$ui["PinnedIds"][$pinId]
+            $pinStatuses[[string]$pinId] = [PSCustomObject]@{
+                PackageId = [string]$pinId
+                IsPinned  = $true
+                PinType   = $pinType
+                Summary   = if ($pinType -and $pinType -ne "None") { "$pinType pin" } else { "Pinned" }
+            }
+        }
+        $runPlan = New-WingetterRunPlan `
+            -Action $operation `
+            -SelectedPackages $selected `
+            -InstalledRecords $ui["InstalledIds"] `
+            -SourcePolicy $ui["SourcePolicy"] `
+            -PinStatusesById $pinStatuses `
+            -IncludePinned ([bool]$IncludePinnedCheck.IsChecked) `
+            -ProfileName $profileName
+        $runLogDir = New-WingetterRunLogDirectory -Action $operation
+        $runPlanPath = Join-Path $runLogDir "preflight-plan.json"
+        $runPlan | Add-Member -MemberType NoteProperty -Name PlanPath -Value $runPlanPath -Force
+        Export-WingetterRunPlan -RunPlan $runPlan -FilePath $runPlanPath | Out-Null
+        if (-not (Show-WingetterRunPlanDialog -RunPlan $runPlan -Owner $Window)) {
+            Export-WingetterRunPlan -RunPlan $runPlan -FilePath $runPlanPath | Out-Null
+            $ProgressText.Text = "Run cancelled before execution. Preflight plan: $runPlanPath"
+            return
+        }
+        Export-WingetterRunPlan -RunPlan $runPlan -FilePath $runPlanPath | Out-Null
+        $selectedIdsToRun = @{}
+        foreach ($planItem in @($runPlan.Packages | Where-Object { $_.SelectedForRun })) {
+            $selectedIdsToRun[[string]$planItem.PackageId] = $true
+        }
+        $selectedToRun = @($selected | Where-Object { $selectedIdsToRun.ContainsKey([string]$_.WingetId) })
+        if ($selectedToRun.Count -eq 0) {
+            $ProgressText.Text = "No packages selected to run after preflight. Plan: $runPlanPath"
+            return
+        }
+
+        # Show log panel and clear previous entries
+        $LogEntriesPanel.Children.Clear()
+        $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
+        $LogToggleBtn.Content = "Hide"
+        $ui["Cancelled"] = $false
+        & $SetOperationRunningState $true
+        $ProgressBar.Value = 0
+        $ProgressPercent.Text = "0%"
+        $ProgressText.Text = if ($isUpdate) { "Starting update run from preflight plan..." } else { "Starting install run from preflight plan..." }
+
         try {
             $worker = Start-WingetterOperationWorker `
                 -Mode "PackageOperation" `
-                -SelectedPackages $selected `
+                -SelectedPackages $selectedToRun `
                 -PackageSourceName ([string]$ui["PackageSource"].Name) `
                 -Operation $operation `
                 -IsUpdate $isUpdate `
@@ -3053,7 +3244,9 @@ function Show-WinGetInstallerGUI {
                 -AcceptAgreements ([bool]$AcceptCheck.IsChecked) `
                 -IncludePinned ([bool]$IncludePinnedCheck.IsChecked) `
                 -ProfileName $profileName `
-                -ImportWarnings $ui["LastImportWarnings"]
+                -ImportWarnings $ui["LastImportWarnings"] `
+                -RunLogDir $runLogDir `
+                -RunPlan $runPlan
             & $StartOperationMessagePump $worker
         } catch {
             & $SetOperationRunningState $false

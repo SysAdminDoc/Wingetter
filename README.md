@@ -31,6 +31,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Metadata-rich search** -- ranked local search across names, package IDs, categories, built-in groups, publisher-like ID tokens, installed state, source, scope, update state, and pin state
 - **Favicon icons** -- parallel-fetched from app domains with colored letter fallbacks and local caching
 - **Bulk install** -- select any combination and install them all in sequence via a responsive background worker
+- **Preflight run plan** -- review what will run, skip current/pinned/blocked/unresolved packages, and save the JSON plan with the run logs
 - **Update mode** -- toggle between Install and Update mode to upgrade already-installed apps
 - **Installed app detection** -- background scan prefers `Microsoft.WinGet.Client`, falls back to `winget list`, and caches detected versions under `%APPDATA%\Wingetter`
 - **Package trust details** -- click an app to inspect source, publisher, installed/latest version, installer type, URL, SHA256, and metadata warnings
@@ -49,7 +50,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Enhanced tooltips** -- hover to see app name and WingetId
 - **Install log panel** -- color-coded per-app results (success/skipped/failed) with summary
 - **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`; WinGet 1.29+ runs use cleaner `--no-progress` output where supported
-- **Migration reports** -- completed install/update runs create exportable Markdown or JSON reports with summary counts, commands, result paths, versions, and sources
+- **Migration reports** -- completed install/update runs create exportable Markdown or JSON reports with the preflight plan, summary counts, commands, result paths, versions, and sources
 - **Scheduled update checks** -- optional Windows scheduled task checks for available updates, respects pins/source policy, can skip metered networks, rotates logs, and never auto-installs
 - **Offline download cache** -- download selected installers in the background with `winget download`, write an offline manifest, and generate a replay script for later installer launch
 - **Toast notifications** -- Windows notification when batch install completes
@@ -125,8 +126,8 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 2. Browse categories using the sidebar or use the search bar to find apps
 3. Check the boxes for everything you want to install (Shift-click for range selection)
 4. Optionally toggle **Silent Install** and **Auto-accept Agreements**
-5. Click **Install Selected** to kick off the batch install
-6. Review results in the log panel -- color-coded per app
+5. Click **Install Selected** to review the preflight plan and remove anything that should not run
+6. Start the reviewed plan and monitor results in the log panel -- color-coded per app
 7. Save your selection as a named group for next time, or export it as a standalone PS1/JSON
 
 ### Exporting
