@@ -60,6 +60,7 @@ $steps = @(
     @{ Name = "Offline Cache"; RelativePath = "tools\Test-OfflineCache.ps1" },
     @{ Name = "WinGet Configuration"; RelativePath = "tools\Test-ConfigurationExport.ps1" },
     @{ Name = "Visual Accessibility"; RelativePath = "tools\Test-VisualAccessibility.ps1" },
+    @{ Name = "UI Smoke"; RelativePath = "tools\Test-UiSmoke.ps1"; UseSta = $true },
     @{ Name = "Release Artifact"; RelativePath = "tools\Test-ReleaseArtifact.ps1" },
     @{ Name = "Launcher Manifest"; RelativePath = "tools\Test-LauncherManifest.ps1" },
     @{ Name = "Bundle"; RelativePath = "tools\Test-Bundle.ps1" },

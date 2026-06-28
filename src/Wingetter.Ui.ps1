@@ -727,7 +727,253 @@ function Show-WingetterRunPlanDialog {
     return ([bool]$window.ShowDialog())
 }
 
+function Add-WingetterUiSmokeFailure {
+    param(
+        [hashtable]$Ui,
+        [string]$Message
+    )
+
+    if ($null -ne $Ui -and ![string]::IsNullOrWhiteSpace($Message)) {
+        [void]$Ui["SmokeFailures"].Add($Message)
+    }
+}
+
+function Save-WingetterUiSmokeScreenshot {
+    param(
+        [hashtable]$Ui,
+        [System.Windows.Window]$Window,
+        [string]$Name,
+        [System.Windows.FrameworkElement]$Element = $Window
+    )
+
+    if ($null -eq $Ui -or $null -eq $Element) { return }
+    if ([string]::IsNullOrWhiteSpace($Ui["SmokeOutputPath"])) {
+        $Ui["SmokeOutputPath"] = (Join-Path ([System.IO.Path]::GetTempPath()) "WingetterUiSmoke")
+    }
+    New-Item -ItemType Directory -Path $Ui["SmokeOutputPath"] -Force | Out-Null
+    $safeName = ($Name -replace '[^\w\.-]', '_')
+    if (!$safeName.EndsWith(".png", [System.StringComparison]::OrdinalIgnoreCase)) {
+        $safeName = "$safeName.png"
+    }
+    $path = Join-Path $Ui["SmokeOutputPath"] $safeName
+
+    $Element.UpdateLayout()
+    $width = [int][math]::Max(1, [math]::Ceiling($Element.ActualWidth))
+    $height = [int][math]::Max(1, [math]::Ceiling($Element.ActualHeight))
+    if ($width -lt 100 -or $height -lt 100) {
+        Add-WingetterUiSmokeFailure -Ui $Ui -Message "Screenshot target '$Name' rendered at ${width}x${height}."
+        return
+    }
+
+    $bitmap = [System.Windows.Media.Imaging.RenderTargetBitmap]::new(
+        $width,
+        $height,
+        96,
+        96,
+        [System.Windows.Media.PixelFormats]::Pbgra32
+    )
+    $bitmap.Render($Element)
+    $encoder = [System.Windows.Media.Imaging.PngBitmapEncoder]::new()
+    $encoder.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+    $stream = [System.IO.File]::Create($path)
+    try {
+        $encoder.Save($stream)
+    } finally {
+        $stream.Dispose()
+    }
+    [void]$Ui["SmokeScreenshots"].Add($path)
+}
+
+function Get-WingetterUiSmokeBounds {
+    param(
+        [System.Windows.Window]$Window,
+        [System.Windows.FrameworkElement]$Element
+    )
+
+    if ($null -eq $Element -or $null -eq $Window) { return $null }
+    if ($Element.Visibility -ne [System.Windows.Visibility]::Visible) { return $null }
+    if ($Element.ActualWidth -le 0 -or $Element.ActualHeight -le 0) { return $null }
+    try {
+        $transform = $Element.TransformToAncestor($Window)
+        return $transform.TransformBounds([System.Windows.Rect]::new(0, 0, $Element.ActualWidth, $Element.ActualHeight))
+    } catch {
+        return $null
+    }
+}
+
+function Test-WingetterUiSmokeAccessibleName {
+    param(
+        [hashtable]$Ui,
+        [string]$Name,
+        [System.Windows.Controls.Control]$Control
+    )
+
+    if ($null -eq $Control) {
+        Add-WingetterUiSmokeFailure -Ui $Ui -Message "Smoke control '$Name' was not found."
+        return
+    }
+
+    $automationName = [System.Windows.Automation.AutomationProperties]::GetName($Control)
+    $text = ""
+    if ($Control.PSObject.Properties["Content"]) {
+        $text = [string]$Control.Content
+    } elseif ($Control.PSObject.Properties["Text"]) {
+        $text = [string]$Control.Text
+    }
+    $toolTip = ""
+    try { $toolTip = [string]$Control.ToolTip } catch {}
+
+    if ([string]::IsNullOrWhiteSpace($automationName) -and
+        [string]::IsNullOrWhiteSpace($text) -and
+        [string]::IsNullOrWhiteSpace($toolTip)) {
+        Add-WingetterUiSmokeFailure -Ui $Ui -Message "Smoke control '$Name' has no screen-reader label source."
+    }
+}
+
+function Test-WingetterUiSmokeBounds {
+    param(
+        [hashtable]$Ui,
+        [System.Windows.Window]$Window,
+        [string]$Name,
+        [System.Windows.FrameworkElement]$Element
+    )
+
+    $bounds = Get-WingetterUiSmokeBounds -Window $Window -Element $Element
+    if ($null -eq $bounds) {
+        Add-WingetterUiSmokeFailure -Ui $Ui -Message "Smoke control '$Name' did not produce visible bounds."
+        return
+    }
+    if ($bounds.Width -lt 10 -or $bounds.Height -lt 10) {
+        Add-WingetterUiSmokeFailure -Ui $Ui -Message "Smoke control '$Name' rendered too small ($([math]::Round($bounds.Width))x$([math]::Round($bounds.Height)))."
+        return
+    }
+
+    $windowWidth = [math]::Max(1, $Window.ActualWidth)
+    $windowHeight = [math]::Max(1, $Window.ActualHeight)
+    if ($bounds.Right -gt ($windowWidth + 2) -or $bounds.Bottom -gt ($windowHeight + 2) -or $bounds.Left -lt -2 -or $bounds.Top -lt -2) {
+        Add-WingetterUiSmokeFailure -Ui $Ui -Message "Smoke control '$Name' rendered outside the window bounds."
+    }
+}
+
+function Test-WingetterUiSmokeNoOverlap {
+    param(
+        [hashtable]$Ui,
+        [System.Windows.Window]$Window,
+        [object[]]$NamedControls
+    )
+
+    $visibleRects = [System.Collections.ArrayList]::new()
+    foreach ($entry in @($NamedControls)) {
+        $bounds = Get-WingetterUiSmokeBounds -Window $Window -Element $entry.Control
+        if ($null -ne $bounds) {
+            [void]$visibleRects.Add([PSCustomObject]@{ Name = [string]$entry.Name; Rect = $bounds })
+        }
+    }
+    for ($i = 0; $i -lt $visibleRects.Count; $i++) {
+        for ($j = $i + 1; $j -lt $visibleRects.Count; $j++) {
+            $intersection = [System.Windows.Rect]::Intersect($visibleRects[$i].Rect, $visibleRects[$j].Rect)
+            if (!$intersection.IsEmpty -and $intersection.Width -gt 2 -and $intersection.Height -gt 2) {
+                Add-WingetterUiSmokeFailure -Ui $Ui -Message "Smoke controls '$($visibleRects[$i].Name)' and '$($visibleRects[$j].Name)' overlap."
+            }
+        }
+    }
+}
+
+function Test-WingetterUiSmokeBaseline {
+    param(
+        [hashtable]$Ui,
+        [System.Windows.Window]$Window,
+        [hashtable]$Controls
+    )
+
+    foreach ($entry in @(
+        @{ Name = "ModeBtn"; Control = $Controls["ModeBtn"] },
+        @{ Name = "SearchBox"; Control = $Controls["SearchBox"] },
+        @{ Name = "GalleryBtn"; Control = $Controls["GalleryBtn"] },
+        @{ Name = "UpdateAllBtn"; Control = $Controls["UpdateAllBtn"] },
+        @{ Name = "InstallBtn"; Control = $Controls["InstallBtn"] },
+        @{ Name = "GroupCombo"; Control = $Controls["GroupCombo"] }
+    )) {
+        Test-WingetterUiSmokeAccessibleName -Ui $Ui -Name $entry.Name -Control $entry.Control
+        Test-WingetterUiSmokeBounds -Ui $Ui -Window $Window -Name $entry.Name -Element $entry.Control
+    }
+    Test-WingetterUiSmokeNoOverlap -Ui $Ui -Window $Window -NamedControls @(
+        @{ Name = "ModeBtn"; Control = $Controls["ModeBtn"] },
+        @{ Name = "GalleryBtn"; Control = $Controls["GalleryBtn"] },
+        @{ Name = "UpdateAllBtn"; Control = $Controls["UpdateAllBtn"] },
+        @{ Name = "InstallBtn"; Control = $Controls["InstallBtn"] },
+        @{ Name = "SearchBox"; Control = $Controls["SearchBox"] }
+    )
+}
+
+function Invoke-WingetterUiSmokeButtonClick {
+    param(
+        [hashtable]$Ui,
+        [System.Windows.Controls.Button]$Button
+    )
+
+    if ($null -eq $Button) {
+        Add-WingetterUiSmokeFailure -Ui $Ui -Message "Smoke tried to click a missing button."
+        return
+    }
+    $clickArgs = [System.Windows.RoutedEventArgs]::new([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
+    $Button.RaiseEvent($clickArgs)
+}
+
+function Add-WingetterUiSmokeInstalledFixtures {
+    param([hashtable]$Ui)
+
+    $fixtureApps = [System.Collections.ArrayList]::new()
+    foreach ($category in $Script:SoftwareDatabase.Keys) {
+        foreach ($app in @($Script:SoftwareDatabase[$category])) {
+            if ($fixtureApps.Count -lt 3) {
+                [void]$fixtureApps.Add($app)
+            }
+        }
+        if ($fixtureApps.Count -ge 3) { break }
+    }
+
+    $fixtureIds = @{}
+    foreach ($app in @($fixtureApps)) {
+        $sourceName = Get-WingetterPackageCatalogSourceName -App $app -DefaultSource $Ui["PackageSource"].Name
+        $Ui["InstalledIds"][[string]$app.WingetId] = [PSCustomObject]@{
+            PackageId         = [string]$app.WingetId
+            Name              = [string]$app.Name
+            Source            = $sourceName
+            SourceName        = $sourceName
+            Scope             = "User"
+            InstalledVersion  = "1.0.0"
+            AvailableVersion  = "1.0.1"
+            IsUpdateAvailable = $true
+        }
+        $fixtureIds[[string]$app.WingetId] = $true
+    }
+
+    $appIndex = 0
+    $themeName = if ($Ui["IsDark"]) { "Dark" } else { "Light" }
+    $theme = $Ui["Themes"][$themeName]
+    $brush = [System.Windows.Media.BrushConverter]::new()
+    foreach ($category in $Script:SoftwareDatabase.Keys) {
+        foreach ($app in @($Script:SoftwareDatabase[$category])) {
+            if ($fixtureIds.ContainsKey([string]$app.WingetId)) {
+                try {
+                    $Ui["Elements"]["InstalledDots"][$appIndex].Visibility = [System.Windows.Visibility]::Visible
+                    $Ui["Elements"]["AppLabels"][$appIndex].Foreground = $brush.ConvertFromString($theme["AppSubtleText"])
+                    $Ui["Elements"]["AppBorders"][$appIndex].Opacity = 0.55
+                } catch {}
+            }
+            $appIndex++
+        }
+    }
+}
+
 function Show-WinGetInstallerGUI {
+    [CmdletBinding()]
+    param(
+        [switch]$SmokeTest,
+        [string]$SmokeOutputPath = (Join-Path ([System.IO.Path]::GetTempPath()) "WingetterUiSmoke")
+    )
+
     # Shared mutable state - local hashtable captured by closures
     $ui = @{
         AllCheckboxes = @{}
@@ -742,6 +988,11 @@ function Show-WinGetInstallerGUI {
         Themes        = $Script:Themes
         Categories    = [System.Collections.ArrayList]::new()
         IconQueue     = [System.Collections.ArrayList]::new()
+        SmokeTest     = [bool]$SmokeTest
+        SmokeOutputPath = $SmokeOutputPath
+        SmokeFailures = [System.Collections.Generic.List[string]]::new()
+        SmokeScreenshots = [System.Collections.Generic.List[string]]::new()
+        SmokeStep = "not started"
         Elements      = @{
             CategoryCards   = [System.Collections.ArrayList]::new()
             CategoryHeaders = [System.Collections.ArrayList]::new()
@@ -1390,6 +1641,7 @@ function Show-WinGetInstallerGUI {
     $ClearSearchBtn   = $Window.FindName("ClearSearchBtn")
     $SearchPlaceholder= $Window.FindName("SearchPlaceholder")
     $VisibleCountText = $Window.FindName("VisibleCountText")
+    $SidebarBorder    = $Window.FindName("SidebarBorder")
     $SidebarPanel     = $Window.FindName("SidebarPanel")
     $Divider1         = $Window.FindName("Divider1")
     $Divider2         = $Window.FindName("Divider2")
@@ -1398,6 +1650,8 @@ function Show-WinGetInstallerGUI {
     $LogScrollViewer  = $Window.FindName("LogScrollViewer")
     $LogToggleBtn     = $Window.FindName("LogToggleBtn")
     $LogTitle         = $Window.FindName("LogTitle")
+    $ToolbarHintBorder = $Window.FindName("ToolbarHintBorder")
+    $ToolbarHintText  = $Window.FindName("ToolbarHintText")
     $PackageDetailsBorder = $Window.FindName("PackageDetailsBorder")
     $PackageDetailsCloseBtn = $Window.FindName("PackageDetailsCloseBtn")
     $EmptyStateBorder = $Window.FindName("EmptyStateBorder")
@@ -2398,7 +2652,13 @@ function Show-WinGetInstallerGUI {
             $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Visible
         }
     }
-    & $checkWinGet
+    if ($SmokeTest) {
+        $WinGetStatus.Text = "WinGet smoke"
+        $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1fb879")
+        $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Collapsed
+    } else {
+        & $checkWinGet
+    }
 
     # ========================================================
     # EVENT HANDLERS
@@ -3431,9 +3691,417 @@ function Show-WinGetInstallerGUI {
     & $UpdateCardLayout
     & $ApplyFilter
 
+    $AddSmokeFailure = {
+        param([string]$Message)
+        if (![string]::IsNullOrWhiteSpace($Message)) {
+            [void]$ui["SmokeFailures"].Add($Message)
+        }
+    }
+
+    $SaveSmokeScreenshot = {
+        param(
+            [string]$Name,
+            [System.Windows.FrameworkElement]$Element = $Window
+        )
+
+        if (-not $SmokeTest) { return }
+        if ([string]::IsNullOrWhiteSpace($ui["SmokeOutputPath"])) {
+            $ui["SmokeOutputPath"] = (Join-Path ([System.IO.Path]::GetTempPath()) "WingetterUiSmoke")
+        }
+        New-Item -ItemType Directory -Path $ui["SmokeOutputPath"] -Force | Out-Null
+        $safeName = ($Name -replace '[^\w\.-]', '_')
+        if (!$safeName.EndsWith(".png", [System.StringComparison]::OrdinalIgnoreCase)) {
+            $safeName = "$safeName.png"
+        }
+        $path = Join-Path $ui["SmokeOutputPath"] $safeName
+
+        $Element.UpdateLayout()
+        $width = [int][math]::Max(1, [math]::Ceiling($Element.ActualWidth))
+        $height = [int][math]::Max(1, [math]::Ceiling($Element.ActualHeight))
+        if ($width -lt 100 -or $height -lt 100) {
+            & $AddSmokeFailure "Screenshot target '$Name' rendered at ${width}x${height}."
+            return
+        }
+
+        $bitmap = [System.Windows.Media.Imaging.RenderTargetBitmap]::new(
+            $width,
+            $height,
+            96,
+            96,
+            [System.Windows.Media.PixelFormats]::Pbgra32
+        )
+        $bitmap.Render($Element)
+        $encoder = [System.Windows.Media.Imaging.PngBitmapEncoder]::new()
+        $encoder.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
+        $stream = [System.IO.File]::Create($path)
+        try {
+            $encoder.Save($stream)
+        } finally {
+            $stream.Dispose()
+        }
+        [void]$ui["SmokeScreenshots"].Add($path)
+    }
+
+    $AssertSmokeAccessibleName = {
+        param(
+            [string]$Name,
+            [System.Windows.Controls.Control]$Control
+        )
+
+        if ($null -eq $Control) {
+            & $AddSmokeFailure "Smoke control '$Name' was not found."
+            return
+        }
+
+        $automationName = [System.Windows.Automation.AutomationProperties]::GetName($Control)
+        $text = ""
+        if ($Control.PSObject.Properties["Content"]) {
+            $text = [string]$Control.Content
+        } elseif ($Control.PSObject.Properties["Text"]) {
+            $text = [string]$Control.Text
+        }
+        $toolTip = ""
+        try { $toolTip = [string]$Control.ToolTip } catch {}
+
+        if ([string]::IsNullOrWhiteSpace($automationName) -and
+            [string]::IsNullOrWhiteSpace($text) -and
+            [string]::IsNullOrWhiteSpace($toolTip)) {
+            & $AddSmokeFailure "Smoke control '$Name' has no screen-reader label source."
+        }
+    }
+
+    $GetSmokeBounds = {
+        param([System.Windows.FrameworkElement]$Element)
+
+        if ($null -eq $Element -or $null -eq $ui["Window"]) { return $null }
+        if ($Element.Visibility -ne [System.Windows.Visibility]::Visible) { return $null }
+        if ($Element.ActualWidth -le 0 -or $Element.ActualHeight -le 0) { return $null }
+        try {
+            $transform = $Element.TransformToAncestor($ui["Window"])
+            return $transform.TransformBounds([System.Windows.Rect]::new(0, 0, $Element.ActualWidth, $Element.ActualHeight))
+        } catch {
+            return $null
+        }
+    }
+
+    $AssertSmokeBounds = {
+        param(
+            [string]$Name,
+            [System.Windows.FrameworkElement]$Element
+        )
+
+        $bounds = & $GetSmokeBounds $Element
+        if ($null -eq $bounds) {
+            & $AddSmokeFailure "Smoke control '$Name' did not produce visible bounds."
+            return
+        }
+        if ($bounds.Width -lt 10 -or $bounds.Height -lt 10) {
+            & $AddSmokeFailure "Smoke control '$Name' rendered too small ($([math]::Round($bounds.Width))x$([math]::Round($bounds.Height)))."
+            return
+        }
+        $windowWidth = [math]::Max(1, $ui["Window"].ActualWidth)
+        $windowHeight = [math]::Max(1, $ui["Window"].ActualHeight)
+        if ($bounds.Right -gt ($windowWidth + 2) -or $bounds.Bottom -gt ($windowHeight + 2) -or $bounds.Left -lt -2 -or $bounds.Top -lt -2) {
+            & $AddSmokeFailure "Smoke control '$Name' rendered outside the window bounds."
+        }
+    }
+
+    $AssertSmokeNoOverlap = {
+        param([object[]]$NamedControls)
+
+        $visibleRects = [System.Collections.ArrayList]::new()
+        foreach ($entry in @($NamedControls)) {
+            $bounds = & $GetSmokeBounds $entry.Control
+            if ($null -ne $bounds) {
+                [void]$visibleRects.Add([PSCustomObject]@{ Name = [string]$entry.Name; Rect = $bounds })
+            }
+        }
+        for ($i = 0; $i -lt $visibleRects.Count; $i++) {
+            for ($j = $i + 1; $j -lt $visibleRects.Count; $j++) {
+                $intersection = [System.Windows.Rect]::Intersect($visibleRects[$i].Rect, $visibleRects[$j].Rect)
+                if (!$intersection.IsEmpty -and $intersection.Width -gt 2 -and $intersection.Height -gt 2) {
+                    & $AddSmokeFailure "Smoke controls '$($visibleRects[$i].Name)' and '$($visibleRects[$j].Name)' overlap."
+                }
+            }
+        }
+    }
+
+    $ClickSmokeButton = {
+        param([System.Windows.Controls.Button]$Button)
+        if ($null -eq $Button) {
+            & $AddSmokeFailure "Smoke tried to click a missing button."
+            return
+        }
+        $clickArgs = [System.Windows.RoutedEventArgs]::new([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
+        $Button.RaiseEvent($clickArgs)
+    }
+
+    $AddSmokeInstalledFixtures = {
+        $fixtureApps = [System.Collections.ArrayList]::new()
+        foreach ($category in $Script:SoftwareDatabase.Keys) {
+            foreach ($app in @($Script:SoftwareDatabase[$category])) {
+                if ($fixtureApps.Count -lt 3) {
+                    [void]$fixtureApps.Add($app)
+                }
+            }
+            if ($fixtureApps.Count -ge 3) { break }
+        }
+
+        $fixtureIds = @{}
+        foreach ($app in @($fixtureApps)) {
+            $sourceName = Get-WingetterPackageCatalogSourceName -App $app -DefaultSource $ui["PackageSource"].Name
+            $ui["InstalledIds"][[string]$app.WingetId] = [PSCustomObject]@{
+                PackageId         = [string]$app.WingetId
+                Name              = [string]$app.Name
+                Source            = $sourceName
+                SourceName        = $sourceName
+                Scope             = "User"
+                InstalledVersion  = "1.0.0"
+                AvailableVersion  = "1.0.1"
+                IsUpdateAvailable = $true
+            }
+            $fixtureIds[[string]$app.WingetId] = $true
+        }
+
+        $appIndex = 0
+        $themeName = if ($ui["IsDark"]) { "Dark" } else { "Light" }
+        $theme = $ui["Themes"][$themeName]
+        $brush = [System.Windows.Media.BrushConverter]::new()
+        foreach ($category in $Script:SoftwareDatabase.Keys) {
+            foreach ($app in @($Script:SoftwareDatabase[$category])) {
+                if ($fixtureIds.ContainsKey([string]$app.WingetId)) {
+                    try {
+                        $ui["Elements"]["InstalledDots"][$appIndex].Visibility = [System.Windows.Visibility]::Visible
+                        $ui["Elements"]["AppLabels"][$appIndex].Foreground = $brush.ConvertFromString($theme["AppSubtleText"])
+                        $ui["Elements"]["AppBorders"][$appIndex].Opacity = 0.55
+                    } catch {}
+                }
+                $appIndex++
+            }
+        }
+        & $ApplyFilter
+    }
+
+    $AssertSmokeBaseline = {
+        foreach ($entry in @(
+            @{ Name = "ModeBtn"; Control = $ModeBtn },
+            @{ Name = "SearchBox"; Control = $SearchBox },
+            @{ Name = "GalleryBtn"; Control = $GalleryBtn },
+            @{ Name = "UpdateAllBtn"; Control = $UpdateAllBtn },
+            @{ Name = "InstallBtn"; Control = $InstallBtn },
+            @{ Name = "GroupCombo"; Control = $GroupCombo }
+        )) {
+            & $AssertSmokeAccessibleName $entry.Name $entry.Control
+            & $AssertSmokeBounds $entry.Name $entry.Control
+        }
+        & $AssertSmokeNoOverlap @(
+            @{ Name = "ModeBtn"; Control = $ModeBtn },
+            @{ Name = "GalleryBtn"; Control = $GalleryBtn },
+            @{ Name = "UpdateAllBtn"; Control = $UpdateAllBtn },
+            @{ Name = "InstallBtn"; Control = $InstallBtn },
+            @{ Name = "SearchBox"; Control = $SearchBox }
+        )
+    }
+
+    $StartSmokeScenario = {
+        if (-not $SmokeTest) { return $null }
+
+        New-Item -ItemType Directory -Path $ui["SmokeOutputPath"] -Force | Out-Null
+        $ui["SmokeScenarioState"] = @{ Step = 0; Detail = "starting"; GalleryOpened = $false }
+        $ui["SmokeControls"] = @{
+            ModeBtn          = $ModeBtn
+            SearchBox        = $SearchBox
+            GalleryBtn       = $GalleryBtn
+            UpdateAllBtn     = $UpdateAllBtn
+            InstallBtn       = $InstallBtn
+            GroupCombo       = $GroupCombo
+            EmptyStateBorder = $EmptyStateBorder
+        }
+        $Script:WingetterUiSmokeState = $ui
+        $timer = New-Object System.Windows.Threading.DispatcherTimer
+        $timer.Interval = [TimeSpan]::FromMilliseconds(250)
+        $ui["SmokeTimer"] = $timer
+        $timer.Add_Tick({
+            param($tickSender, $tickArgs)
+            [void]$tickArgs
+            $smokeUi = $Script:WingetterUiSmokeState
+            $smokeWindow = $smokeUi["Window"]
+            $smokeState = $smokeUi["SmokeScenarioState"]
+            $smokeControls = $smokeUi["SmokeControls"]
+            try {
+                $smokeWindow.UpdateLayout()
+                switch ($smokeState.Step) {
+                    0 {
+                        $smokeState.Detail = "add installed fixtures"
+                        $smokeUi["SmokeStep"] = "0 - add installed fixtures"
+                        Add-WingetterUiSmokeInstalledFixtures -Ui $smokeUi
+                        $smokeState.Detail = "initial layout"
+                        $smokeUi["SmokeStep"] = "0 - initial layout"
+                        $smokeWindow.UpdateLayout()
+                        $smokeState.Detail = "baseline assertions"
+                        $smokeUi["SmokeStep"] = "0 - baseline assertions"
+                        Test-WingetterUiSmokeBaseline -Ui $smokeUi -Window $smokeWindow -Controls $smokeControls
+                        $smokeState.Detail = "dark screenshot"
+                        $smokeUi["SmokeStep"] = "0 - dark screenshot"
+                        Save-WingetterUiSmokeScreenshot -Ui $smokeUi -Window $smokeWindow -Name "01-dark-main.png" -Element $smokeWindow
+                    }
+                    1 {
+                        $smokeState.Detail = "theme toggle"
+                        $smokeUi["SmokeStep"] = "1 - theme toggle"
+                        Invoke-WingetterUiSmokeButtonClick -Ui $smokeUi -Button $smokeControls["ModeBtn"]
+                        $smokeWindow.UpdateLayout()
+                        if ($smokeUi["IsDark"]) { Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Theme toggle did not switch to light mode." }
+                        $smokeState.Detail = "light baseline assertions"
+                        $smokeUi["SmokeStep"] = "1 - light baseline assertions"
+                        Test-WingetterUiSmokeBaseline -Ui $smokeUi -Window $smokeWindow -Controls $smokeControls
+                        $smokeState.Detail = "light screenshot"
+                        $smokeUi["SmokeStep"] = "1 - light screenshot"
+                        Save-WingetterUiSmokeScreenshot -Ui $smokeUi -Window $smokeWindow -Name "02-light-main.png" -Element $smokeWindow
+                    }
+                    2 {
+                        $smokeState.Detail = "empty search"
+                        $smokeUi["SmokeStep"] = "2 - empty search"
+                        $smokeControls["SearchBox"].Text = "__wingetter_no_smoke_match__"
+                        $smokeWindow.UpdateLayout()
+                        if ($smokeControls["EmptyStateBorder"].Visibility -ne [System.Windows.Visibility]::Visible) {
+                            Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Search did not reveal the empty state."
+                        }
+                        Test-WingetterUiSmokeBounds -Ui $smokeUi -Window $smokeWindow -Name "EmptyStateBorder" -Element $smokeControls["EmptyStateBorder"]
+                        $smokeState.Detail = "empty screenshot"
+                        $smokeUi["SmokeStep"] = "2 - empty screenshot"
+                        Save-WingetterUiSmokeScreenshot -Ui $smokeUi -Window $smokeWindow -Name "03-empty-state.png" -Element $smokeWindow
+                    }
+                    3 {
+                        $smokeState.Detail = "open profile gallery"
+                        $smokeUi["SmokeStep"] = "3 - open profile gallery"
+                        $smokeUi["SmokeGalleryState"] = @{ Attempts = 0 }
+                        $galleryCloseTimer = New-Object System.Windows.Threading.DispatcherTimer
+                        $galleryCloseTimer.Interval = [TimeSpan]::FromMilliseconds(150)
+                        $galleryCloseTimer.Add_Tick({
+                            param($gallerySender, $galleryArgs)
+                            [void]$galleryArgs
+                            $smokeUiInner = $Script:WingetterUiSmokeState
+                            $galleryState = $smokeUiInner["SmokeGalleryState"]
+                            $galleryState.Attempts++
+                            $ownedWindows = @($smokeUiInner["Window"].OwnedWindows | Where-Object { $_.Title -eq "Wingetter Profile Gallery" })
+                            if ($ownedWindows.Count -gt 0) {
+                                $smokeUiInner["SmokeScenarioState"].GalleryOpened = $true
+                                $galleryWindow = $ownedWindows[0]
+                                $galleryWindow.UpdateLayout()
+                                Save-WingetterUiSmokeScreenshot -Ui $smokeUiInner -Window $smokeUiInner["Window"] -Name "04-profile-gallery.png" -Element $galleryWindow
+                                $gallerySender.Stop()
+                                $galleryWindow.Close()
+                            } elseif ($galleryState.Attempts -gt 40) {
+                                $gallerySender.Stop()
+                            }
+                        }.GetNewClosure())
+                        $galleryCloseTimer.Start()
+                        Invoke-WingetterUiSmokeButtonClick -Ui $smokeUi -Button $smokeControls["GalleryBtn"]
+                        $galleryCloseTimer.Stop()
+                        if (-not $smokeState.GalleryOpened) {
+                            Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Profile gallery did not open."
+                        }
+                        $smokeWindow.UpdateLayout()
+                        Save-WingetterUiSmokeScreenshot -Ui $smokeUi -Window $smokeWindow -Name "05-after-gallery.png" -Element $smokeWindow
+                    }
+                    4 {
+                        $smokeState.Detail = "enter update mode"
+                        $smokeUi["SmokeStep"] = "4 - enter update mode"
+                        $smokeControls["SearchBox"].Clear()
+                        $smokeWindow.UpdateLayout()
+                        if ($smokeUi["InstalledIds"].Count -eq 0) {
+                            Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Smoke fixture did not populate installed package records."
+                        }
+                        Invoke-WingetterUiSmokeButtonClick -Ui $smokeUi -Button $smokeControls["UpdateAllBtn"]
+                        $smokeWindow.UpdateLayout()
+                        if (-not $smokeUi["IsUpdateMode"]) {
+                            Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Review Updates did not enter update mode."
+                        }
+                        if ($smokeControls["GalleryBtn"].Visibility -ne [System.Windows.Visibility]::Collapsed) {
+                            Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Profile gallery button remained visible in update mode."
+                        }
+                        Test-WingetterUiSmokeBounds -Ui $smokeUi -Window $smokeWindow -Name "UpdateAllBtn" -Element $smokeControls["UpdateAllBtn"]
+                        Save-WingetterUiSmokeScreenshot -Ui $smokeUi -Window $smokeWindow -Name "06-update-mode.png" -Element $smokeWindow
+                    }
+                    5 {
+                        $smokeState.Detail = "exit update mode"
+                        $smokeUi["SmokeStep"] = "5 - exit update mode"
+                        Invoke-WingetterUiSmokeButtonClick -Ui $smokeUi -Button $smokeControls["UpdateAllBtn"]
+                        $smokeWindow.UpdateLayout()
+                        if ($smokeUi["IsUpdateMode"]) {
+                            Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Back to Browse did not exit update mode."
+                        }
+                        if ($smokeControls["GalleryBtn"].Visibility -ne [System.Windows.Visibility]::Visible) {
+                            Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Profile gallery button did not return after update mode."
+                        }
+                        Test-WingetterUiSmokeBaseline -Ui $smokeUi -Window $smokeWindow -Controls $smokeControls
+                        Save-WingetterUiSmokeScreenshot -Ui $smokeUi -Window $smokeWindow -Name "07-browse-restored.png" -Element $smokeWindow
+                    }
+                    default {
+                        $smokeState.Detail = "closing"
+                        $smokeUi["SmokeStep"] = "closing"
+                        $tickSender.Stop()
+                        $smokeWindow.Close()
+                    }
+                }
+                $smokeState.Step++
+            } catch {
+                Add-WingetterUiSmokeFailure -Ui $smokeUi -Message "Smoke scenario step $($smokeState.Step) ($($smokeState.Detail)) threw: $($_.Exception.Message)"
+                $tickSender.Stop()
+                $smokeWindow.Close()
+            }
+        }.GetNewClosure())
+        $timer.Start()
+        return $timer
+    }
+
     Update-Splash $splash "Ready!" 100
     $splash.Window.Close()
 
+    $installedTimer = $null
+    $installedHandle = $null
+    $installedPs = $null
+    $installedRunspace = $null
+    $iconTimer = $null
+    $iconPool = $null
+    $iconJobs = [System.Collections.ArrayList]::new()
+    $smokeTimer = $null
+    if ($SmokeTest) {
+        $ui["SmokeControls"] = @{
+            ModeBtn          = $ModeBtn
+            SearchBox        = $SearchBox
+            GalleryBtn       = $GalleryBtn
+            UpdateAllBtn     = $UpdateAllBtn
+            InstallBtn       = $InstallBtn
+            GroupCombo       = $GroupCombo
+            EmptyStateBorder = $EmptyStateBorder
+        }
+        $Script:WingetterUiSmokeState = $ui
+        $Window.Tag = $ui
+        $Window.Dispatcher.add_UnhandledException({
+            param($smokeSender, $smokeArgs)
+            [void]$smokeSender
+            $smokeUi = $Script:WingetterUiSmokeState
+            $smokeDetail = ""
+            try {
+                if ($smokeArgs.Exception.ErrorRecord -and $smokeArgs.Exception.ErrorRecord.InvocationInfo) {
+                    $smokeDetail = " $($smokeArgs.Exception.ErrorRecord.InvocationInfo.PositionMessage)"
+                }
+            } catch {}
+            $smokeStep = if ($smokeUi -and $smokeUi.ContainsKey("SmokeStep")) { [string]$smokeUi["SmokeStep"] } else { "unknown" }
+            if ($smokeUi -and $smokeUi.ContainsKey("SmokeFailures")) {
+                $smokeUi["SmokeFailures"].Add("Dispatcher exception during ${smokeStep}: $($smokeArgs.Exception.Message)$smokeDetail") | Out-Null
+            }
+            $smokeArgs.Handled = $true
+            try {
+                if ($smokeUi -and $smokeUi.ContainsKey("Window") -and $smokeUi["Window"]) {
+                    $smokeUi["Window"].Close()
+                }
+            } catch {}
+        }.GetNewClosure())
+    }
+
+    if (-not $SmokeTest) {
     # ==============================================================
     # ASYNC INSTALLED APP DETECTION - prefer Microsoft.WinGet.Client, fallback to winget list
     # ==============================================================
@@ -3625,17 +4293,116 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
     $iconTimer.Start()
+    }
 
-    $Window.ShowDialog() | Out-Null
+    if ($SmokeTest) {
+        New-Item -ItemType Directory -Path $ui["SmokeOutputPath"] -Force | Out-Null
+        [void]$Window.Show()
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        $Window.UpdateLayout()
+
+        Add-WingetterUiSmokeInstalledFixtures -Ui $ui
+        Test-WingetterUiSmokeBaseline -Ui $ui -Window $Window -Controls $ui["SmokeControls"]
+        Save-WingetterUiSmokeScreenshot -Ui $ui -Window $Window -Name "01-dark-main.png" -Element $Window
+
+        Invoke-WingetterUiSmokeButtonClick -Ui $ui -Button $ModeBtn
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        $Window.UpdateLayout()
+        if ($ui["IsDark"]) {
+            Add-WingetterUiSmokeFailure -Ui $ui -Message "Theme toggle did not switch to light mode."
+        }
+        Test-WingetterUiSmokeBaseline -Ui $ui -Window $Window -Controls $ui["SmokeControls"]
+        Save-WingetterUiSmokeScreenshot -Ui $ui -Window $Window -Name "02-light-main.png" -Element $Window
+
+        $SearchBox.Text = "__wingetter_no_smoke_match__"
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        $Window.UpdateLayout()
+        if ($EmptyStateBorder.Visibility -ne [System.Windows.Visibility]::Visible) {
+            Add-WingetterUiSmokeFailure -Ui $ui -Message "Search did not reveal the empty state."
+        }
+        Test-WingetterUiSmokeBounds -Ui $ui -Window $Window -Name "EmptyStateBorder" -Element $EmptyStateBorder
+        Save-WingetterUiSmokeScreenshot -Ui $ui -Window $Window -Name "03-empty-state.png" -Element $Window
+
+        $ui["SmokeGalleryOpened"] = $false
+        $ui["SmokeGalleryAttempts"] = 0
+        $Script:WingetterUiSmokeGalleryAction = [System.Action]{
+            $smokeUi = $Script:WingetterUiSmokeState
+            if (-not $smokeUi) { return }
+            $smokeUi["SmokeGalleryAttempts"] = [int]$smokeUi["SmokeGalleryAttempts"] + 1
+            $ownedWindows = @($smokeUi["Window"].OwnedWindows | Where-Object { $_.Title -eq "Wingetter Profile Gallery" })
+            if ($ownedWindows.Count -gt 0) {
+                $smokeUi["SmokeGalleryOpened"] = $true
+                $galleryWindow = $ownedWindows[0]
+                $galleryWindow.UpdateLayout()
+                Save-WingetterUiSmokeScreenshot -Ui $smokeUi -Window $smokeUi["Window"] -Name "04-profile-gallery.png" -Element $galleryWindow
+                $galleryWindow.Close()
+            } elseif ([int]$smokeUi["SmokeGalleryAttempts"] -lt 20) {
+                [void]$smokeUi["Window"].Dispatcher.BeginInvoke($Script:WingetterUiSmokeGalleryAction, [System.Windows.Threading.DispatcherPriority]::Background)
+            }
+        }
+        [void]$Window.Dispatcher.BeginInvoke($Script:WingetterUiSmokeGalleryAction, [System.Windows.Threading.DispatcherPriority]::Background)
+        Invoke-WingetterUiSmokeButtonClick -Ui $ui -Button $GalleryBtn
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        $Window.UpdateLayout()
+        if (-not [bool]$ui["SmokeGalleryOpened"]) {
+            Add-WingetterUiSmokeFailure -Ui $ui -Message "Profile gallery did not open."
+        }
+        Save-WingetterUiSmokeScreenshot -Ui $ui -Window $Window -Name "05-after-gallery.png" -Element $Window
+
+        $SearchBox.Clear()
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        $Window.UpdateLayout()
+        if ($ui["InstalledIds"].Count -eq 0) {
+            Add-WingetterUiSmokeFailure -Ui $ui -Message "Smoke fixture did not populate installed package records."
+        }
+        Invoke-WingetterUiSmokeButtonClick -Ui $ui -Button $UpdateAllBtn
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        $Window.UpdateLayout()
+        if (-not $ui["IsUpdateMode"]) {
+            Add-WingetterUiSmokeFailure -Ui $ui -Message "Review Updates did not enter update mode."
+        }
+        if ($GalleryBtn.Visibility -ne [System.Windows.Visibility]::Collapsed) {
+            Add-WingetterUiSmokeFailure -Ui $ui -Message "Profile gallery button remained visible in update mode."
+        }
+        Test-WingetterUiSmokeBounds -Ui $ui -Window $Window -Name "UpdateAllBtn" -Element $UpdateAllBtn
+        Save-WingetterUiSmokeScreenshot -Ui $ui -Window $Window -Name "06-update-mode.png" -Element $Window
+
+        Invoke-WingetterUiSmokeButtonClick -Ui $ui -Button $UpdateAllBtn
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        $Window.UpdateLayout()
+        if ($ui["IsUpdateMode"]) {
+            Add-WingetterUiSmokeFailure -Ui $ui -Message "Back to Browse did not exit update mode."
+        }
+        if ($GalleryBtn.Visibility -ne [System.Windows.Visibility]::Visible) {
+            Add-WingetterUiSmokeFailure -Ui $ui -Message "Profile gallery button did not return after update mode."
+        }
+        Test-WingetterUiSmokeBaseline -Ui $ui -Window $Window -Controls $ui["SmokeControls"]
+        Save-WingetterUiSmokeScreenshot -Ui $ui -Window $Window -Name "07-browse-restored.png" -Element $Window
+
+        [void]$Window.Close()
+    } else {
+        $Window.ShowDialog() | Out-Null
+    }
 
     # Cleanup if window closed before icons finished
-    try { $iconTimer.Stop() } catch {}
-    try { foreach ($j in $iconJobs) { try { if (-not $j.Handle.IsCompleted) { $j.PS.Stop() }; $j.PS.Dispose() } catch {} }; $iconPool.Close() } catch {}
-    try { $installedTimer.Stop() } catch {}
-    try { if (-not $installedHandle.IsCompleted) { $installedPs.Stop() }; $installedPs.Dispose(); $installedRunspace.Close() } catch {}
+    try { if ($smokeTimer) { $smokeTimer.Stop() } } catch {}
+    try { if ($iconTimer) { $iconTimer.Stop() } } catch {}
+    try { foreach ($j in @($iconJobs)) { try { if ($j.Handle -and -not $j.Handle.IsCompleted) { $j.PS.Stop() }; $j.PS.Dispose() } catch {} }; if ($iconPool) { $iconPool.Close() } } catch {}
+    try { if ($installedTimer) { $installedTimer.Stop() } } catch {}
+    try { if ($installedPs) { if ($installedHandle -and -not $installedHandle.IsCompleted) { $installedPs.Stop() }; $installedPs.Dispose() }; if ($installedRunspace) { $installedRunspace.Close() } } catch {}
     try {
         if ($ui["OperationCancelToken"]) { $ui["OperationCancelToken"]["Cancelled"] = $true }
         if ($ui["OperationTimer"]) { $ui["OperationTimer"].Stop() }
         if ($ui["OperationWorker"]) { & $DisposeOperationWorker $ui["OperationWorker"] }
     } catch {}
+
+    if ($SmokeTest) {
+        if ($ui["SmokeFailures"].Count -gt 0) {
+            throw "Wingetter UI smoke failed: $($ui["SmokeFailures"] -join '; ')"
+        }
+        return [PSCustomObject]@{
+            OutputPath  = [string]$ui["SmokeOutputPath"]
+            Screenshots = [string[]]$ui["SmokeScreenshots"].ToArray()
+        }
+    }
 }

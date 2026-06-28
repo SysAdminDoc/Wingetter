@@ -182,7 +182,7 @@ The repo includes generated catalog snapshots in `catalog/` and validation tools
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-Validation.ps1
 ```
 
-`Invoke-Validation.ps1` runs the catalog, profile, gallery, WinGet runner, search, package-source, source-policy, update, offline-cache, configuration, accessibility, release-artifact, launcher-manifest, bundle, XAML, and PSScriptAnalyzer checks. Pass `-SkipAnalyzerInstall` if the validation run should fail instead of installing PSScriptAnalyzer when it is missing.
+`Invoke-Validation.ps1` runs the catalog, profile, gallery, WinGet runner, search, package-source, source-policy, update, offline-cache, configuration, accessibility, UI smoke screenshot, release-artifact, launcher-manifest, bundle, XAML, and PSScriptAnalyzer checks. Pass `-SkipAnalyzerInstall` if the validation run should fail instead of installing PSScriptAnalyzer when it is missing.
 
 `Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.ProfileGallery.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.OfflineCache.ps1`, `src/Wingetter.Configuration.ps1`, `src/Wingetter.UpdateWatcher.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
 

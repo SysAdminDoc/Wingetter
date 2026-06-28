@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: STA UI smoke validation in `tools\Test-UiSmoke.ps1`. It launches the real WPF surface with fixture installed-package data, toggles dark/light themes, verifies empty search state, opens the profile gallery, enters/exits update mode, captures nonblank PNG screenshots, and is wired into `tools\Invoke-Validation.ps1`.
 - Added: Preflight run plans for install/update. Wingetter now writes a JSON `preflight-plan.json`, shows a review dialog with per-package action/status/reason/source/pin/version fields, skips blocked/current/unresolved rows before execution, and embeds the plan in migration reports.
 - Changed: Install, update, and offline-cache runs now execute in a background runspace with queued UI progress/log updates and a shared cancellation token, keeping Stop responsive without `DoEvents` pumping and preventing reentry while a run is active.
 - Added: WinGet 1.29 clean-output support. Command builders feature-detect 1.29+ before adding `--no-progress`, and fallback `winget list` scans use stable `--sort name --ascending` arguments when available while keeping 1.28-compatible fallback behavior.

@@ -305,6 +305,7 @@ if (!(Test-Path $ValidationScriptPath)) {
         "Test-OfflineCache.ps1",
         "Test-ConfigurationExport.ps1",
         "Test-VisualAccessibility.ps1",
+        "Test-UiSmoke.ps1",
         "Test-ReleaseArtifact.ps1",
         "Test-LauncherManifest.ps1",
         "Test-Bundle.ps1",

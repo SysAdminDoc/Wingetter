@@ -1,30 +1,30 @@
 {
-  "schema": "Wingetter.ReleaseArtifactManifest.v1",
-  "version": "v6.1.0",
-  "generatedAtUtc": "2026-06-28T02:09:22Z",
-  "build": {
-    "source": "Bundled launcher generated from Wingetter.ps1 plus the dot-sourced modules under src/ at v6.1.0",
-    "tool": "tools\\Build-WingetterExe.ps1 with PS2EXE 1.0.18",
-    "notes": "Wingetter.exe is rebuilt locally from a parser-checked bundled launcher. No code-signing certificate was available in this environment; install trust is provided by the checked SHA256 and size manifest."
-  },
-  "artifacts": [
-    {
-      "path": "Wingetter.exe",
-      "sha256": "762C7CA71CDA2CB70EB31D18A810B7A6E358E46BCB1668E9C293CD7FF8AEF498",
-      "size": 245760,
-      "description": "PS2EXE-packaged Wingetter launcher built from v6.1.0."
-    },
-    {
-      "path": "Wingetter.ico",
-      "sha256": "465FA1FFBA9B60E5A82CEF8253EE003FFEDD51971A43722FDC2B9B656E71BC91",
-      "size": 10107,
-      "description": "Application icon bundled with Wingetter.exe."
-    },
-    {
-      "path": "icon.ico",
-      "sha256": "0EF19199CDC4F250BC568976AB1B3BE41ADA054814CEC0CCDEBD32520930AFA6",
-      "size": 15086,
-      "description": "Repository-level icon used by the launcher at runtime and the README header."
-    }
-  ]
+    "schema":  "Wingetter.ReleaseArtifactManifest.v1",
+    "version":  "v6.1.0",
+    "generatedAtUtc":  "2026-06-28T14:01:27Z",
+    "build":  {
+                  "source":  "Bundled launcher generated from Wingetter.ps1 plus the dot-sourced modules under src/ at v6.1.0",
+                  "tool":  "tools\\Build-WingetterExe.ps1 with PS2EXE 1.0.18",
+                  "notes":  "Wingetter.exe is rebuilt locally from a parser-checked bundled launcher. No code-signing certificate was available in this environment; install trust is provided by the checked SHA256 and size manifest."
+              },
+    "artifacts":  [
+                      {
+                          "path":  "Wingetter.exe",
+                          "sha256":  "350072703EA3DBF2A29B6325CDBA10A80047182571CDDB550F8D4101932444EE",
+                          "size":  506368,
+                          "description":  "PS2EXE-packaged Wingetter launcher built from v6.1.0."
+                      },
+                      {
+                          "path":  "Wingetter.ico",
+                          "sha256":  "465FA1FFBA9B60E5A82CEF8253EE003FFEDD51971A43722FDC2B9B656E71BC91",
+                          "size":  10107,
+                          "description":  "Application icon bundled with Wingetter.exe."
+                      },
+                      {
+                          "path":  "icon.ico",
+                          "sha256":  "0EF19199CDC4F250BC568976AB1B3BE41ADA054814CEC0CCDEBD32520930AFA6",
+                          "size":  15086,
+                          "description":  "Repository-level icon used by the launcher at runtime and the README header."
+                      }
+                  ]
 }
