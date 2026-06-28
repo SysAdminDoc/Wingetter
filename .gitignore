@@ -11,3 +11,8 @@ release/Wingetter.bundled.ps1
 PROJECT_CONTEXT.md
 CONTINUATION_PROMPT.md
 RESEARCH_FEATURE_PLAN*.md
+
+# AI config
+CODEX_CHANGELOG.md
+.claude/
+.codex/
