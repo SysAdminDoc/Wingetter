@@ -13,6 +13,29 @@ function Add-Failure {
     $script:failures.Add($Message)
 }
 
+function Get-WingetterFileSha256 {
+    param([string]$Path)
+
+    $hashCommand = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+    if ($hashCommand) {
+        return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant()
+    }
+
+    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    $stream = [System.IO.File]::OpenRead($resolvedPath)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($stream)
+            return ([System.BitConverter]::ToString($hashBytes)).Replace("-", "").ToUpperInvariant()
+        } finally {
+            if ($sha256 -is [System.IDisposable]) { $sha256.Dispose() }
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 if (!(Test-Path $LauncherPath)) {
     Add-Failure "Missing launcher at $LauncherPath."
 }
@@ -62,7 +85,7 @@ if ($failures.Count -eq 0) {
                     Add-Failure "Source module '$modulePath' does not exist."
                     continue
                 }
-                $actual = (Get-FileHash -Path $modulePath -Algorithm SHA256).Hash.ToUpperInvariant()
+                $actual = Get-WingetterFileSha256 -Path $modulePath
                 if ($actual -ne $entries[$file]) {
                     Add-Failure "Launcher hashtable for '$file' is stale. Expected (from disk) $actual, embedded $($entries[$file]). Re-run tools\Sync-LauncherManifest.ps1."
                 }

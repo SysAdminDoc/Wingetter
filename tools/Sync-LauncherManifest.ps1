@@ -6,6 +6,29 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Get-WingetterFileSha256 {
+    param([string]$Path)
+
+    $hashCommand = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+    if ($hashCommand) {
+        return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant()
+    }
+
+    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    $stream = [System.IO.File]::OpenRead($resolvedPath)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($stream)
+            return ([System.BitConverter]::ToString($hashBytes)).Replace("-", "").ToUpperInvariant()
+        } finally {
+            if ($sha256 -is [System.IDisposable]) { $sha256.Dispose() }
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 if (!(Test-Path $LauncherPath)) {
     Write-Host "Missing launcher at $LauncherPath." -ForegroundColor Red
     exit 1
@@ -34,7 +57,7 @@ foreach ($file in $moduleFiles) {
         Write-Host "Missing module file '$modulePath'." -ForegroundColor Red
         exit 1
     }
-    $hash = (Get-FileHash -Path $modulePath -Algorithm SHA256).Hash.ToUpperInvariant()
+    $hash = Get-WingetterFileSha256 -Path $modulePath
     $rows.Add("    '$file' = '$hash'")
 }
 
@@ -61,5 +84,6 @@ if ($updated -eq $launcherText) {
     exit 0
 }
 
-Set-Content -Path $LauncherPath -Value $updated -Encoding UTF8 -NoNewline
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText((Resolve-Path -LiteralPath $LauncherPath).Path, $updated, $utf8NoBom)
 Write-Host "Updated $LauncherPath with refreshed module hashes for $($moduleFiles.Count) module(s)."

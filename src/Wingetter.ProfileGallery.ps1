@@ -141,7 +141,7 @@ function Get-WingetterProfileGalleryItem {
         throw "Profile '$($Entry.Id)' is $([math]::Round($fileInfo.Length / 1KB, 1)) KB, which exceeds the $($Script:WingetterProfileMaxBytes / 1KB) KB gallery limit."
     }
 
-    $actualHash = (Get-FileHash -Path $Entry.ResolvedProfilePath -Algorithm SHA256).Hash.ToUpperInvariant()
+    $actualHash = Get-WingetterFileSha256 -Path $Entry.ResolvedProfilePath
     $expectedHash = ([string]$Entry.Sha256).ToUpperInvariant()
     if ([string]::IsNullOrWhiteSpace($expectedHash) -or $actualHash -ne $expectedHash) {
         throw "Profile '$($Entry.Id)' failed SHA256 verification."

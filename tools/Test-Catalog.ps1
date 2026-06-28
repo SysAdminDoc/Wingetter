@@ -5,6 +5,8 @@ param(
     [string]$GroupsPath = (Join-Path $PSScriptRoot "..\catalog\groups.json"),
     [string]$ReadmePath = (Join-Path $PSScriptRoot "..\README.md"),
     [string]$ChangelogPath = (Join-Path $PSScriptRoot "..\CHANGELOG.md"),
+    [string]$ReleaseReadmePath = (Join-Path $PSScriptRoot "..\release\README.md"),
+    [string]$ValidationScriptPath = (Join-Path $PSScriptRoot "Invoke-Validation.ps1"),
     [switch]$CheckWingetAvailability,
     [int]$AvailabilitySampleSize = 25
 )
@@ -254,9 +256,13 @@ if ($LASTEXITCODE -ne 0) {
 
 $readme = Get-Content -Path $ReadmePath -Raw
 $changelog = Get-Content -Path $ChangelogPath -Raw
+$releaseReadme = if (Test-Path $ReleaseReadmePath) { Get-Content -Path $ReleaseReadmePath -Raw } else { "" }
 
 if ($readme -notmatch "version-$([regex]::Escape($version))") {
     Add-Failure "README version badge does not mention $version."
+}
+if ($readme -notmatch [regex]::Escape("tools\Invoke-Validation.ps1")) {
+    Add-Failure "README.md does not document the one-command local validation runner."
 }
 if ($readme -notmatch "Apps-$($catalog.appCount)") {
     Add-Failure "README apps badge does not mention $($catalog.appCount)."
@@ -272,6 +278,43 @@ if ($changelog -notmatch "## \[$([regex]::Escape($version))\]") {
 }
 if ($changelog -match '%Y-|HEAD ->|origin/main|origin/HEAD') {
     Add-Failure "CHANGELOG.md still contains malformed git/date text."
+}
+foreach ($doc in @(
+    @{ Name = "README.md"; Text = $readme },
+    @{ Name = "CHANGELOG.md"; Text = $changelog },
+    @{ Name = "release/README.md"; Text = $releaseReadme }
+)) {
+    if ($doc.Text -match '\.github[\\/]workflows') {
+        Add-Failure "$($doc.Name) still references removed GitHub workflow paths."
+    }
+}
+
+if (!(Test-Path $ValidationScriptPath)) {
+    Add-Failure "Missing one-command validation runner at tools\Invoke-Validation.ps1."
+} else {
+    $validationRunner = Get-Content -Path $ValidationScriptPath -Raw
+    foreach ($requiredScript in @(
+        "Test-Catalog.ps1",
+        "Test-ProfileJson.ps1",
+        "Test-ProfileGallery.ps1",
+        "Test-WinGetRunner.ps1",
+        "Test-SearchMetadata.ps1",
+        "Test-PackageSources.ps1",
+        "Test-SourcePolicy.ps1",
+        "Test-UpdateWatcher.ps1",
+        "Test-OfflineCache.ps1",
+        "Test-ConfigurationExport.ps1",
+        "Test-VisualAccessibility.ps1",
+        "Test-ReleaseArtifact.ps1",
+        "Test-LauncherManifest.ps1",
+        "Test-Bundle.ps1",
+        "Test-Xaml.ps1",
+        "Test-Analyzer.ps1"
+    )) {
+        if ($validationRunner -notmatch [regex]::Escape($requiredScript)) {
+            Add-Failure "Invoke-Validation.ps1 does not run $requiredScript."
+        }
+    }
 }
 
 $readmeCounts = Get-ReadmeCategoryCounts -Readme $readme

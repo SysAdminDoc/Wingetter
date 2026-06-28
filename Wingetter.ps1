@@ -38,14 +38,14 @@ $Script:WingetterModuleFiles = @(
 # Maintainer workflow: when any `src/Wingetter.*.ps1` file changes, run
 #   pwsh -NoProfile -File .\tools\Sync-LauncherManifest.ps1
 # to refresh this hashtable. `tools\Test-LauncherManifest.ps1` enforces it in
-# CI so the table never drifts from the modules on disk.
+# local validation so the table never drifts from the modules on disk.
 # BEGIN WingetterModuleHashes
 $Script:WingetterModuleHashes = @{
-    'Wingetter.Common.ps1' = 'DF527A00DF7B6C3CB13BC4A674694A842C33706AE516A76FD024644D46158E3F'
+    'Wingetter.Common.ps1' = '26320E9AE063BE41BCA6EDAD518C9B0120C5A6F27087FD1B8774AD9C0B795728'
     'Wingetter.Catalog.ps1' = '03B4E753D4709DC12934407B4D91801BA759BCE63D5EFD7AB1F1914283C53488'
     'Wingetter.WinGet.ps1' = 'E483B4CB1707B9E4DDE0924268DE4C9C0B1255BE12E1C63F635B74B700C8A6BD'
     'Wingetter.Groups.ps1' = 'EDA230D40D1A22F2DFC5C8467A01602230B8E10FFBFFE4F5866F55B7BF8426EB'
-    'Wingetter.ProfileGallery.ps1' = '82916B24ADDF76C4FEDA4F7B12E945F01ADF650B97D8E8D77EEE4F6C97D87DC0'
+    'Wingetter.ProfileGallery.ps1' = '40451F5C22070EFDC6E769D822729E514AE7E641EBB21F1323C1B3011EEC9B1B'
     'Wingetter.Sources.ps1' = '4AB3841ADEF984ED51A277801480C251802EFCBBBEAB0D2FBA110267EBFD945A'
     'Wingetter.OfflineCache.ps1' = 'E6864BA585E1C3B1AE27DB741DBEB34801CA28DDD45B342CAA9DB7B39C5D32C7'
     'Wingetter.Configuration.ps1' = '2A5BCF60D9F65944A0B81CB06A46B1C1FC948D254D450A3822EC72D446E6EBC6'
@@ -55,13 +55,36 @@ $Script:WingetterModuleHashes = @{
 }
 # END WingetterModuleHashes
 
+function Get-WingetterFileSha256 {
+    param([string]$Path)
+
+    $hashCommand = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+    if ($hashCommand) {
+        return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant()
+    }
+
+    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    $stream = [System.IO.File]::OpenRead($resolvedPath)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($stream)
+            return ([System.BitConverter]::ToString($hashBytes)).Replace("-", "").ToUpperInvariant()
+        } finally {
+            if ($sha256 -is [System.IDisposable]) { $sha256.Dispose() }
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 function Test-WingetterModuleHash {
     param([string]$Path, [string]$FileName)
     $expected = $Script:WingetterModuleHashes[$FileName]
     if ([string]::IsNullOrWhiteSpace($expected)) {
         throw "Wingetter launcher has no expected SHA256 for module '$FileName'."
     }
-    $actual = (Get-FileHash -Path $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant()
+    $actual = Get-WingetterFileSha256 -Path $Path
     if ($actual -ne $expected.ToUpperInvariant()) {
         throw "Wingetter module '$FileName' SHA256 mismatch. Expected $expected, got $actual. The downloaded module will not be loaded."
     }

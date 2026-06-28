@@ -1,11 +1,11 @@
 {
   "schema": "Wingetter.ReleaseArtifactManifest.v1",
   "version": "v6.1.0",
-  "generatedAtUtc": "2026-05-18T00:00:00Z",
+  "generatedAtUtc": "2026-06-28T02:09:22Z",
   "build": {
-    "source": "Wingetter.ps1 launcher plus the dot-sourced modules under src/ at the v6.1.0 tag",
-    "tool": "PS2EXE",
-    "notes": "Wingetter.exe is built from Wingetter.ps1 using PS2EXE on a Windows host with PowerShell 5.1 or 7+. The current Wingetter.exe predates the module split: it was produced from the monolithic v6.1.0 launcher. Rebuilding from the modular launcher requires either bundling the src/ modules into the EXE or relying on the launcher's raw-GitHub module-download path."
+    "source": "Bundled launcher generated from Wingetter.ps1 plus the dot-sourced modules under src/ at v6.1.0",
+    "tool": "tools\\Build-WingetterExe.ps1 with PS2EXE 1.0.18",
+    "notes": "Wingetter.exe is rebuilt locally from a parser-checked bundled launcher. No code-signing certificate was available in this environment; install trust is provided by the checked SHA256 and size manifest."
   },
   "artifacts": [
     {

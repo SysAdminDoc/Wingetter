@@ -3,6 +3,7 @@
 A powerful PowerShell GUI application for discovering, selecting, and bulk installing Windows software using [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/winget/). Think Ninite, but with 765 apps and full winget integration.
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)
+![Version](https://img.shields.io/badge/version-v6.1.0-blue)
 ![Apps](https://img.shields.io/badge/Apps-765-green)
 ![Categories](https://img.shields.io/badge/Categories-39-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
@@ -177,20 +178,10 @@ The cache folder contains `offline-manifest.json`, per-package download metadata
 The repo includes generated catalog snapshots in `catalog/` and validation tools in `tools/`:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Sync-EmbeddedCatalog.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Catalog.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileJson.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ProfileGallery.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-WinGetRunner.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SearchMetadata.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-PackageSources.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SourcePolicy.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-UpdateWatcher.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-OfflineCache.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-ConfigurationExport.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-VisualAccessibility.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -STA -File .\tools\Test-Xaml.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-Validation.ps1
 ```
+
+`Invoke-Validation.ps1` runs the catalog, profile, gallery, WinGet runner, search, package-source, source-policy, update, offline-cache, configuration, accessibility, release-artifact, launcher-manifest, bundle, XAML, and PSScriptAnalyzer checks. Pass `-SkipAnalyzerInstall` if the validation run should fail instead of installing PSScriptAnalyzer when it is missing.
 
 `Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.ProfileGallery.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.OfflineCache.ps1`, `src/Wingetter.Configuration.ps1`, `src/Wingetter.UpdateWatcher.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
 

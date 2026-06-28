@@ -4,9 +4,13 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: `tools\Invoke-Validation.ps1` as the single local validation contract. It runs catalog, profile, gallery, WinGet runner, search, package-source, source-policy, update, offline-cache, configuration, accessibility, release-artifact, launcher-manifest, bundle, XAML, and PSScriptAnalyzer checks from one command.
+- Changed: README, release notes, project context, and validation guardrails now describe local validation and local release builds instead of removed GitHub workflow paths.
+- Fixed: Launcher, profile gallery, release-artifact, and launcher-manifest SHA256 checks now fall back to a .NET SHA256 stream helper when `Get-FileHash` is unavailable in Windows PowerShell.
+- Changed: Rebuilt `Wingetter.exe` locally with `tools\Build-WingetterExe.ps1` and refreshed `release\manifest.json` build notes for the bundled-launcher path.
 - Changed: `ExportBtn` selection-export now drives the SaveFileDialog filter and dispatch from a single `$exportFormats` array (Label/Extension/DefaultFileName/Handler), so adding or reordering an export format is a one-line edit instead of three separately maintained parts. The four existing formats produce byte-identical output.
-- Added: Hash-pinned launcher module downloads. `Wingetter.ps1` carries an embedded `$Script:WingetterModuleHashes` table with the canonical SHA256 of every `src\Wingetter.*.ps1` module and refuses to dot-source any downloaded module whose hash differs (catches tampered mirrors, redirected URLs, and `%TEMP%` cache poisoning). `tools\Sync-LauncherManifest.ps1` regenerates the table; `tools\Test-LauncherManifest.ps1` enforces it in CI and probes both the positive and negative verification paths.
-- Added: `.github/workflows/release.yml` - tag-triggered (`v*.*.*`) GitHub Actions workflow that runs the full validation suite, installs PS2EXE, builds a fresh `Wingetter.exe` from the modular launcher, regenerates `release\manifest.json`, uploads both as workflow artifacts, and attaches them to the GitHub Release.
+- Added: Hash-pinned launcher module downloads. `Wingetter.ps1` carries an embedded `$Script:WingetterModuleHashes` table with the canonical SHA256 of every `src\Wingetter.*.ps1` module and refuses to dot-source any downloaded module whose hash differs (catches tampered mirrors, redirected URLs, and `%TEMP%` cache poisoning). `tools\Sync-LauncherManifest.ps1` regenerates the table; `tools\Test-LauncherManifest.ps1` enforces it in local validation and probes both the positive and negative verification paths.
+- Removed: Remote release workflow references; release builds and artifact publication are local-only.
 - Added: Automated accessibility sweep in `tools\Test-VisualAccessibility.ps1` over every named focusable XAML control (Button / TextBox / ComboBox / CheckBox / ToggleButton / ListBox / RadioButton); requires an accessible label source on every control and refuses `Focusable="False"` / `IsTabStop="False"` outside style template parts.
 - Added: `AutomationProperties.Name` on `GroupCombo` ("Saved package groups"), `GroupNameBox` ("Group name"), `ProfilesList` ("Available profile gallery profiles"), and `PreviewBox` ("Profile package review") so screen readers can describe these previously-unlabeled controls.
 - Fixed: `Invoke-WinGetCapture` and `Invoke-WinGetPackageOperation` now dispose the launched process in a `finally` block and tolerate async stream-reader exceptions thrown when `Kill()` races the redirected stdout/stderr readers, so a cancelled or timed-out install no longer leaks file handles or surfaces a raw `OperationCanceledException`.
@@ -22,10 +26,10 @@ All notable changes to Wingetter will be documented in this file.
 - Changed: Group-export JSON and per-package install/upgrade result files now use `ConvertTo-Json -Depth 8` (was 5) for parity with the rest of the codebase.
 - Fixed: `Import-PackageIdsFromJSON` no longer throws `Unrecognized JSON format` for valid WinGet exports with an explicitly empty `Sources` or `Packages` array; classification now keys off property presence via a new `Test-JsonPropertyPresence` helper.
 - Added: Adversarial test coverage for `Import-PackageIdsFromJSON` (duplicate IDs, missing `PackageIdentifier`, missing `SourceDetails.Name`, empty `Sources`, mixed `PackageIds`+`Sources`, multi-source, flat `Packages`, unrecognized payloads) in `tools\Test-ProfileJson.ps1`.
-- Added: `tools\Build-WingetterExe.ps1` to concatenate the dot-sourced `src\` modules into a single bundled launcher (and optionally run PS2EXE), plus `tools\Test-Bundle.ps1` that parses the bundle and verifies module-section presence; wired into CI.
-- Added: Verifiable release artifact manifest at `release\manifest.json` with SHA256 hashes for `Wingetter.exe`, `Wingetter.ico`, and `icon.ico`, plus `tools\Test-ReleaseArtifact.ps1` (with `-Update` mode) and a CI step that fails on unexplained binary changes.
+- Added: `tools\Build-WingetterExe.ps1` to concatenate the dot-sourced `src\` modules into a single bundled launcher (and optionally run PS2EXE), plus `tools\Test-Bundle.ps1` that parses the bundle and verifies module-section presence; covered by local validation.
+- Added: Verifiable release artifact manifest at `release\manifest.json` with SHA256 hashes for `Wingetter.exe`, `Wingetter.ico`, and `icon.ico`, plus `tools\Test-ReleaseArtifact.ps1` (with `-Update` mode) and a local validation step that fails on unexplained binary changes.
 - Added: `release\README.md` documenting how to verify, update, and (re)build the checked-in `Wingetter.exe` from `Wingetter.ps1` via PS2EXE.
-- Added: PSScriptAnalyzer CI gate with a project-tuned `PSScriptAnalyzerSettings.psd1` and `tools\Test-Analyzer.ps1` runner that enforces `PSAvoidAssignmentToAutomaticVariable`, `PSReviewUnusedParameter`, and security/correctness rules.
+- Added: PSScriptAnalyzer local validation gate with a project-tuned `PSScriptAnalyzerSettings.psd1` and `tools\Test-Analyzer.ps1` runner that enforces `PSAvoidAssignmentToAutomaticVariable`, `PSReviewUnusedParameter`, and security/correctness rules.
 - Changed: Renamed shadowed `$profile`, `$error`, `$args`, and `$sender` variables across modules and tools; documented intentionally inert adapter/symmetry parameters with `[void]$param` markers.
 - Added: Locale-independent WinGet result classification using documented HRESULTs, with the matched signal (`ExitCode`/`Text`/`Cancelled`/`None`) and exit-code meaning persisted on per-package result records.
 - Added: Pin classification driven by the `Pin type` column token (`Blocking` / `Gating` / `Pinning` / `PinnedByManifest`) instead of English keywords, with text-pattern fallback.
@@ -38,14 +42,14 @@ All notable changes to Wingetter will be documented in this file.
 - Added: WinGet runner smoke tests for process argument handling and status classification.
 - Added: Package detail panel backed by `winget show` and `winget list` for source, publisher, version, installer type, installer URL, SHA256, and metadata warnings.
 - Added: Audited WinGet bootstrap logging under `%APPDATA%\Wingetter\logs`.
-- Added: GitHub Actions validation for catalog, profile JSON, WinGet runner helpers, and WPF XAML loading.
+- Added: Local validation for catalog, profile JSON, WinGet runner helpers, and WPF XAML loading.
 - Added: Source modules under `src/` for common helpers, catalog data, WinGet operations, group/profile helpers, UI, and runtime bootstrap.
 - Added: WinGet pin state lookup plus package detail controls for standard pins, blocking pins, installed-version pins, and pin removal.
 - Added: Include pinned updates checkbox that passes `--include-pinned` during update runs.
 - Added: Object-based installed package detection through `Microsoft.WinGet.Client` with `winget list` fallback and `%APPDATA%\Wingetter\installed-cache.json` scan caching.
 - Added: Migration report generation for install/update runs, including GUI export to Markdown or JSON.
 - Added: Metadata-rich local search scoring across names, IDs, categories, built-in groups, publisher-like ID prefixes, source/scope state, installed/update state, and pin state.
-- Added: Search metadata validation script and CI coverage.
+- Added: Search metadata validation script and local validation coverage.
 - Added: Visual/accessibility validation that rejects `CornerRadius=999` regressions and checks baseline automation names for key controls.
 - Added: Package-source adapter contract with WinGet as the first registered backend and validation for the adapter/UI boundary.
 - Added: Corporate source policy profile at `%APPDATA%\Wingetter\source-policy.json`, including allowed-source enforcement, explicit-source command generation, and `Microsoft.Rest` private source support.
@@ -65,10 +69,10 @@ All notable changes to Wingetter will be documented in this file.
 - Changed: Replaced remaining pill-style text-bearing UI radii with bounded rectangular radii and added accessible names to the theme toggle and search box.
 - Changed: GUI package details, official source profile import/export, install/update execution, installed scans, pin controls, and copied install commands now route through the package-source adapter instead of calling WinGet helpers directly.
 - Changed: WinGet install/update/detail helpers can pass explicit `--source` values from catalog/source policy metadata.
-- Changed: CI now validates update watcher summary classification, scheduled-task action arguments, and update-check log rotation.
-- Changed: CI now validates offline cache argument generation, manifest export, replay script generation, and cache file delta tracking.
-- Changed: CI now validates WinGet Configuration YAML generation.
-- Changed: CI now validates profile gallery hashes, catalog references, preview text, and rejection of unsupported install-argument fields.
+- Changed: Local validation now validates update watcher summary classification, scheduled-task action arguments, and update-check log rotation.
+- Changed: Local validation now validates offline cache argument generation, manifest export, replay script generation, and cache file delta tracking.
+- Changed: Local validation now validates WinGet Configuration YAML generation.
+- Changed: Local validation now validates profile gallery hashes, catalog references, preview text, and rejection of unsupported install-argument fields.
 - Changed: Install/update execution now uses structured process arguments where available, captures stderr, passes `--verbose-logs`, and surfaces the run log directory after completion or cancellation.
 - Changed: WinGet repair now prefers App Installer registration and `Microsoft.WinGet.Client` `Repair-WinGetPackageManager` instead of downloading GitHub/AppX assets directly.
 - Changed: Synced README version badge, built-in groups, and category counts with the v6.1.0 script catalog.

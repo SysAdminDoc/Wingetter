@@ -104,7 +104,7 @@ if ($failures.Count -eq 0) {
             $bigPath = Join-Path $tempProfileDir "big.wingetter.json"
             $padding = "x" * (1MB + 1024)
             Set-Content -Path $bigPath -Value ('{"Padding":"' + $padding + '"}') -Encoding UTF8
-            $bigHash = (Get-FileHash -Path $bigPath -Algorithm SHA256).Hash.ToUpperInvariant()
+            $bigHash = Get-WingetterFileSha256 -Path $bigPath
             $bigEntry = [PSCustomObject]@{
                 Id                  = "oversized"
                 Name                = "Oversized"

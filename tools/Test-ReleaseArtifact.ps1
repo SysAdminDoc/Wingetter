@@ -6,6 +6,29 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Get-WingetterFileSha256 {
+    param([string]$Path)
+
+    $hashCommand = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+    if ($hashCommand) {
+        return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant()
+    }
+
+    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    $stream = [System.IO.File]::OpenRead($resolvedPath)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($stream)
+            return ([System.BitConverter]::ToString($hashBytes)).Replace("-", "").ToUpperInvariant()
+        } finally {
+            if ($sha256 -is [System.IDisposable]) { $sha256.Dispose() }
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 $repoRoot = (Resolve-Path $RepoRoot).Path
 $manifestPath = Join-Path $repoRoot "release\manifest.json"
 if (!(Test-Path $manifestPath)) {
@@ -37,7 +60,7 @@ foreach ($artifact in $artifacts) {
         $failures.Add("Missing release artifact '$relativePath'.")
         continue
     }
-    $actualHash = (Get-FileHash -Path $fullPath -Algorithm SHA256).Hash.ToUpperInvariant()
+    $actualHash = Get-WingetterFileSha256 -Path $fullPath
     $actualSize = (Get-Item $fullPath).Length
 
     if ($Update) {
@@ -73,7 +96,8 @@ if ($Update) {
             }
         })
     }
-    $updated | ConvertTo-Json -Depth 6 | Set-Content -Path $manifestPath -Encoding UTF8
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($manifestPath, (($updated | ConvertTo-Json -Depth 6) + [Environment]::NewLine), $utf8NoBom)
     Write-Host "Updated $manifestPath with current artifact hashes."
     exit 0
 }
