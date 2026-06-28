@@ -4,13 +4,6 @@
 
 ### P1
 
-- [ ] P1 - Move long package operations off the UI event thread
-  Why: Install/update/offline loops run serial process waits from click handlers and pump `DoEvents`, which risks reentrancy and weak cancellation under long installers.
-  Evidence: `src/Wingetter.Ui.ps1:2518-2601`; `src/Wingetter.Ui.ps1:2604-2674`; `src/Wingetter.WinGet.ps1:362-369`.
-  Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.WinGet.ps1`, `src\Wingetter.OfflineCache.ps1`, `tools\Test-Xaml.ps1`.
-  Acceptance: install/update/offline work runs in a worker runspace or equivalent background boundary; Stop remains responsive without `DoEvents`; disabled/enabled UI states cannot be reentered; manual smoke covers cancel during an active package.
-  Complexity: L
-
 - [ ] P1 - Add a preflight run plan
   Why: Users should know before execution which selected packages are already current, pinned, blocked by source policy, unavailable, missing metadata, or likely to update.
   Evidence: Ninite skip-current reporting; WinGet import/export warning model; `src/Wingetter.WinGet.ps1:818-870`; `src/Wingetter.UpdateWatcher.ps1:184-205`.

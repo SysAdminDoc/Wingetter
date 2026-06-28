@@ -286,11 +286,292 @@ $Script:Themes = @{
 # MAIN GUI
 # ============================================================================
 
+function Get-WingetterUiModuleDirectory {
+    if (![string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $localModulePath = Join-Path $PSScriptRoot "Wingetter.WinGet.ps1"
+        if (Test-Path -LiteralPath $localModulePath) { return $PSScriptRoot }
+    }
+
+    $root = Get-WingetterRootPath
+    if (![string]::IsNullOrWhiteSpace($root)) {
+        $sourcePath = Join-Path $root "src"
+        if (Test-Path -LiteralPath (Join-Path $sourcePath "Wingetter.WinGet.ps1")) { return $sourcePath }
+
+        $downloaded = @(Get-ChildItem -LiteralPath $root -Directory -Filter "src-*" -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "Wingetter.WinGet.ps1") } |
+            Select-Object -First 1)
+        if ($downloaded.Count -gt 0) { return [string]$downloaded[0].FullName }
+    }
+
+    throw "Could not locate Wingetter module directory for background operation worker."
+}
+
+function Start-WingetterOperationWorker {
+    param(
+        [ValidateSet("PackageOperation", "OfflineDownload")]
+        [string]$Mode,
+        [object[]]$SelectedPackages,
+        [string]$PackageSourceName,
+        [string]$Operation = "",
+        [bool]$IsUpdate = $false,
+        [bool]$Silent = $false,
+        [bool]$AcceptAgreements = $true,
+        [bool]$IncludePinned = $false,
+        [string]$CacheDirectory = "",
+        [object]$SourcePolicy = $null,
+        [string]$ProfileName = "Manual selection",
+        [string[]]$ImportWarnings = @(),
+        [string]$ModuleDirectory = (Get-WingetterUiModuleDirectory)
+    )
+
+    $queue = [System.Collections.Concurrent.ConcurrentQueue[object]]::new()
+    $cancelToken = [System.Collections.Concurrent.ConcurrentDictionary[string,bool]]::new()
+    [void]$cancelToken.TryAdd("Cancelled", $false)
+
+    $runspace = [runspacefactory]::CreateRunspace()
+    $runspace.Open()
+    $ps = [PowerShell]::Create()
+    $ps.Runspace = $runspace
+
+    $script = {
+        param(
+            $queue,
+            $cancelToken,
+            [string]$mode,
+            [object[]]$selectedPackages,
+            [string]$packageSourceName,
+            [string]$operation,
+            [bool]$isUpdate,
+            [bool]$silent,
+            [bool]$acceptAgreements,
+            [bool]$includePinned,
+            [string]$cacheDirectory,
+            $sourcePolicy,
+            [string]$profileName,
+            [string[]]$importWarnings,
+            [string]$moduleDirectory
+        )
+
+        $operationQueue = $queue
+        function Send-WingetterOperationMessage {
+            param([hashtable]$Message)
+            $operationQueue.Enqueue([PSCustomObject]$Message)
+        }
+
+        try {
+            foreach ($moduleName in @(
+                "Wingetter.Common.ps1",
+                "Wingetter.WinGet.ps1",
+                "Wingetter.Sources.ps1",
+                "Wingetter.Groups.ps1",
+                "Wingetter.OfflineCache.ps1"
+            )) {
+                . (Join-Path $moduleDirectory $moduleName)
+            }
+
+            if ($mode -eq "OfflineDownload") {
+                $runLogDir = New-WingetterRunLogDirectory -Action "download"
+                $downloadResults = [System.Collections.ArrayList]::new()
+                $total = @($selectedPackages).Count
+                $current = 0
+
+                foreach ($app in @($selectedPackages)) {
+                    if ([bool]$cancelToken["Cancelled"]) {
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED"; Color = "#f39c12" }
+                        break
+                    }
+
+                    $current++
+                    $pct = if ($total -gt 0) { [math]::Round(($current / $total) * 100) } else { 0 }
+                    Send-WingetterOperationMessage @{
+                        Type    = "Progress"
+                        Percent = $pct
+                        Text    = "Downloading $($app.Name) ($current of $total) to offline cache..."
+                    }
+
+                    $result = Invoke-WingetterOfflinePackageDownload `
+                        -PackageId ([string]$app.WingetId) `
+                        -PackageName ([string]$app.Name) `
+                        -SourceName ([string]$app.SourceName) `
+                        -DownloadDirectory $cacheDirectory `
+                        -RunLogDir $runLogDir `
+                        -AcceptAgreements $acceptAgreements `
+                        -ShouldCancel { [bool]$cancelToken["Cancelled"] }
+
+                    [void]$downloadResults.Add($result)
+                    switch ([string]$result.Status) {
+                        "SUCCESS" { Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "DOWNLOADED"; Color = "#2ecc71" } }
+                        "CANCELLED" {
+                            $cancelToken["Cancelled"] = $true
+                            Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED"; Color = "#f39c12" }
+                        }
+                        default { Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "FAILED"; Color = "#e74c3c" } }
+                    }
+                    if ([bool]$cancelToken["Cancelled"]) { break }
+                }
+
+                $manifest = New-WingetterOfflineCacheManifest -CacheDirectory $cacheDirectory -SelectedPackages $selectedPackages -DownloadResults $downloadResults.ToArray() -SourcePolicy $sourcePolicy
+                $paths = Export-WingetterOfflineCacheManifest -Manifest $manifest -ManifestPath (Join-Path $cacheDirectory "offline-manifest.json")
+                Send-WingetterOperationMessage @{
+                    Type         = "Done"
+                    Mode         = $mode
+                    Cancelled    = [bool]$cancelToken["Cancelled"]
+                    RunLogDir    = $runLogDir
+                    CacheDir     = $cacheDirectory
+                    ManifestPath = [string]$paths.ManifestPath
+                    ScriptPath   = [string]$paths.ScriptPath
+                    Results      = @($downloadResults.ToArray())
+                }
+                return
+            }
+
+            $sourceAdapter = Get-WingetterPackageSourceAdapter -Name $packageSourceName
+            $runLogDir = New-WingetterRunLogDirectory -Action $operation
+            $runResults = [System.Collections.ArrayList]::new()
+            $total = @($selectedPackages).Count
+            $current = 0
+            $ok = 0
+            $fail = 0
+            $skip = 0
+            $actionVerb = if ($isUpdate) { "Updating" } else { "Installing" }
+
+            foreach ($app in @($selectedPackages)) {
+                if ([bool]$cancelToken["Cancelled"]) {
+                    Send-WingetterOperationMessage @{
+                        Type    = "Progress"
+                        Percent = if ($total -gt 0) { [math]::Round(($current / $total) * 100) } else { 0 }
+                        Text    = "Stopped before completing the full list."
+                    }
+                    Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED"; Color = "#f39c12" }
+                    break
+                }
+
+                $current++
+                $pct = if ($total -gt 0) { [math]::Round(($current / $total) * 100) } else { 0 }
+                Send-WingetterOperationMessage @{
+                    Type    = "Progress"
+                    Percent = $pct
+                    Text    = "$actionVerb $($app.Name) ($current of $total)..."
+                }
+
+                $result = Invoke-WingetterPackageSourcePackageOperation `
+                    -SourceAdapter $sourceAdapter `
+                    -Action $operation `
+                    -PackageId ([string]$app.WingetId) `
+                    -PackageName ([string]$app.Name) `
+                    -SourceName ([string]$app.SourceName) `
+                    -Silent $silent `
+                    -AcceptAgreements $acceptAgreements `
+                    -IncludePinned $includePinned `
+                    -RunLogDir $runLogDir `
+                    -ShouldCancel { [bool]$cancelToken["Cancelled"] }
+
+                [void]$runResults.Add($result)
+                switch ([string]$result.Status) {
+                    "SUCCESS" {
+                        $ok++
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "SUCCESS"; Color = "#2ecc71" }
+                    }
+                    "UP TO DATE" {
+                        $skip++
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "UP TO DATE"; Color = "#f39c12" }
+                    }
+                    "CANCELLED" {
+                        $cancelToken["Cancelled"] = $true
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED"; Color = "#f39c12" }
+                    }
+                    default {
+                        $fail++
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "FAILED"; Color = "#e74c3c" }
+                    }
+                }
+                if ([bool]$cancelToken["Cancelled"]) { break }
+            }
+
+            $installedRecords = @()
+            $installedById = @{}
+            try {
+                $selectedIds = @($selectedPackages | ForEach-Object { [string]$_.WingetId })
+                $postRunScan = Get-WingetterPackageSourceInstalledCatalogPackages -SourceAdapter $sourceAdapter -PackageIds $selectedIds
+                $installedRecords = @($postRunScan.Packages.Values)
+                foreach ($record in @($installedRecords)) {
+                    $installedById[[string]$record.PackageId] = $record
+                }
+            } catch {}
+
+            $report = New-WingetterMigrationReport `
+                -ProfileName $profileName `
+                -SelectedPackages $selectedPackages `
+                -RunResults $runResults.ToArray() `
+                -InstalledRecords $installedById `
+                -ImportWarnings $importWarnings `
+                -RunLogDir $runLogDir
+            $reportPath = Join-Path $runLogDir "migration-report.json"
+            try { Export-WingetterMigrationReport -Report $report -FilePath $reportPath } catch {}
+
+            Send-WingetterOperationMessage @{
+                Type             = "Done"
+                Mode             = $mode
+                Cancelled        = [bool]$cancelToken["Cancelled"]
+                RunLogDir        = $runLogDir
+                Results          = @($runResults.ToArray())
+                SelectedPackages = @($selectedPackages)
+                InstalledRecords = @($installedRecords)
+                Report           = $report
+                ReportPath       = $reportPath
+                Ok               = $ok
+                Fail             = $fail
+                Skip             = $skip
+                Total            = $total
+                IsUpdate         = $isUpdate
+            }
+        } catch {
+            Send-WingetterOperationMessage @{
+                Type      = "Done"
+                Mode      = $mode
+                Cancelled = [bool]$cancelToken["Cancelled"]
+                Error     = $_.Exception.Message
+            }
+        }
+    }
+
+    [void]$ps.AddScript($script)
+    [void]$ps.AddArgument($queue)
+    [void]$ps.AddArgument($cancelToken)
+    [void]$ps.AddArgument($Mode)
+    [void]$ps.AddArgument(@($SelectedPackages))
+    [void]$ps.AddArgument($PackageSourceName)
+    [void]$ps.AddArgument($Operation)
+    [void]$ps.AddArgument($IsUpdate)
+    [void]$ps.AddArgument($Silent)
+    [void]$ps.AddArgument($AcceptAgreements)
+    [void]$ps.AddArgument($IncludePinned)
+    [void]$ps.AddArgument($CacheDirectory)
+    [void]$ps.AddArgument($SourcePolicy)
+    [void]$ps.AddArgument($ProfileName)
+    [void]$ps.AddArgument($ImportWarnings)
+    [void]$ps.AddArgument($ModuleDirectory)
+
+    [PSCustomObject]@{
+        Queue       = $queue
+        CancelToken = $cancelToken
+        PowerShell  = $ps
+        Runspace    = $runspace
+        Handle      = $ps.BeginInvoke()
+        DoneMessage = $null
+    }
+}
+
 function Show-WinGetInstallerGUI {
     # Shared mutable state - local hashtable captured by closures
     $ui = @{
         AllCheckboxes = @{}
         Cancelled     = $false
+        OperationRunning = $false
+        OperationWorker = $null
+        OperationTimer = $null
+        OperationCancelToken = $null
         IsDark        = $true
         HoverBg       = "#2a2a4a"
         SelectedBg    = "#1a3a5c"
@@ -1144,10 +1425,11 @@ function Show-WinGetInstallerGUI {
             $SelectedCount.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($theme["StatusPillText"])
         }
 
-        $InstallBtn.IsEnabled = ($count -gt 0)
-        $SaveGroupBtn.IsEnabled = ($count -gt 0)
-        $ExportBtn.IsEnabled = ($count -gt 0)
-        $CopyCommandBtn.IsEnabled = ($count -gt 0)
+        $canUseSelectionActions = ($count -gt 0 -and -not [bool]$ui["OperationRunning"])
+        $InstallBtn.IsEnabled = $canUseSelectionActions
+        $SaveGroupBtn.IsEnabled = $canUseSelectionActions
+        $ExportBtn.IsEnabled = $canUseSelectionActions
+        $CopyCommandBtn.IsEnabled = $canUseSelectionActions
         $InstallBtn.Content = if ($count -gt 0) {
             if ($ui["IsUpdateMode"]) { "Update Selected ($count)" } else { "Install Selected ($count)" }
         } else {
@@ -2462,7 +2744,13 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
-    $CancelBtn.Add_Click({ $ui["Cancelled"] = $true; $ProgressText.Text = "Stopping after the current package..." }.GetNewClosure())
+    $CancelBtn.Add_Click({
+        $ui["Cancelled"] = $true
+        if ($ui["OperationCancelToken"]) {
+            try { $ui["OperationCancelToken"]["Cancelled"] = $true } catch {}
+        }
+        $ProgressText.Text = "Stopping after the current package..."
+    }.GetNewClosure())
 
     # Helper: add log entry to log panel
     $AddLogEntry = {
@@ -2515,7 +2803,147 @@ function Show-WinGetInstallerGUI {
         $LogScrollViewer.ScrollToEnd()
     }
 
+    $SetOperationRunningState = {
+        param([bool]$Running)
+
+        $ui["OperationRunning"] = $Running
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
+            if ($null -ne $ctl) { $ctl.IsEnabled = -not $Running }
+        }
+        foreach ($cb in @($ui["AllCheckboxes"].Values)) {
+            try { $cb.IsEnabled = -not $Running } catch {}
+        }
+        $CancelBtn.IsEnabled = $Running
+
+        if (-not $Running) {
+            $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
+            & $UpdateGroupActionState
+            & $UpdateSelectedCount
+        }
+    }
+
+    $DisposeOperationWorker = {
+        param($Worker)
+        if ($null -eq $Worker) { return }
+        try {
+            if ($Worker.Handle -and $Worker.Handle.IsCompleted) {
+                $Worker.PowerShell.EndInvoke($Worker.Handle) | Out-Null
+            } elseif ($Worker.PowerShell) {
+                $Worker.PowerShell.Stop()
+            }
+        } catch {}
+        try { if ($Worker.PowerShell) { $Worker.PowerShell.Dispose() } } catch {}
+        try { if ($Worker.Runspace) { $Worker.Runspace.Close() } } catch {}
+    }
+
+    $ApplyPackageOperationDone = {
+        param($Message)
+
+        $ui["LastRunLogDir"] = [string]$Message.RunLogDir
+        $ui["LastRunResults"] = @($Message.Results)
+        $ui["LastRunSelectedPackages"] = @($Message.SelectedPackages)
+        foreach ($record in @($Message.InstalledRecords)) {
+            if ($record -and $record.PackageId) {
+                $ui["InstalledIds"][[string]$record.PackageId] = $record
+            }
+        }
+        $ui["LastRunReport"] = $Message.Report
+
+        & $SetOperationRunningState $false
+
+        $doneVerb = if ([bool]$Message.IsUpdate) { "updated" } else { "installed" }
+        if (-not [bool]$Message.Cancelled) {
+            $ProgressBar.Value = 100
+            $ProgressPercent.Text = "100%"
+            $ProgressText.Text = "Finished: $($Message.Ok) $doneVerb, $($Message.Skip) already current, $($Message.Fail) failed. Logs: $($Message.RunLogDir). Report: $($Message.ReportPath)"
+
+            try {
+                [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+                [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
+                $toastXml = [Windows.Data.Xml.Dom.XmlDocument]::new()
+                $toastXml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>Wingetter Complete</text><text>$($Message.Ok) $doneVerb, $($Message.Skip) skipped, $($Message.Fail) failed (of $($Message.Total))</text></binding></visual></toast>")
+                $toast = [Windows.UI.Notifications.ToastNotification]::new($toastXml)
+                [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Wingetter").Show($toast)
+            } catch {}
+
+            if ([bool]$Message.IsUpdate) {
+                $doneMsg = $ProgressText.Text
+                & $ExitUpdateView
+                $ProgressText.Text = $doneMsg
+            }
+        } else {
+            $ProgressText.Text = "Stopped before completing the full list. Logs: $($Message.RunLogDir). Report: $($Message.ReportPath)"
+        }
+    }
+
+    $ApplyOfflineOperationDone = {
+        param($Message)
+
+        & $SetOperationRunningState $false
+        $ProgressBar.Value = 100
+        $ProgressPercent.Text = "100%"
+        if ([bool]$Message.Cancelled) {
+            $ProgressText.Text = "Offline cache stopped: $($Message.CacheDir). Manifest: $($Message.ManifestPath). Replay script: $($Message.ScriptPath)"
+        } else {
+            $ProgressText.Text = "Offline cache ready: $($Message.CacheDir). Manifest: $($Message.ManifestPath). Replay script: $($Message.ScriptPath)"
+        }
+    }
+
+    $StartOperationMessagePump = {
+        param($Worker)
+
+        $ui["OperationWorker"] = $Worker
+        $ui["OperationCancelToken"] = $Worker.CancelToken
+        $timer = New-Object System.Windows.Threading.DispatcherTimer
+        $ui["OperationTimer"] = $timer
+        $timer.Interval = [TimeSpan]::FromMilliseconds(100)
+        $timer.Add_Tick({
+            $message = $null
+            $batch = 0
+            while ($batch -lt 50 -and $Worker.Queue.TryDequeue([ref]$message)) {
+                switch ([string]$message.Type) {
+                    "Progress" {
+                        $ProgressBar.Value = [int]$message.Percent
+                        $ProgressPercent.Text = "$([int]$message.Percent)%"
+                        $ProgressText.Text = [string]$message.Text
+                    }
+                    "Log" {
+                        & $AddLogEntry ([string]$message.AppName) ([string]$message.Status) ([string]$message.Color)
+                    }
+                    "Done" {
+                        $Worker.DoneMessage = $message
+                    }
+                }
+                $batch++
+            }
+
+            if ($Worker.DoneMessage -and $Worker.Handle.IsCompleted) {
+                $timer.Stop()
+                $done = $Worker.DoneMessage
+                & $DisposeOperationWorker $Worker
+                $ui["OperationWorker"] = $null
+                $ui["OperationCancelToken"] = $null
+                $ui["OperationTimer"] = $null
+                $ui["Cancelled"] = [bool]$done.Cancelled
+
+                if ($done.Error) {
+                    & $SetOperationRunningState $false
+                    $ProgressText.Text = "Operation failed: $($done.Error)"
+                    return
+                }
+
+                if ([string]$done.Mode -eq "OfflineDownload") {
+                    & $ApplyOfflineOperationDone $done
+                } else {
+                    & $ApplyPackageOperationDone $done
+                }
+            }
+        }.GetNewClosure())
+        $timer.Start()
+    }
+
     $DownloadCacheBtn.Add_Click({
+        if ([bool]$ui["OperationRunning"]) { return }
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can download package installers.", "WinGet Required", "OK", "Warning"); return }
 
@@ -2544,64 +2972,33 @@ function Show-WinGetInstallerGUI {
         if ($folder.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
 
         $cacheDir = New-WingetterOfflineCacheDirectory -BaseDirectory $folder.SelectedPath
-        $runLogDir = New-WingetterRunLogDirectory -Action "download"
-        $downloadResults = [System.Collections.ArrayList]::new()
-
         $LogEntriesPanel.Children.Clear()
         $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
         $LogToggleBtn.Content = "Hide"
         $ui["Cancelled"] = $false
+        & $SetOperationRunningState $true
+        $ProgressBar.Value = 0
+        $ProgressPercent.Text = "0%"
+        $ProgressText.Text = "Preparing offline cache..."
 
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
-            $ctl.IsEnabled = $false
-        }
-        $CancelBtn.IsEnabled = $true
-
-        $total = $selected.Count
-        $current = 0
-        foreach ($app in $selected) {
-            if ($ui["Cancelled"]) { & $AddLogEntry $app.Name "CANCELLED" "#f39c12"; break }
-            $current++
-            $pct = [math]::Round(($current / $total) * 100)
-            $ProgressBar.Value = $pct
-            $ProgressPercent.Text = "$pct%"
-            $ProgressText.Text = "Downloading $($app.Name) ($current of $total) to offline cache..."
-            [System.Windows.Forms.Application]::DoEvents()
-
-            $result = Invoke-WingetterOfflinePackageDownload `
-                -PackageId $app.WingetId `
-                -PackageName $app.Name `
-                -SourceName $app.SourceName `
-                -DownloadDirectory $cacheDir `
-                -RunLogDir $runLogDir `
+        try {
+            $worker = Start-WingetterOperationWorker `
+                -Mode "OfflineDownload" `
+                -SelectedPackages $selected `
+                -PackageSourceName ([string]$ui["PackageSource"].Name) `
                 -AcceptAgreements ([bool]$AcceptCheck.IsChecked) `
-                -ShouldCancel { $ui["Cancelled"] } `
-                -PumpUi { [System.Windows.Forms.Application]::DoEvents() }
-
-            [void]$downloadResults.Add($result)
-            switch ($result.Status) {
-                "SUCCESS" { & $AddLogEntry $app.Name "DOWNLOADED" "#2ecc71" }
-                "CANCELLED" { $ui["Cancelled"] = $true; & $AddLogEntry $app.Name "CANCELLED" "#f39c12" }
-                default { & $AddLogEntry $app.Name "FAILED" "#e74c3c" }
-            }
+                -CacheDirectory $cacheDir `
+                -SourcePolicy $ui["SourcePolicy"]
+            & $StartOperationMessagePump $worker
+        } catch {
+            & $SetOperationRunningState $false
+            $ProgressText.Text = "Could not start offline cache worker: $($_.Exception.Message)"
         }
-
-        $manifest = New-WingetterOfflineCacheManifest -CacheDirectory $cacheDir -SelectedPackages $selected -DownloadResults $downloadResults.ToArray() -SourcePolicy $ui["SourcePolicy"]
-        $paths = Export-WingetterOfflineCacheManifest -Manifest $manifest -ManifestPath (Join-Path $cacheDir "offline-manifest.json")
-
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
-            $ctl.IsEnabled = $true
-        }
-        $CancelBtn.IsEnabled = $false
-        $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
-        & $UpdateGroupActionState
-        $ProgressBar.Value = 100
-        $ProgressPercent.Text = "100%"
-        $ProgressText.Text = "Offline cache ready: $cacheDir. Manifest: $($paths.ManifestPath). Replay script: $($paths.ScriptPath)"
     }.GetNewClosure())
 
     # Install / Update handler
     $InstallBtn.Add_Click({
+        if ([bool]$ui["OperationRunning"]) { return }
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can install packages. Use 'Install WinGet' and try again.", "WinGet Required", "OK", "Warning"); return }
         $selected = @()
@@ -2613,7 +3010,7 @@ function Show-WinGetInstallerGUI {
                 if (!$policyCheck.Allowed) {
                     $blockedByPolicy += "$($cb.Tag.Name) [$sourceName]"
                 } else {
-                    $selected += @{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName }
+                    $selected += [PSCustomObject]@{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName }
                 }
             }
         }
@@ -2624,67 +3021,18 @@ function Show-WinGetInstallerGUI {
         }
         if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }
 
-        $InstallBtn.IsEnabled = $false; $CancelBtn.IsEnabled = $true; $SelectAllBtn.IsEnabled = $false; $DeselectAllBtn.IsEnabled = $false
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
-            $ctl.IsEnabled = $false
-        }
-        $ui["Cancelled"] = $false
-
         # Show log panel and clear previous entries
         $LogEntriesPanel.Children.Clear()
         $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
         $LogToggleBtn.Content = "Hide"
+        $ui["Cancelled"] = $false
+        & $SetOperationRunningState $true
 
         $isUpdate = $ui["IsUpdateMode"]
-        $actionVerb = if ($isUpdate) { "Updating" } else { "Installing" }
         $operation = if ($isUpdate) { "upgrade" } else { "install" }
-        $runLogDir = New-WingetterRunLogDirectory -Action $operation
-        $runResults = [System.Collections.ArrayList]::new()
-        $total = $selected.Count; $current = 0; $ok = 0; $fail = 0; $skip = 0
-
-        foreach ($app in $selected) {
-            if ($ui["Cancelled"]) { $ProgressText.Text = "Stopped before completing the full list."; & $AddLogEntry $app.Name "CANCELLED" "#f39c12"; break }
-            $current++; $pct = [math]::Round(($current / $total) * 100)
-            $ProgressBar.Value = $pct; $ProgressPercent.Text = "$pct%"
-            $ProgressText.Text = "$actionVerb $($app.Name) ($current of $total)..."
-            [System.Windows.Forms.Application]::DoEvents()
-
-            $result = Invoke-WingetterPackageSourcePackageOperation `
-                -SourceAdapter $ui["PackageSource"] `
-                -Action $operation `
-                -PackageId $app.WingetId `
-                -PackageName $app.Name `
-                -SourceName $app.SourceName `
-                -Silent ([bool]$SilentCheck.IsChecked) `
-                -AcceptAgreements ([bool]$AcceptCheck.IsChecked) `
-                -IncludePinned ([bool]$IncludePinnedCheck.IsChecked) `
-                -RunLogDir $runLogDir `
-                -ShouldCancel { $ui["Cancelled"] } `
-                -PumpUi { [System.Windows.Forms.Application]::DoEvents() }
-
-            [void]$runResults.Add($result)
-            switch ($result.Status) {
-                "SUCCESS" { $ok++; & $AddLogEntry $app.Name "SUCCESS" "#2ecc71" }
-                "UP TO DATE" { $skip++; & $AddLogEntry $app.Name "UP TO DATE" "#f39c12" }
-                "CANCELLED" { $ui["Cancelled"] = $true; & $AddLogEntry $app.Name "CANCELLED" "#f39c12" }
-                default { $fail++; & $AddLogEntry $app.Name "FAILED" "#e74c3c" }
-            }
-            if ($ui["Cancelled"]) { break }
-            [System.Windows.Forms.Application]::DoEvents()
-        }
-
-        $ui["LastRunLogDir"] = $runLogDir
-        $ui["LastRunResults"] = $runResults.ToArray()
-        $ui["LastRunSelectedPackages"] = @($selected)
-
-        try {
-            $selectedIds = @($selected | ForEach-Object { [string]$_.WingetId })
-            $postRunScan = Get-WingetterPackageSourceInstalledCatalogPackages -SourceAdapter $ui["PackageSource"] -PackageIds $selectedIds
-            foreach ($record in @($postRunScan.Packages.Values)) {
-                $ui["InstalledIds"][[string]$record.PackageId] = $record
-            }
-        } catch {}
-
+        $ProgressBar.Value = 0
+        $ProgressPercent.Text = "0%"
+        $ProgressText.Text = if ($isUpdate) { "Preparing update run..." } else { "Preparing install run..." }
         $profileName = "Manual selection"
         try {
             if ($ui["IsUpdateMode"]) {
@@ -2693,47 +3041,23 @@ function Show-WinGetInstallerGUI {
                 $profileName = [string]$GroupCombo.SelectedItem.Tag["Name"]
             }
         } catch {}
-        $report = New-WingetterMigrationReport `
-            -ProfileName $profileName `
-            -SelectedPackages $selected `
-            -RunResults $ui["LastRunResults"] `
-            -InstalledRecords $ui["InstalledIds"] `
-            -ImportWarnings $ui["LastImportWarnings"] `
-            -RunLogDir $runLogDir
-        $ui["LastRunReport"] = $report
-        $reportPath = Join-Path $runLogDir "migration-report.json"
-        try { Export-WingetterMigrationReport -Report $report -FilePath $reportPath } catch {}
 
-        $InstallBtn.IsEnabled = $true; $CancelBtn.IsEnabled = $false; $SelectAllBtn.IsEnabled = $true; $DeselectAllBtn.IsEnabled = $true
-        foreach ($ctl in @($ImportBtn, $GalleryBtn, $ExportSourcesBtn, $DownloadCacheBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
-            $ctl.IsEnabled = $true
-        }
-        $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
-        & $UpdateGroupActionState
-        & $UpdateSelectedCount
-        $doneVerb = if ($isUpdate) { "updated" } else { "installed" }
-        if (-not $ui["Cancelled"]) {
-            $ProgressBar.Value = 100; $ProgressPercent.Text = "100%"
-            $ProgressText.Text = "Finished: $ok $doneVerb, $skip already current, $fail failed. Logs: $runLogDir. Report: $reportPath"
-
-            # Windows Toast notification
-            try {
-                [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-                [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
-                $toastXml = [Windows.Data.Xml.Dom.XmlDocument]::new()
-                $toastXml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>Wingetter Complete</text><text>$ok $doneVerb, $skip skipped, $fail failed (of $total)</text></binding></visual></toast>")
-                $toast = [Windows.UI.Notifications.ToastNotification]::new($toastXml)
-                [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Wingetter").Show($toast)
-            } catch {}
-
-            # Auto-restore install view after update completes
-            if ($isUpdate) {
-                $doneMsg = $ProgressText.Text
-                & $ExitUpdateView
-                $ProgressText.Text = $doneMsg
-            }
-        } else {
-            $ProgressText.Text = "Stopped before completing the full list. Logs: $runLogDir. Report: $reportPath"
+        try {
+            $worker = Start-WingetterOperationWorker `
+                -Mode "PackageOperation" `
+                -SelectedPackages $selected `
+                -PackageSourceName ([string]$ui["PackageSource"].Name) `
+                -Operation $operation `
+                -IsUpdate $isUpdate `
+                -Silent ([bool]$SilentCheck.IsChecked) `
+                -AcceptAgreements ([bool]$AcceptCheck.IsChecked) `
+                -IncludePinned ([bool]$IncludePinnedCheck.IsChecked) `
+                -ProfileName $profileName `
+                -ImportWarnings $ui["LastImportWarnings"]
+            & $StartOperationMessagePump $worker
+        } catch {
+            & $SetOperationRunningState $false
+            $ProgressText.Text = "Could not start package worker: $($_.Exception.Message)"
         }
     }.GetNewClosure())
 
@@ -2929,7 +3253,7 @@ function Show-WinGetInstallerGUI {
     foreach ($cat in $Script:SoftwareDatabase.Keys) {
         foreach ($app in $Script:SoftwareDatabase[$cat]) { $catalogPackageIds += [string]$app.WingetId }
     }
-    $sourceRootPath = Join-Path (Get-WingetterRootPath) "src"
+    $sourceRootPath = Get-WingetterUiModuleDirectory
     $winGetModulePath = Join-Path $sourceRootPath "Wingetter.WinGet.ps1"
     $sourcesModulePath = Join-Path $sourceRootPath "Wingetter.Sources.ps1"
     $packageSourceName = [string]$ui["PackageSource"].Name
@@ -3116,4 +3440,9 @@ function Show-WinGetInstallerGUI {
     try { foreach ($j in $iconJobs) { try { if (-not $j.Handle.IsCompleted) { $j.PS.Stop() }; $j.PS.Dispose() } catch {} }; $iconPool.Close() } catch {}
     try { $installedTimer.Stop() } catch {}
     try { if (-not $installedHandle.IsCompleted) { $installedPs.Stop() }; $installedPs.Dispose(); $installedRunspace.Close() } catch {}
+    try {
+        if ($ui["OperationCancelToken"]) { $ui["OperationCancelToken"]["Cancelled"] = $true }
+        if ($ui["OperationTimer"]) { $ui["OperationTimer"].Stop() }
+        if ($ui["OperationWorker"]) { & $DisposeOperationWorker $ui["OperationWorker"] }
+    } catch {}
 }

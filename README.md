@@ -30,7 +30,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Dark / Light mode** -- defaults to dark, toggle with one click
 - **Metadata-rich search** -- ranked local search across names, package IDs, categories, built-in groups, publisher-like ID tokens, installed state, source, scope, update state, and pin state
 - **Favicon icons** -- parallel-fetched from app domains with colored letter fallbacks and local caching
-- **Bulk install** -- select any combination and install them all in sequence via winget
+- **Bulk install** -- select any combination and install them all in sequence via a responsive background worker
 - **Update mode** -- toggle between Install and Update mode to upgrade already-installed apps
 - **Installed app detection** -- background scan prefers `Microsoft.WinGet.Client`, falls back to `winget list`, and caches detected versions under `%APPDATA%\Wingetter`
 - **Package trust details** -- click an app to inspect source, publisher, installed/latest version, installer type, URL, SHA256, and metadata warnings
@@ -51,7 +51,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`; WinGet 1.29+ runs use cleaner `--no-progress` output where supported
 - **Migration reports** -- completed install/update runs create exportable Markdown or JSON reports with summary counts, commands, result paths, versions, and sources
 - **Scheduled update checks** -- optional Windows scheduled task checks for available updates, respects pins/source policy, can skip metered networks, rotates logs, and never auto-installs
-- **Offline download cache** -- download selected installers with `winget download`, write an offline manifest, and generate a replay script for later installer launch
+- **Offline download cache** -- download selected installers in the background with `winget download`, write an offline manifest, and generate a replay script for later installer launch
 - **Toast notifications** -- Windows notification when batch install completes
 - **Splash screen** -- loading progress indicator while icons are fetched
 - **Select All / Deselect All** per category or globally
