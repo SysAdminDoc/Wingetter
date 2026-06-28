@@ -48,25 +48,49 @@ if ($failures.Count -eq 0) {
     $selected = @(
         [PSCustomObject]@{ Name = "Internal Tool"; WingetId = "Internal.Tool"; SourceName = "corp" }
     )
+    $recordRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-offline-records-" + [System.Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $recordRoot -Force | Out-Null
+    $installerPath = Join-Path $recordRoot "tool.exe"
+    [System.IO.File]::WriteAllText($installerPath, "AAAA")
     $results = @(
         [PSCustomObject]@{
             PackageId       = "Internal.Tool"
             Status          = "SUCCESS"
             Command         = "winget download --id Internal.Tool --exact"
-            DownloadedFiles = @("C:\Cache\Internal.Tool\tool.msi")
+            DownloadedFiles = @($installerPath)
             ResultPath      = "C:\Logs\result.json"
         }
     )
-    $manifest = New-WingetterOfflineCacheManifest -CacheDirectory "C:\Cache" -SelectedPackages $selected -DownloadResults $results
-    if ($manifest.Schema -ne "Wingetter.OfflineCache.v1" -or $manifest.PackageCount -ne 1 -or $manifest.Packages[0].SourceName -ne "corp") {
-        Add-Failure "Offline cache manifest did not preserve package metadata."
+    try {
+        $manifest = New-WingetterOfflineCacheManifest -CacheDirectory $recordRoot -SelectedPackages $selected -DownloadResults $results
+        if ($manifest.Schema -ne "Wingetter.OfflineCache.v1" -or $manifest.PackageCount -ne 1 -or $manifest.Packages[0].SourceName -ne "corp") {
+            Add-Failure "Offline cache manifest did not preserve package metadata."
+        }
+        $fileRecord = @($manifest.Packages[0].DownloadedFileRecords)[0]
+        if ($null -eq $fileRecord -or $fileRecord.Path -ne $installerPath -or $fileRecord.Size -ne 4 -or [string]::IsNullOrWhiteSpace([string]$fileRecord.Sha256)) {
+            Add-Failure "Offline cache manifest did not record installer path, size, and SHA256."
+        }
+    } finally {
+        Remove-Item -Path $recordRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-offline-cache-" + [System.Guid]::NewGuid().ToString("N"))
     try {
         New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+        $cachedInstaller = Join-Path $tempRoot "tool.exe"
+        [System.IO.File]::WriteAllText($cachedInstaller, "AAAA")
+        $tamperResults = @(
+            [PSCustomObject]@{
+                PackageId       = "Internal.Tool"
+                Status          = "SUCCESS"
+                Command         = "winget download --id Internal.Tool --exact"
+                DownloadedFiles = @($cachedInstaller)
+                ResultPath      = "C:\Logs\result.json"
+            }
+        )
+        $tamperManifest = New-WingetterOfflineCacheManifest -CacheDirectory $tempRoot -SelectedPackages $selected -DownloadResults $tamperResults
         $manifestPath = Join-Path $tempRoot "offline-manifest.json"
-        $paths = Export-WingetterOfflineCacheManifest -Manifest $manifest -ManifestPath $manifestPath
+        $paths = Export-WingetterOfflineCacheManifest -Manifest $tamperManifest -ManifestPath $manifestPath
         if (!(Test-Path $paths.ManifestPath) -or !(Test-Path $paths.ScriptPath)) {
             Add-Failure "Offline cache export did not create manifest and replay script."
         }
@@ -86,6 +110,9 @@ if ($failures.Count -eq 0) {
         if ($scriptText -notmatch "allowed installer extension") {
             Add-Failure "Offline replay script does not constrain installer extensions."
         }
+        if ($scriptText -notmatch "SHA256 changed" -or $scriptText -notmatch "size changed") {
+            Add-Failure "Offline replay script does not verify installer size and SHA256 before launch."
+        }
 
         # Executing the generated script without -Confirm must short-circuit
         # so a misclick or scheduled job cannot run installers.
@@ -95,6 +122,18 @@ if ($failures.Count -eq 0) {
         }
         if ($invokeOutput -notmatch "-Confirm") {
             Add-Failure "Replay script did not print the -Confirm hint when invoked without the switch."
+        }
+
+        [System.IO.File]::WriteAllText($cachedInstaller, "BBBB")
+        $tamperOutput = & pwsh -NoProfile -File $paths.ScriptPath -ManifestPath $paths.ManifestPath -Confirm 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Add-Failure "Replay script returned non-zero exit ($LASTEXITCODE) when refusing a tampered installer."
+        }
+        if ($tamperOutput -notmatch "SHA256 changed") {
+            Add-Failure "Replay script did not report the tampered installer SHA256 mismatch."
+        }
+        if ($tamperOutput -match "Launching") {
+            Add-Failure "Replay script attempted to launch a tampered installer."
         }
     } finally {
         Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue

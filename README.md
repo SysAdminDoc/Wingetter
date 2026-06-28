@@ -171,7 +171,7 @@ Use **Download Cache** in the toolbar, or run:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-OfflineCache.ps1 -PackageId Google.Chrome,Mozilla.Firefox -AcceptAgreements
 ```
 
-The cache folder contains `offline-manifest.json`, per-package download metadata, and `install-offline.ps1`.
+The cache folder contains `offline-manifest.json`, per-package download metadata, and `install-offline.ps1`. The manifest records each cached installer's SHA256 and byte size, and the replay script refuses to launch files that changed after download.
 
 ## Catalog Validation
 

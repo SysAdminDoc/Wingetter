@@ -2,15 +2,6 @@
 
 ## Research-Driven Additions
 
-### P0
-
-- [ ] P0 - Hash-verify offline cache replay
-  Why: Offline replay constrains paths/extensions but launches cached installers without verifying they still match the files Wingetter downloaded.
-  Evidence: `src/Wingetter.OfflineCache.ps1:162-180`; `src/Wingetter.OfflineCache.ps1:183-256`; PDQ chain-of-custody model; SLSA provenance guidance.
-  Touches: `src\Wingetter.OfflineCache.ps1`, `tools\Test-OfflineCache.ps1`, `README.md`.
-  Acceptance: `offline-manifest.json` records SHA256 and size for each downloaded installer; `install-offline.ps1` recomputes hashes and refuses mismatches; tests mutate a cached file and prove replay blocks it.
-  Complexity: M
-
 ### P1
 
 - [ ] P1 - Add WinGet 1.29 clean-output support

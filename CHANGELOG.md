@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Fixed: Offline cache manifests now record cached installer SHA256 and byte size, and `install-offline.ps1` refuses to launch files whose size or hash no longer matches the manifest.
 - Fixed: Source policy export now redacts private REST `Header` values and generated `winget source add --header` arguments by default; raw headers require the explicit `-IncludeRawHeaders` export switch.
 - Added: `tools\Invoke-Validation.ps1` as the single local validation contract. It runs catalog, profile, gallery, WinGet runner, search, package-source, source-policy, update, offline-cache, configuration, accessibility, release-artifact, launcher-manifest, bundle, XAML, and PSScriptAnalyzer checks from one command.
 - Changed: README, release notes, project context, and validation guardrails now describe local validation and local release builds instead of removed GitHub workflow paths.

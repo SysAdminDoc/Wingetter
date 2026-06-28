@@ -51,6 +51,30 @@ function Compare-WingetterOfflineCacheFiles {
     @($After | Where-Object { !$beforeSet.ContainsKey([string]$_) })
 }
 
+function New-WingetterOfflineFileRecord {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or !(Test-Path -LiteralPath $Path)) { return $null }
+    $resolved = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).Path
+    $item = Get-Item -LiteralPath $resolved -ErrorAction Stop
+    [PSCustomObject]@{
+        Path   = $resolved
+        Size   = [int64]$item.Length
+        Sha256 = Get-WingetterFileSha256 -Path $resolved
+    }
+}
+
+function Get-WingetterOfflineFileRecords {
+    param([string[]]$Paths = @())
+
+    $records = @()
+    foreach ($path in @($Paths)) {
+        $record = New-WingetterOfflineFileRecord -Path $path
+        if ($null -ne $record) { $records += $record }
+    }
+    return @($records)
+}
+
 function Invoke-WingetterOfflinePackageDownload {
     param(
         [string]$PackageId,
@@ -116,6 +140,7 @@ function Invoke-WingetterOfflinePackageDownload {
 
     $afterFiles = Get-WingetterOfflineCacheFiles -Directory $DownloadDirectory
     $downloadedFiles = Compare-WingetterOfflineCacheFiles -Before $beforeFiles -After $afterFiles
+    $downloadedFileRecords = Get-WingetterOfflineFileRecords -Paths $downloadedFiles
     $signal = 'None'
     $status = Get-WinGetOperationStatus -ExitCode ([int]$exitCode) -StdOut $stdout -StdErr $stderr -Cancelled $cancelled -Signal ([ref]$signal)
     $exitCodeMeaning = Get-WinGetExitCodeMeaning -ExitCode ([int]$exitCode)
@@ -134,6 +159,7 @@ function Invoke-WingetterOfflinePackageDownload {
         Cancelled         = $cancelled
         DownloadDirectory = $DownloadDirectory
         DownloadedFiles   = @($downloadedFiles)
+        DownloadedFileRecords = @($downloadedFileRecords)
         StdOutPath        = $stdoutPath
         StdErrPath        = $stderrPath
         StdOutExcerpt     = Get-TextExcerpt -Text $stdout
@@ -159,12 +185,21 @@ function New-WingetterOfflineCacheManifest {
     foreach ($package in @($SelectedPackages)) {
         $id = [string]$package.WingetId
         $result = if ($resultById.ContainsKey($id)) { $resultById[$id] } else { $null }
+        $fileRecords = @()
+        if ($result) {
+            if ($result.PSObject.Properties["DownloadedFileRecords"]) {
+                $fileRecords = @($result.DownloadedFileRecords)
+            } else {
+                $fileRecords = Get-WingetterOfflineFileRecords -Paths @($result.DownloadedFiles)
+            }
+        }
         $packages += [PSCustomObject]@{
             Name            = [string]$package.Name
             PackageId       = $id
             SourceName      = [string]$package.SourceName
             Status          = if ($result) { [string]$result.Status } else { "NOT RUN" }
             DownloadedFiles = if ($result) { @($result.DownloadedFiles) } else { @() }
+            DownloadedFileRecords = @($fileRecords)
             Command         = if ($result) { [string]$result.Command } else { "" }
             ResultPath      = if ($result) { [string]$result.ResultPath } else { "" }
         }
@@ -225,13 +260,50 @@ $cacheRoot = (Resolve-Path -Path $cacheRoot -ErrorAction Stop).Path
 
 $allowedExtensions = @(".exe", ".msi", ".msix", ".msixbundle", ".appx", ".appxbundle")
 
+function Get-WingetterReplayFileSha256 {
+    param([string]$Path)
+
+    $hashCommand = Get-Command Get-FileHash -ErrorAction SilentlyContinue
+    if ($hashCommand) {
+        return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToUpperInvariant()
+    }
+
+    $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+    $stream = [System.IO.File]::OpenRead($resolvedPath)
+    try {
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($stream)
+            return ([System.BitConverter]::ToString($hashBytes)).Replace("-", "").ToUpperInvariant()
+        } finally {
+            if ($sha256 -is [System.IDisposable]) { $sha256.Dispose() }
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 foreach ($package in @($manifest.Packages)) {
-    $files = @($package.DownloadedFiles | Where-Object { $_ -and (Test-Path $_) })
-    if ($files.Count -eq 0) {
+    $fileRecords = @()
+    if ($package.PSObject.Properties["DownloadedFileRecords"] -and @($package.DownloadedFileRecords).Count -gt 0) {
+        $fileRecords = @($package.DownloadedFileRecords)
+    } else {
+        foreach ($legacyPath in @($package.DownloadedFiles)) {
+            if ($legacyPath) {
+                $fileRecords += [PSCustomObject]@{ Path = [string]$legacyPath; Size = $null; Sha256 = "" }
+            }
+        }
+    }
+    if ($fileRecords.Count -eq 0) {
         Write-Warning "No downloaded installer files found for $($package.PackageId)."
         continue
     }
-    foreach ($file in $files) {
+    foreach ($record in $fileRecords) {
+        $file = if ($record.PSObject.Properties["Path"]) { [string]$record.Path } else { [string]$record }
+        if ([string]::IsNullOrWhiteSpace($file)) {
+            Write-Warning "Skipping empty installer path for $($package.PackageId)."
+            continue
+        }
         $resolved = $null
         try { $resolved = (Resolve-Path -Path $file -ErrorAction Stop).Path } catch {
             Write-Warning "Could not resolve installer path '$file': $($_.Exception.Message)"
@@ -247,6 +319,23 @@ foreach ($package in @($manifest.Packages)) {
         if ($extension -notin $allowedExtensions) {
             Write-Warning "Skipping '$resolved' because '$extension' is not in the allowed installer extension list."
             continue
+        }
+        $fileInfo = Get-Item -LiteralPath $resolved -ErrorAction Stop
+        $hasExpectedSize = $record.PSObject.Properties["Size"] -and $null -ne $record.Size -and ![string]::IsNullOrWhiteSpace([string]$record.Size)
+        if ($hasExpectedSize) {
+            $expectedSize = [int64]$record.Size
+            if ($fileInfo.Length -ne $expectedSize) {
+                Write-Warning "Refusing to launch '$resolved' because its size changed. Expected $expectedSize bytes, got $($fileInfo.Length) bytes."
+                continue
+            }
+        }
+        $expectedHash = if ($record.PSObject.Properties["Sha256"]) { ([string]$record.Sha256).ToUpperInvariant() } else { "" }
+        if (![string]::IsNullOrWhiteSpace($expectedHash)) {
+            $actualHash = Get-WingetterReplayFileSha256 -Path $resolved
+            if ($actualHash -ne $expectedHash) {
+                Write-Warning "Refusing to launch '$resolved' because its SHA256 changed. Expected $expectedHash, got $actualHash."
+                continue
+            }
         }
         Write-Host "Launching $($package.PackageId): $resolved"
         Start-Process -FilePath $resolved -Wait
