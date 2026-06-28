@@ -425,7 +425,8 @@ function New-WingetterSourceDefinition {
         [string]$TrustLevel = "Community",
         [bool]$Explicit = $false,
         [bool]$Private = $false,
-        [string]$Header = ""
+        [string]$Header = "",
+        [Nullable[int]]$Priority = $null
     )
 
     [PSCustomObject]@{
@@ -436,6 +437,7 @@ function New-WingetterSourceDefinition {
         Explicit   = [bool]$Explicit
         Private    = [bool]$Private
         Header     = $Header
+        Priority   = $Priority
     }
 }
 
@@ -493,8 +495,13 @@ function ConvertTo-WingetterSourceDefinition {
     $explicit = [bool](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Explicit" -DefaultValue $false)
     $private = [bool](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Private" -DefaultValue $false)
     $header = [string](Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Header" -DefaultValue "")
+    $priorityValue = Get-WingetterPolicyPropertyValue -InputObject $Source -PropertyName "Priority" -DefaultValue $null
+    $priority = $null
+    if ($null -ne $priorityValue -and "$priorityValue" -match '^\d+$') {
+        $priority = [int]$priorityValue
+    }
 
-    New-WingetterSourceDefinition -Name $name -Type $type -Argument $argument -TrustLevel $trustLevel -Explicit $explicit -Private $private -Header $header
+    New-WingetterSourceDefinition -Name $name -Type $type -Argument $argument -TrustLevel $trustLevel -Explicit $explicit -Private $private -Header $header -Priority $priority
 }
 
 function ConvertTo-WingetterSourcePolicy {
@@ -646,6 +653,7 @@ function Test-WingetterPackageAllowedBySourcePolicy {
             Allowed    = $true
             TrustLevel = $trust
             SourceType = $type
+            Priority   = if ($definition) { $definition.Priority } else { $null }
             Reason     = "Corporate mode is disabled."
         }
     }
@@ -657,6 +665,7 @@ function Test-WingetterPackageAllowedBySourcePolicy {
             Allowed    = $false
             TrustLevel = "Unknown"
             SourceType = "Unknown"
+            Priority   = $null
             Reason     = "Source '$resolvedSource' is not listed in the corporate source policy."
         }
     }
@@ -667,6 +676,7 @@ function Test-WingetterPackageAllowedBySourcePolicy {
         Allowed    = $true
         TrustLevel = if ($definition) { [string]$definition.TrustLevel } else { "Unknown" }
         SourceType = if ($definition) { [string]$definition.Type } else { "Unknown" }
+        Priority   = if ($definition) { $definition.Priority } else { $null }
         Reason     = "Source '$resolvedSource' is allowed by the corporate source policy."
     }
 }
@@ -679,7 +689,8 @@ function Get-WingetterPackageSourceTrustSummary {
 
     $check = Test-WingetterPackageAllowedBySourcePolicy -Policy $Policy -PackageId "" -SourceName $SourceName
     $state = if ($check.Allowed) { "allowed" } else { "blocked" }
-    "$($check.SourceName) / $($check.TrustLevel) / $state"
+    $priorityText = if ($null -ne $check.Priority) { " / priority $($check.Priority)" } else { "" }
+    "$($check.SourceName) / $($check.TrustLevel) / $state$priorityText"
 }
 
 $Script:WingetterSourceHeaderPlaceholder = "<redacted-header>"
@@ -716,13 +727,27 @@ function ConvertTo-WingetterSourceDefinitionForExport {
         -TrustLevel $definition.TrustLevel `
         -Explicit $definition.Explicit `
         -Private $definition.Private `
-        -Header (Get-WingetterSourceHeaderForExport -Source $definition -IncludeRawHeader:$IncludeRawHeader)
+        -Header (Get-WingetterSourceHeaderForExport -Source $definition -IncludeRawHeader:$IncludeRawHeader) `
+        -Priority $definition.Priority
+}
+
+function Test-WingetterWinGetSourcePrioritySupported {
+    param([string]$WinGetVersion = "")
+
+    if ([string]::IsNullOrWhiteSpace($WinGetVersion) -and (Get-Command Get-WinGetCliVersionText -ErrorAction SilentlyContinue)) {
+        $WinGetVersion = Get-WinGetCliVersionText
+    }
+    if (Get-Command Test-WinGetVersionAtLeast -ErrorAction SilentlyContinue) {
+        return (Test-WinGetVersionAtLeast -VersionText $WinGetVersion -MinimumVersion ([version]"1.29.0"))
+    }
+    return $false
 }
 
 function New-WingetterWinGetSourceAddArguments {
     param(
         [object]$Source,
-        [switch]$IncludeRawHeader
+        [switch]$IncludeRawHeader,
+        [string]$WinGetVersion = ""
     )
 
     $definition = ConvertTo-WingetterSourceDefinition -Source $Source
@@ -734,6 +759,10 @@ function New-WingetterWinGetSourceAddArguments {
     $arguments += "--trust-level"
     $arguments += $trust
     if ($definition.Explicit) { $arguments += "--explicit" }
+    if ($null -ne $definition.Priority -and (Test-WingetterWinGetSourcePrioritySupported -WinGetVersion $WinGetVersion)) {
+        $arguments += "--priority"
+        $arguments += [string]$definition.Priority
+    }
     $header = Get-WingetterSourceHeaderForExport -Source $definition -IncludeRawHeader:$IncludeRawHeader
     if (![string]::IsNullOrWhiteSpace($header)) {
         $arguments += "--header"
@@ -747,23 +776,182 @@ function New-WingetterWinGetSourceAddArguments {
 function New-WingetterWinGetSourceAddCommand {
     param(
         [object]$Source,
-        [switch]$IncludeRawHeader
+        [switch]$IncludeRawHeader,
+        [string]$WinGetVersion = ""
     )
-    "winget " + (Join-ProcessArguments -Arguments (New-WingetterWinGetSourceAddArguments -Source $Source -IncludeRawHeader:$IncludeRawHeader))
+    "winget " + (Join-ProcessArguments -Arguments (New-WingetterWinGetSourceAddArguments -Source $Source -IncludeRawHeader:$IncludeRawHeader -WinGetVersion $WinGetVersion))
+}
+
+function ConvertFrom-WingetterWinGetSourceListText {
+    param([string]$Text)
+
+    $lines = @(([string]$Text -split "`r?`n") | Where-Object { ![string]::IsNullOrWhiteSpace($_) })
+    $headerIndex = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '\bName\b' -and $lines[$i] -match '\bArgument\b') {
+            $headerIndex = $i
+            break
+        }
+    }
+    if ($headerIndex -lt 0) { return @() }
+
+    $headers = @($lines[$headerIndex].Trim() -split '\s{2,}' | ForEach-Object {
+        ([string]$_ -replace '\s+', '').ToLowerInvariant()
+    })
+    $sources = [System.Collections.ArrayList]::new()
+    for ($i = $headerIndex + 1; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        if ($line -match '^\s*-{3,}') { continue }
+        $values = @($line.Trim() -split '\s{2,}')
+        if ($values.Count -lt 2) { continue }
+
+        $row = @{}
+        for ($j = 0; $j -lt $headers.Count -and $j -lt $values.Count; $j++) {
+            $row[$headers[$j]] = [string]$values[$j]
+        }
+
+        $name = if ($row.ContainsKey("name")) { [string]$row["name"] } else { [string]$values[0] }
+        if ([string]::IsNullOrWhiteSpace($name)) { continue }
+        $priorityValue = if ($row.ContainsKey("priority")) { [string]$row["priority"] } else { "" }
+        $priority = $null
+        if ($priorityValue -match '^\d+$') { $priority = [int]$priorityValue }
+        $explicitValue = if ($row.ContainsKey("explicit")) { [string]$row["explicit"] } else { "" }
+        $explicit = $null
+        if ($explicitValue -match '^(true|yes|1)$') { $explicit = $true }
+        if ($explicitValue -match '^(false|no|0)$') { $explicit = $false }
+
+        [void]$sources.Add([PSCustomObject]@{
+            Name       = $name
+            Argument   = if ($row.ContainsKey("argument")) { [string]$row["argument"] } else { "" }
+            Type       = if ($row.ContainsKey("type")) { [string]$row["type"] } else { "" }
+            Explicit   = $explicit
+            TrustLevel = if ($row.ContainsKey("trustlevel")) { [string]$row["trustlevel"] } elseif ($row.ContainsKey("trust")) { [string]$row["trust"] } else { "" }
+            Priority   = $priority
+        })
+    }
+
+    return [object[]]$sources.ToArray()
+}
+
+function Compare-WingetterSourcePolicyDrift {
+    param(
+        [object]$Policy,
+        [object[]]$LiveSources
+    )
+
+    $policySources = @(Get-WingetterSourcePolicyDefinitions -Policy $Policy)
+    $policyByName = @{}
+    foreach ($source in $policySources) {
+        if ($null -eq $source -or [string]::IsNullOrWhiteSpace([string]$source.Name)) { continue }
+        $policyByName[([string]$source.Name).ToLowerInvariant()] = ConvertTo-WingetterSourceDefinition -Source $source
+    }
+    $liveByName = @{}
+    foreach ($source in @($LiveSources)) {
+        if ($null -eq $source -or [string]::IsNullOrWhiteSpace([string]$source.Name)) { continue }
+        $liveByName[([string]$source.Name).ToLowerInvariant()] = $source
+    }
+
+    $items = [System.Collections.ArrayList]::new()
+    foreach ($key in @($policyByName.Keys | Sort-Object)) {
+        $policySource = $policyByName[$key]
+        if (!$liveByName.ContainsKey($key)) {
+            [void]$items.Add([PSCustomObject]@{
+                Name        = [string]$policySource.Name
+                Status      = "Missing"
+                Differences = [string[]]@("missing")
+                Policy      = $policySource
+                Live        = $null
+            })
+            continue
+        }
+
+        $liveSource = $liveByName[$key]
+        $differences = [System.Collections.ArrayList]::new()
+        if (![string]::IsNullOrWhiteSpace([string]$liveSource.Argument) -and [string]$liveSource.Argument -ne [string]$policySource.Argument) {
+            [void]$differences.Add("argument")
+        }
+        if (![string]::IsNullOrWhiteSpace([string]$liveSource.Type) -and [string]$liveSource.Type -ne [string]$policySource.Type) {
+            [void]$differences.Add("type")
+        }
+        if ($null -ne $liveSource.Explicit -and [bool]$liveSource.Explicit -ne [bool]$policySource.Explicit) {
+            [void]$differences.Add("explicit")
+        }
+        if (![string]::IsNullOrWhiteSpace([string]$liveSource.TrustLevel) -and [string]$liveSource.TrustLevel -ne [string]$policySource.TrustLevel) {
+            [void]$differences.Add("trust")
+        }
+        if ($null -ne $policySource.Priority -or $null -ne $liveSource.Priority) {
+            if ([string]$policySource.Priority -ne [string]$liveSource.Priority) {
+                [void]$differences.Add("priority")
+            }
+        }
+
+        [void]$items.Add([PSCustomObject]@{
+            Name        = [string]$policySource.Name
+            Status      = if ($differences.Count -gt 0) { "Changed" } else { "Matched" }
+            Differences = [string[]]$differences.ToArray()
+            Policy      = $policySource
+            Live        = $liveSource
+        })
+    }
+
+    foreach ($key in @($liveByName.Keys | Sort-Object)) {
+        if ($policyByName.ContainsKey($key)) { continue }
+        $liveSource = $liveByName[$key]
+        [void]$items.Add([PSCustomObject]@{
+            Name        = [string]$liveSource.Name
+            Status      = "Extra"
+            Differences = [string[]]@("extra")
+            Policy      = $null
+            Live        = $liveSource
+        })
+    }
+
+    $rows = [object[]]$items.ToArray()
+    [PSCustomObject]@{
+        Schema       = "Wingetter.SourcePolicyDrift.v1"
+        CheckedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+        Summary      = [ordered]@{
+            policySources = $policyByName.Count
+            liveSources   = $liveByName.Count
+            missing       = @($rows | Where-Object { $_.Status -eq "Missing" }).Count
+            extra         = @($rows | Where-Object { $_.Status -eq "Extra" }).Count
+            changed       = @($rows | Where-Object { $_.Status -eq "Changed" }).Count
+            matched       = @($rows | Where-Object { $_.Status -eq "Matched" }).Count
+        }
+        Items        = $rows
+    }
+}
+
+function Get-WingetterSourcePolicyDrift {
+    param(
+        [object]$Policy,
+        [int]$TimeoutSeconds = 20
+    )
+
+    $arguments = @("source", "list", "--disable-interactivity")
+    $arguments = Add-WinGetCleanOutputArguments -Arguments $arguments
+    $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds $TimeoutSeconds
+    $liveSources = ConvertFrom-WingetterWinGetSourceListText -Text "$($capture.StdOut)`n$($capture.StdErr)"
+    $drift = Compare-WingetterSourcePolicyDrift -Policy $Policy -LiveSources $liveSources
+    $drift | Add-Member -NotePropertyName Command -NotePropertyValue ("winget " + (Join-ProcessArguments -Arguments $arguments))
+    $drift | Add-Member -NotePropertyName ExitCode -NotePropertyValue ([int]$capture.ExitCode)
+    $drift | Add-Member -NotePropertyName TimedOut -NotePropertyValue ([bool]$capture.TimedOut)
+    return $drift
 }
 
 function Export-WingetterSourcePolicy {
     param(
         [object]$Policy,
         [string]$FilePath,
-        [switch]$IncludeRawHeaders
+        [switch]$IncludeRawHeaders,
+        [string]$WinGetVersion = ""
     )
 
     $normalized = ConvertTo-WingetterSourcePolicy -Policy $Policy
     $commands = @()
     foreach ($source in @(Get-WingetterSourcePolicyDefinitions -Policy $normalized)) {
         if (![string]::IsNullOrWhiteSpace([string]$source.Argument)) {
-            $commands += New-WingetterWinGetSourceAddCommand -Source $source -IncludeRawHeader:$IncludeRawHeaders
+            $commands += New-WingetterWinGetSourceAddCommand -Source $source -IncludeRawHeader:$IncludeRawHeaders -WinGetVersion $WinGetVersion
         }
     }
 

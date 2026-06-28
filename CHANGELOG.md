@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: Source policy priority and drift audit support. Source definitions can carry optional WinGet 1.29+ `Priority`, exported `winget source add` commands include `--priority` only when supported, policy trust summaries show priority, and `Get-WingetterSourcePolicyDrift` compares policy sources against live `winget source list` data for missing, extra, changed, explicit, trust, and priority drift.
 - Changed: Release artifact verification now regenerates the bundled launcher, records and verifies its SHA256/size in `release\manifest.json`, checks that `Wingetter.exe` version metadata references the same bundle hash, records PS2EXE version metadata, and stores the live Authenticode status with an explicit unsigned reason when no code-signing certificate is available.
 - Added: STA UI smoke validation in `tools\Test-UiSmoke.ps1`. It launches the real WPF surface with fixture installed-package data, toggles dark/light themes, verifies empty search state, opens the profile gallery, enters/exits update mode, captures nonblank PNG screenshots, and is wired into `tools\Invoke-Validation.ps1`.
 - Added: Preflight run plans for install/update. Wingetter now writes a JSON `preflight-plan.json`, shows a review dialog with per-package action/status/reason/source/pin/version fields, skips blocked/current/unresolved rows before execution, and embeds the plan in migration reports.
