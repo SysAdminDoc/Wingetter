@@ -20,7 +20,7 @@ Wingetter is a Windows-first PowerShell/WPF setup cockpit for curated WinGet dis
 
 ## Security, Privacy, and Reliability
 - Validation-contract gap addressed after this research pass: README carries the `v6.1.0` badge, `tools\Invoke-Validation.ps1` is the one-command local runner, and release docs describe local validation/builds instead of removed workflow paths.
-- Verified secret-leak risk: `src/Wingetter.Sources.ps1:696-731` exports private REST source `Header` values and source-add commands; `tools\Test-SourcePolicy.ps1:41-63` uses an `Authorization=Bearer example` header, proving the schema can carry credentials.
+- Secret-leak risk addressed after this research pass: private REST source `Header` values and generated `winget source add --header` commands are redacted by default; raw header export now requires the explicit `-IncludeRawHeaders` switch and test coverage.
 - Verified offline replay risk: `src/Wingetter.OfflineCache.ps1:162-180` records downloaded file paths but not file hashes; `src/Wingetter.OfflineCache.ps1:183-256` verifies path containment and extension allowlists before `Start-Process`, but does not verify file integrity before replay.
 - Verified supply-chain gap: `Wingetter.ps1:43-56` hash-pins downloaded modules and `Wingetter.ps1:93-130` verifies staged module downloads, but the launcher script and checked-in EXE are not Authenticode-signed and the release verifier only checks hashes in `release/manifest.json`.
 - Verified privacy gap: `src/Wingetter.Ui.ps1:3020-3060` fetches icons from remote favicon URLs in parallel and swallows failures; there is no private/offline icon mode, TTL, or timeout policy visible in settings.

@@ -671,7 +671,7 @@ function Show-WinGetInstallerGUI {
                         <Button x:Name="DeleteGroupBtn" Style="{StaticResource ToolBtn}" Content="Delete" Margin="0,0,12,0" FontSize="11.5" Cursor="Hand" ToolTip="Delete the selected saved group"/>
                         <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="0,2,12,2"/>
                         <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON, PowerShell, or WinGet Configuration"/>
-                        <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and winget source commands"/>
+                        <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and redacted winget source commands"/>
                         <Button x:Name="DownloadCacheBtn" Style="{StaticResource ToolBtn}" Content="Download Cache" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Download selected installers and write an offline cache manifest"/>
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="GalleryBtn" Style="{StaticResource ToolBtn}" Content="Profile Gallery" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Browse hashed public profiles and review every package before import"/>
@@ -2272,7 +2272,7 @@ function Show-WinGetInstallerGUI {
         if ($dlg.ShowDialog() -eq $true) {
             try {
                 Export-WingetterSourcePolicy -Policy $ui["SourcePolicy"] -FilePath $dlg.FileName | Out-Null
-                $ProgressText.Text = "Exported source policy to $($dlg.FileName)."
+                $ProgressText.Text = "Exported redacted source policy to $($dlg.FileName)."
             } catch {
                 $ProgressText.Text = "Source policy export failed: $($_.Exception.Message)"
             }

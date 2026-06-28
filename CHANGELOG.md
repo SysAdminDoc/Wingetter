@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Fixed: Source policy export now redacts private REST `Header` values and generated `winget source add --header` arguments by default; raw headers require the explicit `-IncludeRawHeaders` export switch.
 - Added: `tools\Invoke-Validation.ps1` as the single local validation contract. It runs catalog, profile, gallery, WinGet runner, search, package-source, source-policy, update, offline-cache, configuration, accessibility, release-artifact, launcher-manifest, bundle, XAML, and PSScriptAnalyzer checks from one command.
 - Changed: README, release notes, project context, and validation guardrails now describe local validation and local release builds instead of removed GitHub workflow paths.
 - Fixed: Launcher, profile gallery, release-artifact, and launcher-manifest SHA256 checks now fall back to a .NET SHA256 stream helper when `Get-FileHash` is unavailable in Windows PowerShell.

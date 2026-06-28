@@ -145,7 +145,7 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 
 **Profile Gallery** opens the read-only checked-in profile index from `profiles/gallery.json`. Each profile file under `profiles/gallery/` must match its SHA256 hash, may contain only package IDs/names/sources, and is imported only after the package review dialog is accepted. Gallery import selects packages in Wingetter; it never starts install or update.
 
-**Corporate source policy** is stored at `%APPDATA%\Wingetter\source-policy.json`. Enable **Corporate policy** in the footer to refuse selected packages whose source is not listed in that policy. **Export Sources** writes the current policy plus reproducible `winget source add` commands for allowed and private sources.
+**Corporate source policy** is stored at `%APPDATA%\Wingetter\source-policy.json`. Enable **Corporate policy** in the footer to refuse selected packages whose source is not listed in that policy. **Export Sources** writes the current policy plus reproducible `winget source add` commands for allowed and private sources. Private source headers are redacted by default; use `Export-WingetterSourcePolicy -IncludeRawHeaders` only when deliberately creating a secret-bearing policy file.
 
 ### Scheduled Update Checks
 

@@ -681,8 +681,48 @@ function Get-WingetterPackageSourceTrustSummary {
     "$($check.SourceName) / $($check.TrustLevel) / $state"
 }
 
+$Script:WingetterSourceHeaderPlaceholder = "<redacted-header>"
+
+function Get-WingetterRedactedSourceHeaderPlaceholder {
+    return $Script:WingetterSourceHeaderPlaceholder
+}
+
+function Get-WingetterSourceHeaderForExport {
+    param(
+        [object]$Source,
+        [switch]$IncludeRawHeader
+    )
+
+    $definition = ConvertTo-WingetterSourceDefinition -Source $Source
+    if ($null -eq $definition -or [string]::IsNullOrWhiteSpace([string]$definition.Header)) { return "" }
+    if ($IncludeRawHeader) { return [string]$definition.Header }
+    return $Script:WingetterSourceHeaderPlaceholder
+}
+
+function ConvertTo-WingetterSourceDefinitionForExport {
+    param(
+        [object]$Source,
+        [switch]$IncludeRawHeader
+    )
+
+    $definition = ConvertTo-WingetterSourceDefinition -Source $Source
+    if ($null -eq $definition) { return $null }
+
+    New-WingetterSourceDefinition `
+        -Name $definition.Name `
+        -Type $definition.Type `
+        -Argument $definition.Argument `
+        -TrustLevel $definition.TrustLevel `
+        -Explicit $definition.Explicit `
+        -Private $definition.Private `
+        -Header (Get-WingetterSourceHeaderForExport -Source $definition -IncludeRawHeader:$IncludeRawHeader)
+}
+
 function New-WingetterWinGetSourceAddArguments {
-    param([object]$Source)
+    param(
+        [object]$Source,
+        [switch]$IncludeRawHeader
+    )
 
     $definition = ConvertTo-WingetterSourceDefinition -Source $Source
     if ($null -eq $definition) { throw "Cannot build source command for an empty source definition." }
@@ -693,9 +733,10 @@ function New-WingetterWinGetSourceAddArguments {
     $arguments += "--trust-level"
     $arguments += $trust
     if ($definition.Explicit) { $arguments += "--explicit" }
-    if (![string]::IsNullOrWhiteSpace($definition.Header)) {
+    $header = Get-WingetterSourceHeaderForExport -Source $definition -IncludeRawHeader:$IncludeRawHeader
+    if (![string]::IsNullOrWhiteSpace($header)) {
         $arguments += "--header"
-        $arguments += [string]$definition.Header
+        $arguments += $header
     }
     $arguments += "--accept-source-agreements"
     $arguments += "--disable-interactivity"
@@ -703,32 +744,38 @@ function New-WingetterWinGetSourceAddArguments {
 }
 
 function New-WingetterWinGetSourceAddCommand {
-    param([object]$Source)
-    "winget " + (Join-ProcessArguments -Arguments (New-WingetterWinGetSourceAddArguments -Source $Source))
+    param(
+        [object]$Source,
+        [switch]$IncludeRawHeader
+    )
+    "winget " + (Join-ProcessArguments -Arguments (New-WingetterWinGetSourceAddArguments -Source $Source -IncludeRawHeader:$IncludeRawHeader))
 }
 
 function Export-WingetterSourcePolicy {
     param(
         [object]$Policy,
-        [string]$FilePath
+        [string]$FilePath,
+        [switch]$IncludeRawHeaders
     )
 
     $normalized = ConvertTo-WingetterSourcePolicy -Policy $Policy
     $commands = @()
     foreach ($source in @(Get-WingetterSourcePolicyDefinitions -Policy $normalized)) {
         if (![string]::IsNullOrWhiteSpace([string]$source.Argument)) {
-            $commands += New-WingetterWinGetSourceAddCommand -Source $source
+            $commands += New-WingetterWinGetSourceAddCommand -Source $source -IncludeRawHeader:$IncludeRawHeaders
         }
     }
 
     $export = [ordered]@{
-        Schema            = "Wingetter.SourcePolicyExport.v1"
-        ExportedAtUtc     = (Get-Date).ToUniversalTime().ToString("o")
-        CorporateMode     = [bool]$normalized.CorporateMode
+        Schema               = "Wingetter.SourcePolicyExport.v1"
+        ExportedAtUtc        = (Get-Date).ToUniversalTime().ToString("o")
+        CorporateMode        = [bool]$normalized.CorporateMode
         RequireAllowedSource = [bool]$normalized.RequireAllowedSource
-        AllowedSources    = @($normalized.AllowedSources)
-        PrivateSources    = @($normalized.PrivateSources)
-        SourceAddCommands = @($commands)
+        HeadersRedacted      = -not [bool]$IncludeRawHeaders
+        HeaderPlaceholder    = $Script:WingetterSourceHeaderPlaceholder
+        AllowedSources       = @($normalized.AllowedSources | ForEach-Object { ConvertTo-WingetterSourceDefinitionForExport -Source $_ -IncludeRawHeader:$IncludeRawHeaders })
+        PrivateSources       = @($normalized.PrivateSources | ForEach-Object { ConvertTo-WingetterSourceDefinitionForExport -Source $_ -IncludeRawHeader:$IncludeRawHeaders })
+        SourceAddCommands    = @($commands)
     }
 
     $parent = Split-Path -Parent $FilePath

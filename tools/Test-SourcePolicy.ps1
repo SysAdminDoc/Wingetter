@@ -57,11 +57,24 @@ if ($failures.Count -eq 0) {
         Add-Failure "Corporate source policy did not allow the private REST source."
     }
 
+    $placeholder = Get-WingetterRedactedSourceHeaderPlaceholder
+
     $command = New-WingetterWinGetSourceAddCommand -Source $privateSource
     foreach ($expected in @("winget source add", "--name corp", "--arg https://packages.example.test/api", "--type Microsoft.Rest", "--trust-level trusted", "--explicit", "--header", "--accept-source-agreements", "--disable-interactivity")) {
         if ($command -notlike "*$expected*") {
             Add-Failure "Private source add command did not include '$expected': $command"
         }
+    }
+    if ($command -like "*Authorization=Bearer example*") {
+        Add-Failure "Default private source add command leaked the raw header: $command"
+    }
+    if ($command -notlike "*$placeholder*") {
+        Add-Failure "Default private source add command did not include the redacted header placeholder: $command"
+    }
+
+    $rawCommand = New-WingetterWinGetSourceAddCommand -Source $privateSource -IncludeRawHeader
+    if ($rawCommand -notlike "*Authorization=Bearer example*") {
+        Add-Failure "Explicit raw private source add command did not include the raw header: $rawCommand"
     }
 
     $adapter = Get-WingetterPackageSourceAdapter -Name "winget"
@@ -88,11 +101,32 @@ if ($failures.Count -eq 0) {
         }
 
         $exportPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-source-policy-export-" + [System.Guid]::NewGuid().ToString("N") + ".json")
+        $rawExportPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-source-policy-raw-export-" + [System.Guid]::NewGuid().ToString("N") + ".json")
         $export = Export-WingetterSourcePolicy -Policy $saved -FilePath $exportPath
         if (!(Test-Path $exportPath) -or @($export.SourceAddCommands).Count -eq 0 -or $export.SourceAddCommands[0] -notlike "*Microsoft.Rest*") {
             Add-Failure "Source policy export did not write source add commands."
         }
+        $exportJson = Get-Content -Path $exportPath -Raw
+        if ($exportJson -like "*Authorization=Bearer example*") {
+            Add-Failure "Default source policy export leaked the raw private header."
+        }
+        if (!$export.HeadersRedacted -or $export.HeaderPlaceholder -ne $placeholder) {
+            Add-Failure "Default source policy export did not mark headers as redacted."
+        }
+        if ($export.PrivateSources[0].Header -ne $placeholder) {
+            Add-Failure "Default source policy export did not redact the PrivateSources header."
+        }
+        if ($export.SourceAddCommands[0] -notlike "*$placeholder*") {
+            Add-Failure "Default source policy export command did not include the header placeholder."
+        }
+
+        $rawExport = Export-WingetterSourcePolicy -Policy $saved -FilePath $rawExportPath -IncludeRawHeaders
+        $rawExportJson = Get-Content -Path $rawExportPath -Raw
+        if ($rawExport.HeadersRedacted -or $rawExportJson -notlike "*Authorization=Bearer example*" -or $rawExport.SourceAddCommands[0] -notlike "*Authorization=Bearer example*") {
+            Add-Failure "Explicit raw source policy export did not preserve the private header."
+        }
         Remove-Item -Path $exportPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $rawExportPath -Force -ErrorAction SilentlyContinue
     } finally {
         Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue
     }

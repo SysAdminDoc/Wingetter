@@ -4,13 +4,6 @@
 
 ### P0
 
-- [ ] P0 - Redact private source headers by default
-  Why: Source policy export can write private REST `Header` values and source-add commands containing bearer-style secrets.
-  Evidence: `src/Wingetter.Sources.ps1:696-731`; `tools\Test-SourcePolicy.ps1:41-63`; Microsoft `winget source --header` docs.
-  Touches: `src\Wingetter.Sources.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-SourcePolicy.ps1`, `README.md`.
-  Acceptance: exported source policy and GUI source export redact headers by default, emit a placeholder in generated commands, and only include raw headers through an explicit advanced parameter with test coverage.
-  Complexity: M
-
 - [ ] P0 - Hash-verify offline cache replay
   Why: Offline replay constrains paths/extensions but launches cached installers without verifying they still match the files Wingetter downloaded.
   Evidence: `src/Wingetter.OfflineCache.ps1:162-180`; `src/Wingetter.OfflineCache.ps1:183-256`; PDQ chain-of-custody model; SLSA provenance guidance.
