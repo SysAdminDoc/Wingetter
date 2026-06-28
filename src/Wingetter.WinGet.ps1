@@ -131,6 +131,64 @@ function Join-ProcessArguments {
     }) -join " "
 }
 
+$Script:WingetterWinGetVersionText = $null
+
+function Get-WinGetCliVersionText {
+    if ($null -ne $Script:WingetterWinGetVersionText) { return $Script:WingetterWinGetVersionText }
+    $Script:WingetterWinGetVersionText = ""
+    try {
+        $winget = Get-Command winget -ErrorAction SilentlyContinue
+        if ($winget) {
+            $output = & $winget.Source --version 2>$null
+            $Script:WingetterWinGetVersionText = [string](@($output) | Select-Object -First 1)
+        }
+    } catch {
+        $Script:WingetterWinGetVersionText = ""
+    }
+    return $Script:WingetterWinGetVersionText
+}
+
+function ConvertTo-WinGetVersion {
+    param([string]$VersionText)
+
+    $match = [regex]::Match([string]$VersionText, '(?<major>\d+)\.(?<minor>\d+)(?:\.(?<patch>\d+))?')
+    if (!$match.Success) { return $null }
+    $patch = if ($match.Groups["patch"].Success) { [int]$match.Groups["patch"].Value } else { 0 }
+    return [version]::new([int]$match.Groups["major"].Value, [int]$match.Groups["minor"].Value, $patch)
+}
+
+function Test-WinGetVersionAtLeast {
+    param(
+        [string]$VersionText,
+        [version]$MinimumVersion
+    )
+
+    $version = ConvertTo-WinGetVersion -VersionText $VersionText
+    return ($null -ne $version -and $version -ge $MinimumVersion)
+}
+
+function Test-WinGetCleanOutputSupported {
+    param([string]$VersionText = "")
+
+    if ([string]::IsNullOrWhiteSpace($VersionText)) {
+        $VersionText = Get-WinGetCliVersionText
+    }
+    Test-WinGetVersionAtLeast -VersionText $VersionText -MinimumVersion ([version]"1.29.0")
+}
+
+function Add-WinGetCleanOutputArguments {
+    param(
+        [string[]]$Arguments,
+        [string]$WinGetVersion = ""
+    )
+
+    $updated = @($Arguments)
+    if ((Test-WinGetCleanOutputSupported -VersionText $WinGetVersion) -and $updated -notcontains "--no-progress") {
+        $updated += "--no-progress"
+    }
+    return [string[]]$updated
+}
+
 function Set-ProcessArguments {
     param(
         [System.Diagnostics.ProcessStartInfo]$ProcessStartInfo,
@@ -294,7 +352,8 @@ function New-WinGetPackageOperationArguments {
         [string]$SourceName = "",
         [bool]$Silent,
         [bool]$AcceptAgreements,
-        [bool]$IncludePinned
+        [bool]$IncludePinned,
+        [string]$WinGetVersion = ""
     )
 
     $arguments = @($Action, "--id", $PackageId, "--exact", "--verbose-logs", "--disable-interactivity")
@@ -310,7 +369,7 @@ function New-WinGetPackageOperationArguments {
     if ($Action -eq "upgrade" -and $IncludePinned) {
         $arguments += "--include-pinned"
     }
-    return [string[]]$arguments
+    return Add-WinGetCleanOutputArguments -Arguments $arguments -WinGetVersion $WinGetVersion
 }
 
 function Invoke-WinGetPackageOperation {
@@ -487,6 +546,25 @@ function Get-WingetterInstalledCachePath {
     return (Join-Path $root "installed-cache.json")
 }
 
+function New-WinGetListArguments {
+    param(
+        [string]$SourceName = "",
+        [string]$WinGetVersion = ""
+    )
+
+    $arguments = @("list", "--disable-interactivity")
+    if (![string]::IsNullOrWhiteSpace($SourceName)) {
+        $arguments += "--source"
+        $arguments += $SourceName
+    }
+    if (Test-WinGetCleanOutputSupported -VersionText $WinGetVersion) {
+        $arguments += "--sort"
+        $arguments += "name"
+        $arguments += "--ascending"
+    }
+    return Add-WinGetCleanOutputArguments -Arguments $arguments -WinGetVersion $WinGetVersion
+}
+
 function Set-WingetterFileAtomic {
     # Write $Content to $Path via a sibling temp file + Move-Item -Force. Avoids
     # leaving a partially-written file behind when two writers race (concurrent
@@ -644,7 +722,7 @@ function Get-WinGetInstalledCatalogPackages {
         $errorMessage = $_.Exception.Message
         try {
             $listSource = if ([string]::IsNullOrWhiteSpace($SourceName)) { "winget" } else { $SourceName }
-            $capture = Invoke-WinGetCapture -Arguments @("list", "--source", $listSource, "--disable-interactivity") -TimeoutSeconds 45
+            $capture = Invoke-WinGetCapture -Arguments (New-WinGetListArguments -SourceName $listSource) -TimeoutSeconds 45
             $records = ConvertFrom-WinGetListText -Text "$($capture.StdOut)`n$($capture.StdErr)" -PackageIds $PackageIds -ScannedAtUtc $scannedAtUtc
             if ($capture.ExitCode -ne 0 -and !$errorMessage) { $errorMessage = "winget list exited with code $($capture.ExitCode)." }
         } catch {
@@ -775,7 +853,8 @@ function Get-WinGetPinStatusFromText {
 function Get-WinGetPinStatus {
     param([string]$PackageId)
 
-    $capture = Invoke-WinGetCapture -Arguments @("pin", "list", "--id", $PackageId, "--exact", "--disable-interactivity") -TimeoutSeconds 20
+    $arguments = Add-WinGetCleanOutputArguments -Arguments @("pin", "list", "--id", $PackageId, "--exact", "--disable-interactivity")
+    $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds 20
     $combined = "$($capture.StdOut)`n$($capture.StdErr)"
     return Get-WinGetPinStatusFromText -Text $combined -PackageId $PackageId -ExitCode $capture.ExitCode -TimedOut ([bool]$capture.TimedOut)
 }
@@ -802,6 +881,7 @@ function Invoke-WinGetPinOperation {
         }
     }
 
+    $arguments = Add-WinGetCleanOutputArguments -Arguments $arguments
     $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds 60
     $combined = "$($capture.StdOut)`n$($capture.StdErr)".Trim()
     [PSCustomObject]@{
@@ -826,6 +906,7 @@ function Get-WinGetPackageDetails {
         $arguments += "--source"
         $arguments += $SourceName
     }
+    $arguments = Add-WinGetCleanOutputArguments -Arguments $arguments
     $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds 20
     $combined = "$($capture.StdOut)`n$($capture.StdErr)"
     $warnings = [System.Collections.ArrayList]::new()

@@ -37,6 +37,14 @@ if ($failures.Count -eq 0) {
             Add-Failure "Offline download arguments did not include '$expected'."
         }
     }
+    $legacyDownloadArgs = New-WingetterOfflineDownloadArguments -PackageId "Internal.Tool" -DownloadDirectory "C:\Cache" -SourceName "corp" -AcceptAgreements $true -WinGetVersion "v1.28.240"
+    if ($legacyDownloadArgs -contains "--no-progress") {
+        Add-Failure "WinGet 1.28 offline download arguments unexpectedly included --no-progress."
+    }
+    $cleanDownloadArgs = New-WingetterOfflineDownloadArguments -PackageId "Internal.Tool" -DownloadDirectory "C:\Cache" -SourceName "corp" -AcceptAgreements $true -WinGetVersion "v1.29.280"
+    if ($cleanDownloadArgs -notcontains "--no-progress") {
+        Add-Failure "WinGet 1.29 offline download arguments did not include --no-progress."
+    }
 
     $before = @("C:\Cache\a.exe")
     $after = @("C:\Cache\a.exe", "C:\Cache\b.msi")

@@ -4,13 +4,6 @@
 
 ### P1
 
-- [ ] P1 - Add WinGet 1.29 clean-output support
-  Why: WinGet 1.29 adds `--no-progress`, cleaner redirected table output, sortable `list`, source priority, and preserved custom/override import metadata that directly reduce parser/log noise.
-  Evidence: `microsoft/winget-cli` v1.29.280 release; `src/Wingetter.WinGet.ps1:290-313`; `src/Wingetter.WinGet.ps1:620-664`; UniGetUI issue #5004.
-  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.OfflineCache.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget`.
-  Acceptance: command builders feature-detect support and add `--no-progress` where available; list scans use stable sort/clean redirected output when supported; tests cover WinGet 1.28 fallback and 1.29 argument emission.
-  Complexity: M
-
 - [ ] P1 - Move long package operations off the UI event thread
   Why: Install/update/offline loops run serial process waits from click handlers and pump `DoEvents`, which risks reentrancy and weak cancellation under long installers.
   Evidence: `src/Wingetter.Ui.ps1:2518-2601`; `src/Wingetter.Ui.ps1:2604-2674`; `src/Wingetter.WinGet.ps1:362-369`.

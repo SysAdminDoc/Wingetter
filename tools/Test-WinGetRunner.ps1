@@ -91,6 +91,12 @@ if ($failures.Count -eq 0) {
     if ($null -ne (Get-WinGetExitCodeMeaning -ExitCode 1603)) {
         Add-Failure "Get-WinGetExitCodeMeaning should return `$null for unknown exit codes."
     }
+    if (Test-WinGetCleanOutputSupported -VersionText "v1.28.240") {
+        Add-Failure "WinGet clean-output support should be disabled for v1.28.240."
+    }
+    if (-not (Test-WinGetCleanOutputSupported -VersionText "v1.29.280")) {
+        Add-Failure "WinGet clean-output support should be enabled for v1.29.280."
+    }
 
     # R-021: fixture-based parser coverage.
     $fixtureRoot = Join-Path $PSScriptRoot "fixtures\winget"
@@ -219,6 +225,24 @@ if ($failures.Count -eq 0) {
     $sourceArgs = New-WinGetPackageOperationArguments -Action "install" -PackageId "Internal.Tool" -SourceName "corp" -Silent $false -AcceptAgreements $true -IncludePinned $false
     if ($sourceArgs -notcontains "--source" -or $sourceArgs -notcontains "corp") {
         Add-Failure "Install arguments did not include an explicit source."
+    }
+    $legacyArgs = New-WinGetPackageOperationArguments -Action "install" -PackageId "Google.Chrome" -Silent $false -AcceptAgreements $false -IncludePinned $false -WinGetVersion "v1.28.240"
+    if ($legacyArgs -contains "--no-progress") {
+        Add-Failure "WinGet 1.28 install arguments unexpectedly included --no-progress."
+    }
+    $cleanArgs = New-WinGetPackageOperationArguments -Action "install" -PackageId "Google.Chrome" -Silent $false -AcceptAgreements $false -IncludePinned $false -WinGetVersion "v1.29.280"
+    if ($cleanArgs -notcontains "--no-progress") {
+        Add-Failure "WinGet 1.29 install arguments did not include --no-progress."
+    }
+    $legacyListArgs = New-WinGetListArguments -SourceName "winget" -WinGetVersion "v1.28.240"
+    if ($legacyListArgs -contains "--no-progress" -or $legacyListArgs -contains "--sort") {
+        Add-Failure "WinGet 1.28 list arguments unexpectedly included clean-output/sort arguments."
+    }
+    $cleanListArgs = New-WinGetListArguments -SourceName "winget" -WinGetVersion "v1.29.280"
+    foreach ($expectedListArg in @("--no-progress", "--sort", "name", "--ascending")) {
+        if ($cleanListArgs -notcontains $expectedListArg) {
+            Add-Failure "WinGet 1.29 list arguments did not include '$expectedListArg'."
+        }
     }
 
     $showSample = @"

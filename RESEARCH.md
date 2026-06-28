@@ -24,7 +24,7 @@ Wingetter is a Windows-first PowerShell/WPF setup cockpit for curated WinGet dis
 - Offline replay integrity gap addressed after this research pass: `offline-manifest.json` records cached installer SHA256 and byte size, and `install-offline.ps1` refuses files whose size or hash changed before launch.
 - Verified supply-chain gap: `Wingetter.ps1:43-56` hash-pins downloaded modules and `Wingetter.ps1:93-130` verifies staged module downloads, but the launcher script and checked-in EXE are not Authenticode-signed and the release verifier only checks hashes in `release/manifest.json`.
 - Verified privacy gap: `src/Wingetter.Ui.ps1:3020-3060` fetches icons from remote favicon URLs in parallel and swallows failures; there is no private/offline icon mode, TTL, or timeout policy visible in settings.
-- Verified reliability opportunity: WinGet 1.29 adds `--no-progress`, cleaner redirected list output, sortable `list`, source priority, and preserved custom/override export/import arguments; local installed WinGet is v1.28.240, so support must be version/feature detected.
+- WinGet 1.29 clean-output support addressed after this research pass: command builders feature-detect 1.29+ before adding `--no-progress`, and fallback list scans emit stable sort arguments only when supported. Source priority and preserved import/export metadata remain separate roadmap items.
 
 ## Architecture Assessment
 - `src/Wingetter.Ui.ps1` is still the dominant module at 2,912 lines; install/update/offline click handlers run serial package operations from the UI event path with `System.Windows.Forms.Application.DoEvents()` (`src/Wingetter.Ui.ps1:2604-2674`) instead of a dedicated worker boundary.

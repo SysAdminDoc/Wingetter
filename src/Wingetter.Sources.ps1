@@ -92,6 +92,7 @@ function Get-WingetterWinGetSourceAdapter {
             }
             $arguments += "--disable-interactivity"
             $arguments += "--accept-source-agreements"
+            $arguments = Add-WinGetCleanOutputArguments -Arguments $arguments
             $capture = Invoke-WinGetCapture -Arguments $arguments -TimeoutSeconds $TimeoutSeconds
             [PSCustomObject]@{
                 Source   = "winget"

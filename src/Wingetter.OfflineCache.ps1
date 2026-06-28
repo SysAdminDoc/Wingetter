@@ -18,7 +18,8 @@ function New-WingetterOfflineDownloadArguments {
         [string]$PackageId,
         [string]$DownloadDirectory,
         [string]$SourceName = "winget",
-        [bool]$AcceptAgreements = $true
+        [bool]$AcceptAgreements = $true,
+        [string]$WinGetVersion = ""
     )
 
     $arguments = @("download", "--id", $PackageId, "--exact", "--download-directory", $DownloadDirectory, "--disable-interactivity", "--verbose-logs")
@@ -30,7 +31,7 @@ function New-WingetterOfflineDownloadArguments {
         $arguments += "--accept-package-agreements"
         $arguments += "--accept-source-agreements"
     }
-    return [string[]]$arguments
+    return Add-WinGetCleanOutputArguments -Arguments $arguments -WinGetVersion $WinGetVersion
 }
 
 function Get-WingetterOfflineCacheFiles {

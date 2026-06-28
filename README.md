@@ -48,7 +48,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Shift-click range selection** -- hold Shift to select a range of apps at once
 - **Enhanced tooltips** -- hover to see app name and WingetId
 - **Install log panel** -- color-coded per-app results (success/skipped/failed) with summary
-- **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`
+- **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`; WinGet 1.29+ runs use cleaner `--no-progress` output where supported
 - **Migration reports** -- completed install/update runs create exportable Markdown or JSON reports with summary counts, commands, result paths, versions, and sources
 - **Scheduled update checks** -- optional Windows scheduled task checks for available updates, respects pins/source policy, can skip metered networks, rotates logs, and never auto-installs
 - **Offline download cache** -- download selected installers with `winget download`, write an offline manifest, and generate a replay script for later installer launch
