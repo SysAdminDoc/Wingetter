@@ -13,14 +13,16 @@ function Add-Failure {
     $script:failures.Add($Message)
 }
 
-$modulePath = Join-Path $SourceDir "Wingetter.Configuration.ps1"
-if (!(Test-Path $modulePath)) {
-    Add-Failure "Missing source module 'Wingetter.Configuration.ps1'."
-} else {
-    try {
-        . (Resolve-Path $modulePath).Path
-    } catch {
-        Add-Failure "Could not import 'Wingetter.Configuration.ps1': $($_.Exception.Message)"
+foreach ($moduleName in @("Wingetter.Common.ps1", "Wingetter.Configuration.ps1")) {
+    $modulePath = Join-Path $SourceDir $moduleName
+    if (!(Test-Path $modulePath)) {
+        Add-Failure "Missing source module '$moduleName'."
+    } else {
+        try {
+            . (Resolve-Path $modulePath).Path
+        } catch {
+            Add-Failure "Could not import '$moduleName': $($_.Exception.Message)"
+        }
     }
 }
 
@@ -40,6 +42,15 @@ if ($failures.Count -eq 0) {
         if ($yaml -notlike "*$expected*") {
             Add-Failure "Configuration YAML did not include '$expected'."
         }
+    }
+    $versionYaml = ConvertTo-WingetterConfigurationYaml -PackageEntries @(
+        (New-WingetterConfigurationPackageEntry -Name "Pinned Tool" -PackageId "Example.Tool" -SourceName "winget" -InstallOptions ([PSCustomObject]@{ Version = "1.2.3"; Scope = "machine" }))
+    )
+    if ($versionYaml -notlike "*version: '1.2.3'*") {
+        Add-Failure "Configuration YAML did not preserve per-package version install option."
+    }
+    if ($versionYaml -like "*scope:*") {
+        Add-Failure "Configuration YAML should not invent unsupported scope settings."
     }
 
     # Names with embedded newlines must be flattened so the generated YAML

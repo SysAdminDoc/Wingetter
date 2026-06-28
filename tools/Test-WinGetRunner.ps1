@@ -12,14 +12,16 @@ function Add-Failure {
     $script:failures.Add($Message)
 }
 
-$modulePath = Join-Path $SourceDir "Wingetter.WinGet.ps1"
-if (!(Test-Path $modulePath)) {
-    Add-Failure "Missing source module 'Wingetter.WinGet.ps1'."
-} else {
-    try {
-        . (Resolve-Path $modulePath).Path
-    } catch {
-        Add-Failure "Could not import 'Wingetter.WinGet.ps1': $($_.Exception.Message)"
+foreach ($moduleName in @("Wingetter.Common.ps1", "Wingetter.WinGet.ps1")) {
+    $modulePath = Join-Path $SourceDir $moduleName
+    if (!(Test-Path $modulePath)) {
+        Add-Failure "Missing source module '$moduleName'."
+    } else {
+        try {
+            . (Resolve-Path $modulePath).Path
+        } catch {
+            Add-Failure "Could not import '$moduleName': $($_.Exception.Message)"
+        }
     }
 }
 
@@ -245,6 +247,40 @@ if ($failures.Count -eq 0) {
     if ($cleanArgs -notcontains "--no-progress") {
         Add-Failure "WinGet 1.29 install arguments did not include --no-progress."
     }
+    $optionArgs = New-WinGetPackageOperationArguments `
+        -Action "install" `
+        -PackageId "Example.Tool" `
+        -SourceName "corp" `
+        -Silent $true `
+        -AcceptAgreements $true `
+        -IncludePinned $false `
+        -InstallOptions ([PSCustomObject]@{
+            Version       = "1.2.3"
+            Scope         = "machine"
+            Architecture  = "x64"
+            InstallerType = "msi"
+            Locale        = "en-US"
+            Location      = "C:\Program Files\Example Tool"
+            Custom        = "/NoDesktopShortcut"
+        })
+    foreach ($expectedOptionArg in @("--version", "1.2.3", "--scope", "machine", "--architecture", "x64", "--installer-type", "msi", "--locale", "en-US", "--location", "C:\Program Files\Example Tool", "--custom", "/NoDesktopShortcut")) {
+        if ($optionArgs -notcontains $expectedOptionArg) {
+            Add-Failure "Install arguments with options did not include '$expectedOptionArg'."
+        }
+    }
+    $optionCommand = "winget " + (Join-ProcessArguments -Arguments $optionArgs)
+    if ($optionCommand -notlike '*--location "C:\Program Files\Example Tool"*') {
+        Add-Failure "Install command preview did not quote a location containing spaces: $optionCommand"
+    }
+    $unsafeOptionsRejected = $false
+    try {
+        New-WinGetPackageOperationArguments -Action "install" -PackageId "Bad.Tool" -Silent $false -AcceptAgreements $false -IncludePinned $false -InstallOptions ([PSCustomObject]@{ Override = "/danger" }) | Out-Null
+    } catch {
+        $unsafeOptionsRejected = ($_.Exception.Message -match "not supported")
+    }
+    if (-not $unsafeOptionsRejected) {
+        Add-Failure "WinGet operation arguments accepted unsafe Override install options."
+    }
     $legacyListArgs = New-WinGetListArguments -SourceName "winget" -WinGetVersion "v1.28.240"
     if ($legacyListArgs -contains "--no-progress" -or $legacyListArgs -contains "--sort") {
         Add-Failure "WinGet 1.28 list arguments unexpectedly included clean-output/sort arguments."
@@ -279,13 +315,16 @@ if ($failures.Count -eq 0) {
         [PSCustomObject]@{ Name = "Google Chrome"; WingetId = "Google.Chrome"; SourceName = "winget" },
         [PSCustomObject]@{ Name = "Mozilla Firefox"; WingetId = "Mozilla.Firefox"; SourceName = "winget" },
         [PSCustomObject]@{ Name = "Internal Tool"; WingetId = "Internal.Tool"; SourceName = "corp" },
-        [PSCustomObject]@{ Name = "New App"; WingetId = "Example.NewApp"; SourceName = "winget" }
+        [PSCustomObject]@{ Name = "New App"; WingetId = "Example.NewApp"; SourceName = "winget"; InstallOptions = [PSCustomObject]@{ Scope = "user"; Architecture = "x64" } }
     )
     $installPlan = New-WingetterRunPlan -Action "install" -SelectedPackages $planPackages -InstalledRecords $installedRecords -SourcePolicy $policy -PinStatusesById $pinStatuses -IncludePinned $false -ProfileName "Fixture"
     $installById = @{}
     foreach ($item in @($installPlan.Packages)) { $installById[[string]$item.PackageId] = $item }
     if (!$installById["Example.NewApp"].CanRun -or $installById["Example.NewApp"].PlannedAction -ne "Install") {
         Add-Failure "Install preflight plan did not mark a new allowed package as runnable."
+    }
+    if ($installById["Example.NewApp"].InstallOptions.Scope -ne "user" -or $installById["Example.NewApp"].InstallOptionsSummary -notmatch "Architecture=x64") {
+        Add-Failure "Install preflight plan did not preserve per-package install options."
     }
     if ($installById["Mozilla.Firefox"].CanRun -or $installById["Mozilla.Firefox"].Status -ne "INSTALLED_CURRENT") {
         Add-Failure "Install preflight plan did not skip an already installed/current package."

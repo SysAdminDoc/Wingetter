@@ -303,6 +303,8 @@ function New-WingetterRunPlan {
         $packageId = if ($package.WingetId) { [string]$package.WingetId } elseif ($package.PackageId) { [string]$package.PackageId } else { "" }
         $name = if ($package.Name) { [string]$package.Name } else { $packageId }
         $sourceName = if ($package.SourceName) { [string]$package.SourceName } else { "winget" }
+        $installOptions = if ($package.PSObject.Properties["InstallOptions"]) { ConvertTo-WingetterInstallOptions -InstallOptions $package.InstallOptions -AllowCustom $true } else { ConvertTo-WingetterInstallOptions -InstallOptions $null }
+        $installOptionsSummary = ConvertTo-WingetterInstallOptionsSummary -InstallOptions $installOptions
         $installed = if ($InstalledRecords -and $InstalledRecords.ContainsKey($packageId)) { $InstalledRecords[$packageId] } else { $null }
         $pinStatus = if ($PinStatusesById -and $PinStatusesById.ContainsKey($packageId)) { $PinStatusesById[$packageId] } else { $null }
         $isInstalled = ($null -ne $installed)
@@ -387,6 +389,8 @@ function New-WingetterRunPlan {
             PinType          = if ($pinStatus) { [string]$pinStatus.PinType } else { "None" }
             SourceAllowed    = [bool]$policyAllowed
             SourceReason     = $policyReason
+            InstallOptions   = $installOptions
+            InstallOptionsSummary = $installOptionsSummary
         })
     }
 
@@ -494,6 +498,7 @@ function New-WinGetPackageOperationArguments {
         [bool]$Silent,
         [bool]$AcceptAgreements,
         [bool]$IncludePinned,
+        [object]$InstallOptions = $null,
         [string]$WinGetVersion = ""
     )
 
@@ -501,6 +506,37 @@ function New-WinGetPackageOperationArguments {
     if (![string]::IsNullOrWhiteSpace($SourceName) -and $Action -ne "uninstall") {
         $arguments += "--source"
         $arguments += $SourceName
+    }
+    $options = ConvertTo-WingetterInstallOptions -InstallOptions $InstallOptions -AllowCustom $true
+    if ($Action -in @("install", "upgrade")) {
+        if ($options.PSObject.Properties["Version"]) {
+            $arguments += "--version"
+            $arguments += [string]$options.Version
+        }
+        if ($options.PSObject.Properties["Scope"]) {
+            $arguments += "--scope"
+            $arguments += [string]$options.Scope
+        }
+        if ($options.PSObject.Properties["Architecture"]) {
+            $arguments += "--architecture"
+            $arguments += [string]$options.Architecture
+        }
+        if ($options.PSObject.Properties["InstallerType"]) {
+            $arguments += "--installer-type"
+            $arguments += [string]$options.InstallerType
+        }
+        if ($options.PSObject.Properties["Locale"]) {
+            $arguments += "--locale"
+            $arguments += [string]$options.Locale
+        }
+        if ($Action -eq "install" -and $options.PSObject.Properties["Location"]) {
+            $arguments += "--location"
+            $arguments += [string]$options.Location
+        }
+        if ($options.PSObject.Properties["Custom"]) {
+            $arguments += "--custom"
+            $arguments += [string]$options.Custom
+        }
     }
     if ($Silent) { $arguments += "--silent" }
     if ($AcceptAgreements) {
@@ -522,12 +558,14 @@ function Invoke-WinGetPackageOperation {
         [bool]$Silent,
         [bool]$AcceptAgreements,
         [bool]$IncludePinned,
+        [object]$InstallOptions = $null,
         [string]$RunLogDir,
         [scriptblock]$ShouldCancel = { $false },
         [scriptblock]$PumpUi = {}
     )
 
-    $arguments = New-WinGetPackageOperationArguments -Action $Action -PackageId $PackageId -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned
+    $options = ConvertTo-WingetterInstallOptions -InstallOptions $InstallOptions -AllowCustom $true
+    $arguments = New-WinGetPackageOperationArguments -Action $Action -PackageId $PackageId -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -InstallOptions $options
 
     $safeId = Get-SafeFileName -Value $PackageId
     # 7-digit fractional seconds (100-ns ticks) avoids collisions when two
@@ -597,6 +635,8 @@ function Invoke-WinGetPackageOperation {
         PackageName       = $PackageName
         PackageId         = $PackageId
         SourceName        = $SourceName
+        InstallOptions    = $options
+        InstallOptionsSummary = ConvertTo-WingetterInstallOptionsSummary -InstallOptions $options
         Command           = "winget " + (Join-ProcessArguments -Arguments $arguments)
         ExitCode          = $exitCode
         ExitCodeMeaning   = $exitCodeMeaning

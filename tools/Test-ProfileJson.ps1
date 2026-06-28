@@ -75,6 +75,96 @@ if ($failures.Count -eq 0) {
             Add-Failure "Wingetter import group name was '$($wingetterImport.GroupName)'."
         }
 
+        $optionEntries = @(
+            (New-WingetterGroupPackageEntry `
+                -PackageId "Example.Tool" `
+                -SourceName "winget" `
+                -Name "Example Tool" `
+                -InstallOptions ([PSCustomObject]@{
+                    Version       = "1.2.3"
+                    Scope         = "machine"
+                    Architecture  = "x64"
+                    InstallerType = "msi"
+                    Locale        = "en-US"
+                    Location      = "C:\Program Files\Example Tool"
+                    Custom        = "/NoDesktopShortcut"
+                }) `
+                -AllowCustomInstallOptions)
+        )
+        $optionPath = Join-Path $tempDir "wingetter-group-options.json"
+        Export-GroupAsJSON -GroupName "Options" -PackageIds @("Example.Tool") -PackageEntries $optionEntries -FilePath $optionPath
+        $optionJson = Get-Content -Path $optionPath -Raw | ConvertFrom-Json
+        if (!$optionJson.Packages[0].InstallOptions -or $optionJson.Packages[0].InstallOptions.Scope -ne "machine") {
+            Add-Failure "Wingetter group JSON export did not persist install options."
+        }
+        $optionImport = Import-PackageIdsFromJSON -Content $optionJson -FallbackGroupName "Options"
+        if ($optionImport.PackageEntries[0].InstallOptions.Location -ne "C:\Program Files\Example Tool" -or $optionImport.PackageEntries[0].InstallOptions.Custom -ne "/NoDesktopShortcut") {
+            Add-Failure "Wingetter group JSON import did not preserve install options."
+        }
+
+        $optionWinGetPath = Join-Path $tempDir "winget-options.json"
+        Export-GroupAsWinGetJSON -GroupName "Options" -PackageIds @("Example.Tool") -PackageEntries $optionEntries -FilePath $optionWinGetPath
+        $optionWinGetJson = Get-Content -Path $optionWinGetPath -Raw | ConvertFrom-Json
+        if ($optionWinGetJson.Sources[0].Packages[0].Version -ne "1.2.3") {
+            Add-Failure "Official WinGet JSON export did not preserve safe version metadata."
+        }
+        if ($optionWinGetJson.Sources[0].Packages[0].PSObject.Properties["Scope"]) {
+            Add-Failure "Official WinGet JSON export should not emit non-schema install option fields."
+        }
+
+        $optionScriptPath = Join-Path $tempDir "Install-Options.ps1"
+        Export-GroupAsPS1 -GroupName "Options" -PackageIds @("Example.Tool") -PackageEntries $optionEntries -FilePath $optionScriptPath
+        $optionScript = Get-Content -Path $optionScriptPath -Raw
+        foreach ($expectedScriptText in @("InstallOptions = @", "Location = 'C:\Program Files\Example Tool'", "Custom = '/NoDesktopShortcut'", "& winget @wingetArgs")) {
+            if ($optionScript -notlike "*$expectedScriptText*") {
+                Add-Failure "PowerShell group export did not include install option script text '$expectedScriptText'."
+            }
+        }
+        $tokens = $null
+        $parseErrors = $null
+        [System.Management.Automation.Language.Parser]::ParseFile($optionScriptPath, [ref]$tokens, [ref]$parseErrors) | Out-Null
+        if (@($parseErrors).Count -gt 0) {
+            Add-Failure "PowerShell group export generated a script with parse errors: $($parseErrors[0].Message)"
+        }
+
+        $officialOptions = [PSCustomObject]@{
+            Sources = @(
+                [PSCustomObject]@{
+                    SourceDetails = [PSCustomObject]@{ Name = "winget" }
+                    Packages      = @(
+                        [PSCustomObject]@{
+                            PackageIdentifier = "Official.Tool"
+                            Version           = "4.5.6"
+                            Scope             = "user"
+                            Architecture      = "arm64"
+                            InstallerType     = "msix"
+                            Locale            = "en-US"
+                        }
+                    )
+                }
+            )
+        }
+        $officialOptionsImport = Import-PackageIdsFromJSON -Content $officialOptions -FallbackGroupName "OfficialOptions"
+        if ($officialOptionsImport.PackageEntries[0].InstallOptions.Version -ne "4.5.6" -or $officialOptionsImport.PackageEntries[0].InstallOptions.Architecture -ne "arm64") {
+            Add-Failure "Official WinGet import metadata did not preserve safe install options."
+        }
+        if (@($officialOptionsImport.Warnings | Where-Object { $_ -match "Preserved safe install options" }).Count -ne 1) {
+            Add-Failure "Official WinGet import metadata did not warn about preserved install options."
+        }
+
+        $unsafeOptionsRejected = $false
+        try {
+            Import-PackageIdsFromJSON -Content ([PSCustomObject]@{
+                Schema   = "Wingetter.Group.v1"
+                Packages = @([PSCustomObject]@{ PackageIdentifier = "Bad.Tool"; InstallOptions = [PSCustomObject]@{ Override = "/danger" } })
+            }) -FallbackGroupName "UnsafeOptions" | Out-Null
+        } catch {
+            $unsafeOptionsRejected = ($_.Exception.Message -match "not supported")
+        }
+        if (-not $unsafeOptionsRejected) {
+            Add-Failure "Wingetter group JSON accepted unsafe Override install options."
+        }
+
         $arrayImport = Import-PackageIdsFromJSON -Content $ids -FallbackGroupName "Array"
         Assert-EqualArray -Actual $arrayImport.PackageIds -Expected $ids -Name "Array import package IDs"
 

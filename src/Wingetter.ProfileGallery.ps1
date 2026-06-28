@@ -25,7 +25,7 @@ function ConvertFrom-WingetterPublicProfileJson {
         throw "Unsupported public profile schema '$schema'."
     }
 
-    $allowedProfileProperties = @("Schema", "ProfileId", "Name", "Description", "Publisher", "Generated", "Tags", "Packages")
+    $allowedProfileProperties = @("Schema", "ProfileId", "Name", "Description", "Publisher", "Generated", "Tags", "Packages", "AllowedInstallOptionFields")
     foreach ($property in @($Content.PSObject.Properties.Name)) {
         if ($allowedProfileProperties -notcontains $property) {
             throw "Public profile contains unsupported top-level field '$property'."
@@ -34,11 +34,17 @@ function ConvertFrom-WingetterPublicProfileJson {
 
     $packages = Get-WingetterGalleryJsonProperty -InputObject $Content -PropertyName "Packages"
     if (!$packages) { throw "Public profile does not contain any packages." }
+    $allowedInstallOptionFields = [string[]]@(
+        (Get-WingetterGalleryJsonProperty -InputObject $Content -PropertyName "AllowedInstallOptionFields") |
+            ForEach-Object { [string]$_ } |
+            Where-Object { ![string]::IsNullOrWhiteSpace([string]$_) }
+    )
+    $allowCustomInstallOptions = @($allowedInstallOptionFields | Where-Object { [string]::Equals([string]$_, "Custom", [System.StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
 
     $entries = [System.Collections.ArrayList]::new()
     $seenIds = @{}
     foreach ($package in @($packages)) {
-        $allowedPackageProperties = @("PackageIdentifier", "SourceName", "Name")
+        $allowedPackageProperties = @("PackageIdentifier", "SourceName", "Name", "InstallOptions")
         foreach ($property in @($package.PSObject.Properties.Name)) {
             if ($allowedPackageProperties -notcontains $property) {
                 throw "Public profile package contains unsupported field '$property'."
@@ -56,12 +62,17 @@ function ConvertFrom-WingetterPublicProfileJson {
 
         $sourceName = [string](Get-WingetterGalleryJsonProperty -InputObject $package -PropertyName "SourceName")
         if ([string]::IsNullOrWhiteSpace($sourceName)) { $sourceName = "winget" }
+        $installOptions = Get-WingetterPackageEntryInstallOptions -Package $package -AllowCustomInstallOptions:$allowCustomInstallOptions -AllowedInstallOptionFields $allowedInstallOptionFields
 
-        [void]$entries.Add([PSCustomObject]@{
+        $entry = [ordered]@{
             Name              = [string](Get-WingetterGalleryJsonProperty -InputObject $package -PropertyName "Name")
             PackageIdentifier = $packageId
             SourceName        = $sourceName
-        })
+        }
+        if (!(Test-WingetterInstallOptionsEmpty -InstallOptions $installOptions)) {
+            $entry["InstallOptions"] = $installOptions
+        }
+        [void]$entries.Add([PSCustomObject]$entry)
     }
 
     [PSCustomObject]@{
@@ -190,7 +201,9 @@ function ConvertTo-WingetterProfileGalleryPreviewText {
     [void]$sb.AppendLine("Package review")
     foreach ($package in @($GalleryItem.PackageEntries)) {
         $name = if (![string]::IsNullOrWhiteSpace([string]$package.Name)) { " - $($package.Name)" } else { "" }
-        [void]$sb.AppendLine("- $($package.PackageIdentifier) | source: $($package.SourceName)$name")
+        $optionsSummary = if ($package.PSObject.Properties["InstallOptions"]) { ConvertTo-WingetterInstallOptionsSummary -InstallOptions $package.InstallOptions } else { "" }
+        $optionsText = if (![string]::IsNullOrWhiteSpace($optionsSummary)) { " | options: $optionsSummary" } else { "" }
+        [void]$sb.AppendLine("- $($package.PackageIdentifier) | source: $($package.SourceName)$name$optionsText")
     }
     [void]$sb.AppendLine("")
     [void]$sb.AppendLine("Importing this profile only selects packages in Wingetter. It does not install or update anything.")

@@ -9,6 +9,7 @@ $ErrorActionPreference = "Stop"
 
 $sourceDir = Join-Path $PSScriptRoot "..\src"
 foreach ($moduleName in @(
+    "Wingetter.Common.ps1",
     "Wingetter.Configuration.ps1"
 )) {
     . (Resolve-Path (Join-Path $sourceDir $moduleName)).Path

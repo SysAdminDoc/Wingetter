@@ -40,6 +40,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Silent install & auto-accept agreements** -- toggleable checkboxes for hands-free deployment
 - **Copy command** -- grab the raw `winget install` commands to clipboard
 - **Save / Load groups** -- persist custom selections as named groups for reuse
+- **Per-package install options** -- Wingetter group profiles can preserve vetted WinGet `version`, `scope`, `architecture`, `installer-type`, `locale`, `location`, and `custom` options
 - **Profile Gallery** -- browse checked-in public profiles, verify SHA256 hashes, review every package ID/source, and import only as a selection
 - **Export as PS1, Wingetter JSON, official WinGet JSON, or WinGet Configuration** -- generate standalone installer scripts, reusable Wingetter group profiles, files usable with `winget import`, or declarative `.winget` configuration files
 - **Import JSON profiles** -- load official WinGet export/import JSON, Wingetter group JSON, or simple package ID arrays
@@ -134,17 +135,17 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 
 **Export as WinGet Import JSON** creates an official `winget import` compatible file with `Sources`, `Packages`, and `PackageIdentifier` entries.
 
-**Export as Wingetter Group JSON** creates a portable Wingetter profile that can be imported back into Wingetter on any machine.
+**Export as Wingetter Group JSON** creates a portable Wingetter profile that can be imported back into Wingetter on any machine. It keeps legacy `PackageIds` for compatibility and adds `Packages` entries when a package carries vetted install options.
 
-**Export as PS1** generates a self-contained PowerShell script that installs your selected packages with no dependencies -- hand it to a coworker or drop it in your deployment pipeline.
+**Export as PS1** generates a self-contained PowerShell script that installs your selected packages with no dependencies -- hand it to a coworker or drop it in your deployment pipeline. Generated scripts use PowerShell argument arrays so source names, install locations, and custom installer values with spaces stay quoted correctly.
 
 **Export as WinGet Configuration** creates a declarative `.winget` file using `Microsoft.WinGet.DSC/WinGetPackage` resources. Validate it with `winget configure validate -f .\configuration.winget --disable-interactivity` before applying it on another machine.
 
 **Export Report** becomes available after an install or update run and writes a migration report as Markdown or JSON. The report includes selected packages, status counts, commands, result log paths, installed/available versions, sources, scan timestamps, and import warnings when applicable.
 
-**Import JSON** accepts official WinGet import/export JSON, Wingetter group JSON, or a simple JSON array of package IDs. Packages not present in the Wingetter catalog are reported and skipped during selection.
+**Import JSON** accepts official WinGet import/export JSON, Wingetter group JSON, or a simple JSON array of package IDs. Packages not present in the Wingetter catalog are reported and skipped during selection. Safe package metadata such as WinGet `Version` plus Wingetter `InstallOptions` is preserved with an import warning so it can be reviewed before a run starts; raw `Override` / arbitrary argument fields are rejected.
 
-**Profile Gallery** opens the read-only checked-in profile index from `profiles/gallery.json`. Each profile file under `profiles/gallery/` must match its SHA256 hash, may contain only package IDs/names/sources, and is imported only after the package review dialog is accepted. Gallery import selects packages in Wingetter; it never starts install or update.
+**Profile Gallery** opens the read-only checked-in profile index from `profiles/gallery.json`. Each profile file under `profiles/gallery/` must match its SHA256 hash, may contain only package IDs/names/sources plus constrained safe install options, and is imported only after the package review dialog is accepted. Gallery import selects packages in Wingetter; it never starts install or update.
 
 **Corporate source policy** is stored at `%APPDATA%\Wingetter\source-policy.json`. Enable **Corporate policy** in the footer to refuse selected packages whose source is not listed in that policy. Sources can include optional WinGet 1.29+ priority values, and **Export Sources** writes reproducible `winget source add` commands with `--priority` only when the detected WinGet version supports it. Private source headers are redacted by default; use `Export-WingetterSourcePolicy -IncludeRawHeaders` only when deliberately creating a secret-bearing policy file. `Get-WingetterSourcePolicyDrift` compares policy sources with live `winget source list` output and reports missing, extra, changed, explicit, trust, and priority drift.
 

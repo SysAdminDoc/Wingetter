@@ -39,13 +39,16 @@ function New-WingetterConfigurationPackageEntry {
     param(
         [string]$Name,
         [string]$PackageId,
-        [string]$SourceName = "winget"
+        [string]$SourceName = "winget",
+        [object]$InstallOptions = $null
     )
 
+    $options = ConvertTo-WingetterInstallOptions -InstallOptions $InstallOptions -AllowCustom $true
     [PSCustomObject]@{
-        Name       = $Name
-        WingetId   = $PackageId
-        SourceName = if ([string]::IsNullOrWhiteSpace($SourceName)) { "winget" } else { $SourceName }
+        Name           = $Name
+        WingetId       = $PackageId
+        SourceName     = if ([string]::IsNullOrWhiteSpace($SourceName)) { "winget" } else { $SourceName }
+        InstallOptions = $options
     }
 }
 
@@ -70,6 +73,7 @@ function ConvertTo-WingetterConfigurationYaml {
         }
         $name = if (![string]::IsNullOrWhiteSpace([string]$package.Name)) { [string]$package.Name } else { $packageId }
         $sourceName = if (![string]::IsNullOrWhiteSpace([string]$package.SourceName)) { [string]$package.SourceName } else { "winget" }
+        $installOptions = if ($package.PSObject.Properties["InstallOptions"]) { ConvertTo-WingetterInstallOptions -InstallOptions $package.InstallOptions -AllowCustom $true } else { ConvertTo-WingetterInstallOptions -InstallOptions $null }
         $resourceId = ConvertTo-WingetterConfigurationResourceId -PackageId $packageId -Index $index
 
         $lines.Add("    - resource: Microsoft.WinGet.DSC/WinGetPackage")
@@ -79,6 +83,9 @@ function ConvertTo-WingetterConfigurationYaml {
         $lines.Add("      settings:")
         $lines.Add("        id: $(ConvertTo-WingetterYamlSingleQuotedValue -Value $packageId)")
         $lines.Add("        source: $(ConvertTo-WingetterYamlSingleQuotedValue -Value $sourceName)")
+        if ($installOptions.PSObject.Properties["Version"]) {
+            $lines.Add("        version: $(ConvertTo-WingetterYamlSingleQuotedValue -Value ([string]$installOptions.Version))")
+        }
     }
 
     $lines.Add("  configurationVersion: $ConfigurationVersion")

@@ -119,11 +119,12 @@ function Get-WingetterWinGetSourceAdapter {
                 [bool]$Silent,
                 [bool]$AcceptAgreements,
                 [bool]$IncludePinned,
+                [object]$InstallOptions = $null,
                 [string]$RunLogDir,
                 [scriptblock]$ShouldCancel = { $false },
                 [scriptblock]$PumpUi = {}
             )
-            Invoke-WinGetPackageOperation -Action "install" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
+            Invoke-WinGetPackageOperation -Action "install" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -InstallOptions $InstallOptions -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
         }
         Upgrade = {
             param(
@@ -133,11 +134,12 @@ function Get-WingetterWinGetSourceAdapter {
                 [bool]$Silent,
                 [bool]$AcceptAgreements,
                 [bool]$IncludePinned,
+                [object]$InstallOptions = $null,
                 [string]$RunLogDir,
                 [scriptblock]$ShouldCancel = { $false },
                 [scriptblock]$PumpUi = {}
             )
-            Invoke-WinGetPackageOperation -Action "upgrade" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
+            Invoke-WinGetPackageOperation -Action "upgrade" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -InstallOptions $InstallOptions -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
         }
         Uninstall = {
             param(
@@ -147,6 +149,7 @@ function Get-WingetterWinGetSourceAdapter {
                 [bool]$Silent,
                 [bool]$AcceptAgreements,
                 [bool]$IncludePinned,
+                [object]$InstallOptions = $null,
                 [string]$RunLogDir,
                 [scriptblock]$ShouldCancel = { $false },
                 [scriptblock]$PumpUi = {}
@@ -156,15 +159,17 @@ function Get-WingetterWinGetSourceAdapter {
             # them so the analyzer treats them as intentionally inert.
             [void]$AcceptAgreements
             [void]$IncludePinned
+            [void]$InstallOptions
             Invoke-WinGetPackageOperation -Action "uninstall" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $false -IncludePinned $false -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
         }
         ExportProfile = {
             param(
                 [string]$GroupName,
                 [string[]]$PackageIds,
-                [string]$FilePath
+                [string]$FilePath,
+                [object[]]$PackageEntries = @()
             )
-            Export-GroupAsWinGetJSON -GroupName $GroupName -PackageIds $PackageIds -FilePath $FilePath
+            Export-GroupAsWinGetJSON -GroupName $GroupName -PackageIds $PackageIds -FilePath $FilePath -PackageEntries $PackageEntries
         }
         ImportProfile = {
             param(
@@ -196,9 +201,10 @@ function Get-WingetterWinGetSourceAdapter {
                 [string]$PackageId,
                 [string]$SourceName = "",
                 [bool]$Silent,
-                [bool]$AcceptAgreements
+                [bool]$AcceptAgreements,
+                [object]$InstallOptions = $null
             )
-            $arguments = New-WinGetPackageOperationArguments -Action "install" -PackageId $PackageId -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $false
+            $arguments = New-WinGetPackageOperationArguments -Action "install" -PackageId $PackageId -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $false -InstallOptions $InstallOptions
             "winget " + (Join-ProcessArguments -Arguments $arguments)
         }
     }
@@ -303,6 +309,7 @@ function Invoke-WingetterPackageSourcePackageOperation {
         [bool]$Silent,
         [bool]$AcceptAgreements,
         [bool]$IncludePinned,
+        [object]$InstallOptions = $null,
         [string]$RunLogDir,
         [scriptblock]$ShouldCancel = { $false },
         [scriptblock]$PumpUi = {}
@@ -321,6 +328,7 @@ function Invoke-WingetterPackageSourcePackageOperation {
         Silent           = $Silent
         AcceptAgreements = $AcceptAgreements
         IncludePinned    = $IncludePinned
+        InstallOptions   = $InstallOptions
         RunLogDir        = $RunLogDir
         ShouldCancel     = $ShouldCancel
         PumpUi           = $PumpUi
@@ -332,12 +340,14 @@ function Export-WingetterPackageSourceProfile {
         [object]$SourceAdapter,
         [string]$GroupName,
         [string[]]$PackageIds,
-        [string]$FilePath
+        [string]$FilePath,
+        [object[]]$PackageEntries = @()
     )
     Invoke-WingetterPackageSourceOperation -SourceAdapter $SourceAdapter -Operation "ExportProfile" -Parameters @{
-        GroupName  = $GroupName
-        PackageIds = $PackageIds
-        FilePath   = $FilePath
+        GroupName      = $GroupName
+        PackageIds     = $PackageIds
+        FilePath       = $FilePath
+        PackageEntries = $PackageEntries
     }
 }
 
@@ -400,13 +410,15 @@ function Get-WingetterPackageSourceInstallCommand {
         [string]$PackageId,
         [string]$SourceName = "",
         [bool]$Silent,
-        [bool]$AcceptAgreements
+        [bool]$AcceptAgreements,
+        [object]$InstallOptions = $null
     )
     Invoke-WingetterPackageSourceOperation -SourceAdapter $SourceAdapter -Operation "GetInstallCommand" -Parameters @{
         PackageId        = $PackageId
         SourceName       = $SourceName
         Silent           = $Silent
         AcceptAgreements = $AcceptAgreements
+        InstallOptions   = $InstallOptions
     }
 }
 

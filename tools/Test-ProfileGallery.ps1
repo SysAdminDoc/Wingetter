@@ -95,6 +95,65 @@ if ($failures.Count -eq 0) {
             }
         }
 
+        $safeOptionsProfile = [PSCustomObject]@{
+            Schema    = "Wingetter.PublicProfile.v1"
+            ProfileId = "safe-options"
+            Name      = "Safe Options"
+            Packages  = @(
+                [PSCustomObject]@{
+                    PackageIdentifier = "Google.Chrome"
+                    SourceName        = "winget"
+                    InstallOptions    = [PSCustomObject]@{
+                        Version       = "125.0.0"
+                        Scope         = "machine"
+                        Architecture  = "x64"
+                        InstallerType = "msi"
+                        Locale        = "en-US"
+                    }
+                }
+            )
+        }
+        $safeParsed = ConvertFrom-WingetterPublicProfileJson -Content $safeOptionsProfile
+        if ($safeParsed.PackageEntries[0].InstallOptions.Scope -ne "machine" -or $safeParsed.PackageEntries[0].InstallOptions.InstallerType -ne "msi") {
+            Add-Failure "Public profile parser did not preserve safe install options."
+        }
+        $safePreview = ConvertTo-WingetterProfileGalleryPreviewText -GalleryItem ([PSCustomObject]@{
+            Name           = "Safe Options"
+            Publisher      = "Fixture"
+            Sha256         = "fixture"
+            Description    = ""
+            PackageEntries = $safeParsed.PackageEntries
+        })
+        if ($safePreview -notmatch "options: Version=125.0.0") {
+            Add-Failure "Profile gallery preview did not show safe install options."
+        }
+
+        $customWithoutAllowListRejected = $false
+        try {
+            ConvertFrom-WingetterPublicProfileJson -Content ([PSCustomObject]@{
+                Schema    = "Wingetter.PublicProfile.v1"
+                ProfileId = "custom-reject"
+                Name      = "Custom Reject"
+                Packages  = @([PSCustomObject]@{ PackageIdentifier = "Google.Chrome"; SourceName = "winget"; InstallOptions = [PSCustomObject]@{ Custom = "/NoDesktopShortcut" } })
+            }) | Out-Null
+        } catch {
+            $customWithoutAllowListRejected = ($_.Exception.Message -match "requires explicit allow-listing")
+        }
+        if (-not $customWithoutAllowListRejected) {
+            Add-Failure "Public profile parser accepted Custom install options without an allow-list."
+        }
+
+        $customAllowed = ConvertFrom-WingetterPublicProfileJson -Content ([PSCustomObject]@{
+            Schema                     = "Wingetter.PublicProfile.v1"
+            ProfileId                  = "custom-allowed"
+            Name                       = "Custom Allowed"
+            AllowedInstallOptionFields = @("Custom")
+            Packages                   = @([PSCustomObject]@{ PackageIdentifier = "Google.Chrome"; SourceName = "winget"; InstallOptions = [PSCustomObject]@{ Custom = "/NoDesktopShortcut" } })
+        })
+        if ($customAllowed.PackageEntries[0].InstallOptions.Custom -ne "/NoDesktopShortcut") {
+            Add-Failure "Public profile parser did not preserve explicitly allow-listed Custom install options."
+        }
+
         # Oversized profile file should be rejected before parsing. Generate a
         # >1MB file on disk, point an entry at it, and confirm the hash check
         # never even runs.

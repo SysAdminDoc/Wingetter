@@ -462,6 +462,7 @@ function Start-WingetterOperationWorker {
                     Percent = $pct
                     Text    = "$actionVerb $($app.Name) ($current of $total)..."
                 }
+                $operationInstallOptions = if ($app.PSObject.Properties["InstallOptions"]) { $app.InstallOptions } else { $null }
 
                 $result = Invoke-WingetterPackageSourcePackageOperation `
                     -SourceAdapter $sourceAdapter `
@@ -472,6 +473,7 @@ function Start-WingetterOperationWorker {
                     -Silent $silent `
                     -AcceptAgreements $acceptAgreements `
                     -IncludePinned $includePinned `
+                    -InstallOptions $operationInstallOptions `
                     -RunLogDir $runLogDir `
                     -ShouldCancel { [bool]$cancelToken["Cancelled"] }
 
@@ -684,7 +686,9 @@ function Show-WingetterRunPlanDialog {
         [void]$textStack.Children.Add($nameText)
 
         $detailText = New-Object System.Windows.Controls.TextBlock
-        $detailText.Text = "Source: $($item.SourceName)  Installed: $($item.InstalledVersion)  Available: $($item.AvailableVersion)  Pin: $($item.PinStatus)"
+        $itemOptionsSummary = if ($item.PSObject.Properties["InstallOptionsSummary"]) { [string]$item.InstallOptionsSummary } else { "" }
+        $optionsText = if (![string]::IsNullOrWhiteSpace($itemOptionsSummary)) { "  Options: $itemOptionsSummary" } else { "" }
+        $detailText.Text = "Source: $($item.SourceName)  Installed: $($item.InstalledVersion)  Available: $($item.AvailableVersion)  Pin: $($item.PinStatus)$optionsText"
         $detailText.Foreground = $bc.ConvertFromString("#94a7bc")
         $detailText.FontSize = 11
         $detailText.Margin = [System.Windows.Thickness]::new(0, 4, 0, 0)
@@ -1749,6 +1753,7 @@ function Show-WinGetInstallerGUI {
     $ui["LastRunReport"]       = $null
     $ui["LastRunSelectedPackages"] = @()
     $ui["LastImportWarnings"]  = @()
+    $ui["SelectedInstallOptionsById"] = @{}
     $ui["SidebarButtons"]      = [System.Collections.ArrayList]::new()
     $ui["CategoryAppsStacks"]  = [System.Collections.ArrayList]::new()
     $ui["BuiltInGroups"]       = $Script:BuiltInGroups
@@ -2624,7 +2629,7 @@ function Show-WinGetInstallerGUI {
             $GroupCombo.Items.Add($usrHeader) | Out-Null
 
             foreach ($prop in $userProps) {
-                $count = @($prop.Value).Count
+                $count = (Get-WingetterGroupRecordPackageIds -GroupRecord $prop.Value).Count
                 $item = New-Object System.Windows.Controls.ComboBoxItem
                 $item.Content = "$($prop.Name) ($count)"
                 $item.Tag = @{ Name = $prop.Name; Type = "user" }
@@ -2750,14 +2755,41 @@ function Show-WinGetInstallerGUI {
         return $sel.ToArray()
     }
 
-    # Helper to apply a list of package IDs as checked
+    $GetPackageInstallOptions = {
+        param([string]$PackageId)
+        if ($ui["SelectedInstallOptionsById"].ContainsKey($PackageId)) {
+            return $ui["SelectedInstallOptionsById"][$PackageId]
+        }
+        return $null
+    }
+
+    $GetSelectedPackageEntries = {
+        $entries = [System.Collections.ArrayList]::new()
+        foreach ($cb in $ui["AllCheckboxes"].Values) {
+            if ($cb.IsChecked -eq $true) {
+                $packageId = [string]$cb.Tag.WingetId
+                $sourceName = Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name
+                $installOptions = & $GetPackageInstallOptions $packageId
+                [void]$entries.Add((New-WingetterGroupPackageEntry -PackageId $packageId -SourceName $sourceName -Name ([string]$cb.Tag.Name) -InstallOptions $installOptions -AllowCustomInstallOptions))
+            }
+        }
+        return [object[]]$entries.ToArray()
+    }
+
+    # Helper to apply a list of package IDs or package entries as checked.
     $ApplyPackageList = {
-        param([string[]]$ids)
+        param([object[]]$Packages)
         foreach ($cb in $ui["AllCheckboxes"].Values) { $cb.IsChecked = $false }
+        $ui["SelectedInstallOptionsById"] = @{}
+        $entries = ConvertTo-WingetterGroupPackageEntries -PackageEntries @($Packages) -AllowCustomInstallOptions
         $loaded = 0
-        foreach ($id in $ids) {
+        foreach ($entry in @($entries)) {
+            $id = [string]$entry.PackageIdentifier
             if ($ui["AllCheckboxes"].ContainsKey($id)) {
                 $ui["AllCheckboxes"][$id].IsChecked = $true
+                if ($entry.PSObject.Properties["InstallOptions"] -and !(Test-WingetterInstallOptionsEmpty -InstallOptions $entry.InstallOptions)) {
+                    $ui["SelectedInstallOptionsById"][$id] = $entry.InstallOptions
+                }
                 $loaded++
             }
         }
@@ -2774,14 +2806,14 @@ function Show-WinGetInstallerGUI {
         $gType = $selected.Tag["Type"]
 
         if ($gType -eq "builtin") {
-            $ids = $ui["BuiltInGroups"][$gName]
+            $entries = ConvertTo-WingetterGroupPackageEntries -PackageIds ([string[]]$ui["BuiltInGroups"][$gName])
         } else {
             $saved = Get-SavedGroups
-            $ids = @($saved.$gName)
+            $entries = Get-WingetterGroupRecordPackageEntries -GroupRecord $saved.$gName
         }
 
-        $loaded = & $ApplyPackageList $ids
-        $ProgressText.Text = "Applied '$gName' and selected $loaded of $($ids.Count) apps."
+        $loaded = & $ApplyPackageList $entries
+        $ProgressText.Text = "Applied '$gName' and selected $loaded of $(@($entries).Count) apps."
     }.GetNewClosure())
 
     $SaveGroupBtn.Add_Click({
@@ -2824,7 +2856,7 @@ function Show-WinGetInstallerGUI {
         if ($inputWin.ShowDialog() -eq $true) {
             $gName = $nameBox.Text.Trim()
             if ($gName -ne "") {
-                Save-GroupToFile -Name $gName -PackageIds $sel
+                Save-GroupToFile -Name $gName -PackageIds $sel -PackageEntries (& $GetSelectedPackageEntries)
                 & $RefreshGroupCombo
                 $ProgressText.Text = "Saved '$gName' with $($sel.Count) selected apps."
             }
@@ -2888,7 +2920,7 @@ function Show-WinGetInstallerGUI {
             DefaultFileName = "WinGetPackages.json"
             Handler         = {
                 param($BaseName, $Path, $SelectedIds)
-                Export-WingetterPackageSourceProfile -SourceAdapter $ui["PackageSource"] -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path
+                Export-WingetterPackageSourceProfile -SourceAdapter $ui["PackageSource"] -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path -PackageEntries (& $GetSelectedPackageEntries)
                 "Exported $($SelectedIds.Count) apps as official WinGet import JSON."
             }
         },
@@ -2898,7 +2930,7 @@ function Show-WinGetInstallerGUI {
             DefaultFileName = "WingetterGroup.wingetter.json"
             Handler         = {
                 param($BaseName, $Path, $SelectedIds)
-                Export-GroupAsJSON -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path
+                Export-GroupAsJSON -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path -PackageEntries (& $GetSelectedPackageEntries)
                 "Exported $($SelectedIds.Count) apps as a Wingetter group JSON profile."
             }
         },
@@ -2908,7 +2940,7 @@ function Show-WinGetInstallerGUI {
             DefaultFileName = "Install-WingetterGroup.ps1"
             Handler         = {
                 param($BaseName, $Path, $SelectedIds)
-                Export-GroupAsPS1 -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path -Silent $SilentCheck.IsChecked -AcceptAgreements $AcceptCheck.IsChecked
+                Export-GroupAsPS1 -GroupName $BaseName -PackageIds $SelectedIds -FilePath $Path -Silent $SilentCheck.IsChecked -AcceptAgreements $AcceptCheck.IsChecked -PackageEntries (& $GetSelectedPackageEntries)
                 "Exported $($SelectedIds.Count) apps as a PowerShell installer."
             }
         },
@@ -2931,7 +2963,8 @@ function Show-WinGetInstallerGUI {
                         $entries += New-WingetterConfigurationPackageEntry `
                             -Name $cb.Tag.Name `
                             -PackageId $cb.Tag.WingetId `
-                            -SourceName (Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name)
+                            -SourceName (Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name) `
+                            -InstallOptions (& $GetPackageInstallOptions ([string]$cb.Tag.WingetId))
                     }
                 }
                 Export-WingetterConfigurationFile -PackageEntries $entries -FilePath $Path | Out-Null
@@ -3096,7 +3129,7 @@ function Show-WinGetInstallerGUI {
             if ($galleryWin.ShowDialog() -eq $true -and $null -ne $galleryWin.Tag) {
                 $imported = $galleryWin.Tag
                 $ids = [string[]]@($imported.PackageIds)
-                $loaded = & $ApplyPackageList $ids
+                $loaded = & $ApplyPackageList ([object[]]$imported.PackageEntries)
                 $missing = $ids.Count - $loaded
                 $ui["LastImportWarnings"] = @("Profile gallery import '$($imported.Name)' was SHA256 verified and selected packages only; no install was run.")
                 if ($missing -gt 0) {
@@ -3128,7 +3161,7 @@ function Show-WinGetInstallerGUI {
                     $ui["LastImportWarnings"] = @()
                 }
 
-                $loaded = & $ApplyPackageList $ids
+                $loaded = & $ApplyPackageList ([object[]]$import.PackageEntries)
                 $missing = $ids.Count - $loaded
                 $sourceSuffix = if ($import.SourceNames.Count -gt 0) { " Sources: $(@($import.SourceNames | Select-Object -Unique) -join ', ')." } else { "" }
                 if ($missing -gt 0) {
@@ -3140,7 +3173,7 @@ function Show-WinGetInstallerGUI {
                 # Offer to save as group
                 $save = [System.Windows.MessageBox]::Show("Save '$($import.GroupName)' as a reusable Wingetter group for later?", "Save Imported Group", "YesNo", "Question")
                 if ($save -eq "Yes") {
-                    Save-GroupToFile -Name $import.GroupName -PackageIds $ids
+                    Save-GroupToFile -Name $import.GroupName -PackageIds $ids -PackageEntries ([object[]]$import.PackageEntries)
                     & $RefreshGroupCombo
                     $ProgressText.Text = "Imported and saved '$($import.GroupName)' ($loaded matched apps)."
                 }
@@ -3155,7 +3188,7 @@ function Show-WinGetInstallerGUI {
         if ($sel.Count -eq 0) { $ProgressText.Text = "Select at least one app before copying commands."; return }
         $cmds = $sel | ForEach-Object {
             $sourceName = Get-WingetterPackageCatalogSourceName -App $_.Tag -DefaultSource $ui["PackageSource"].Name
-            Get-WingetterPackageSourceInstallCommand -SourceAdapter $ui["PackageSource"] -PackageId $_.Tag.WingetId -SourceName $sourceName -Silent ([bool]$SilentCheck.IsChecked) -AcceptAgreements ([bool]$AcceptCheck.IsChecked)
+            Get-WingetterPackageSourceInstallCommand -SourceAdapter $ui["PackageSource"] -PackageId $_.Tag.WingetId -SourceName $sourceName -Silent ([bool]$SilentCheck.IsChecked) -AcceptAgreements ([bool]$AcceptCheck.IsChecked) -InstallOptions (& $GetPackageInstallOptions ([string]$_.Tag.WingetId))
         }
         # Clipboard.SetText can throw CLIPBRD_E_CANT_OPEN when another process
         # holds the clipboard (e.g., remote desktop, password manager). Surface
@@ -3380,7 +3413,7 @@ function Show-WinGetInstallerGUI {
                 if (!$policyCheck.Allowed) {
                     $blockedByPolicy += "$($cb.Tag.Name) [$sourceName]"
                 } else {
-                    $selected += [PSCustomObject]@{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName }
+                    $selected += [PSCustomObject]@{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName; InstallOptions = (& $GetPackageInstallOptions ([string]$cb.Tag.WingetId)) }
                 }
             }
         }
@@ -3429,7 +3462,7 @@ function Show-WinGetInstallerGUI {
         foreach ($cb in $ui["AllCheckboxes"].Values) {
             if ($cb.IsChecked) {
                 $sourceName = Get-WingetterPackageCatalogSourceName -App $cb.Tag -DefaultSource $ui["PackageSource"].Name
-                $selected += [PSCustomObject]@{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName }
+                $selected += [PSCustomObject]@{ Name = $cb.Tag.Name; WingetId = $cb.Tag.WingetId; SourceName = $sourceName; InstallOptions = (& $GetPackageInstallOptions ([string]$cb.Tag.WingetId)) }
             }
         }
         if ($selected.Count -eq 0) { [System.Windows.MessageBox]::Show("Select at least one app before continuing.", "No Apps Selected", "OK", "Information"); return }

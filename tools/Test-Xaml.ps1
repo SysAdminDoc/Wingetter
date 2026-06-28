@@ -101,9 +101,11 @@ function Invoke-WingetterPackageSourcePackageOperation {
         [bool]$Silent,
         [bool]$AcceptAgreements,
         [bool]$IncludePinned,
+        [object]$InstallOptions = $null,
         [string]$RunLogDir,
         [scriptblock]$ShouldCancel = { $false }
     )
+    [void]$InstallOptions
     foreach ($i in 1..80) {
         if (& $ShouldCancel) {
             return [PSCustomObject]@{

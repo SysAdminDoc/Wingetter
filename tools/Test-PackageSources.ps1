@@ -72,6 +72,18 @@ if ($failures.Count -eq 0) {
     if ($installCommand -like "*--include-pinned*") {
         Add-Failure "Install command unexpectedly included --include-pinned."
     }
+    $optionInstallCommand = Get-WingetterPackageSourceInstallCommand `
+        -SourceAdapter $adapter `
+        -PackageId "Example.Tool" `
+        -SourceName "corp" `
+        -Silent $false `
+        -AcceptAgreements $true `
+        -InstallOptions ([PSCustomObject]@{ Scope = "machine"; Location = "C:\Program Files\Example Tool" })
+    foreach ($expected in @("--source corp", "--scope machine", '--location "C:\Program Files\Example Tool"')) {
+        if ($optionInstallCommand -notlike "*$expected*") {
+            Add-Failure "Install command with options did not include '$expected': $optionInstallCommand"
+        }
+    }
 
     $badAdapterRejected = $false
     try {
