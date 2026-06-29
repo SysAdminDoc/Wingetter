@@ -1,79 +1,82 @@
 # Research - Wingetter
 
 ## Executive Summary
-Wingetter is a Windows-first PowerShell/WPF setup cockpit for curated WinGet discovery, bulk install/update, reusable profiles, source policy, scheduled check-only update scans, offline installer caches, and migration reports. Verified: the current repo is stronger than the prior research state because preflight plans, background operation runspaces, clean WinGet 1.29 output, redacted private-source export, offline-cache hash replay checks, launcher hash pinning, release-artifact verification, and a UI smoke harness now exist. Current blocker: `tools\Invoke-Validation.ps1` is red in the working tree because UI smoke, launcher manifest, and PSScriptAnalyzer checks fail against modified UI code. Highest-value direction: restore the local validation contract first, then keep pushing toward a trustworthy local setup/recovery tool rather than a broad package-manager clone. Top opportunities in priority order: restore validation; keep the existing UI smoke item honest by adding screen-reader/focus assertions; make release provenance and Authenticode status explicit; audit live source/catalog drift; preserve safe per-package install options and lockfile state; add diagnostics export; add update deferrals/maintenance windows; add private icon mode; persist window layout safely across DPI/display changes; normalize noisy installer logs; and add catalog freshness checks against live WinGet metadata.
+Wingetter is a Windows-first PowerShell/WPF setup and recovery cockpit for curated WinGet browsing, reviewed bulk install/update runs, reusable profiles, source policy, scheduled check-only update scans, offline caches, and reproducible exports. Verified: the project is strongest when it stays a local trust-and-recovery tool rather than trying to become a fleet agent or a full multi-manager clone. Highest-value direction: harden the points where a user can get stuck or lose confidence before adding breadth. Top opportunities in priority order: classify WinGet policy/constrained-language blockers; keep the existing diagnostics, deferral, private icon, catalog freshness, lockfile, window restore, log normalization, and read-only Scoop roadmap items; add an editable source-policy workflow; add single-instance activation; split install/update and offline-download operation state; persist update-view sort/filter state; and prepare future WinGet DSC v3 export support behind feature detection.
 
 ## Product Map
-- Core workflows: browse/search 765 curated WinGet apps; select individual apps, groups, or gallery profiles; review an install/update preflight plan; run WinGet operations with structured logs; export profiles/scripts/WinGet JSON/WinGet Configuration; build offline caches and migration reports.
-- User personas: personal Windows power user rebuilding a PC; small IT/helpdesk user preparing repeatable workstation profiles; privacy/corporate user enforcing allowed sources; admin who wants local audit trails without a full endpoint-management suite.
-- Platforms and distribution: Windows 10/11, Windows PowerShell 5.1+, WPF, raw GitHub quick-launch, checked-in bundled `Wingetter.exe`, MIT license, local validation via `tools\Invoke-Validation.ps1`.
-- Key integrations and data flows: `winget.exe`; optional `Microsoft.WinGet.Client`; `%APPDATA%\Wingetter` groups/source policy/logs/cache; checked-in `catalog/*.json`; SHA256-verified `profiles/gallery/*.wingetter.json`; Google favicon URLs unless private icon mode is added.
+- Core workflows: browse/search the 765-app curated catalog; select individual apps, groups, or gallery profiles; review an install/update plan; run WinGet operations with visible progress/logs; export Wingetter JSON, official WinGet JSON, PowerShell, and WinGet Configuration files; create offline caches and migration reports.
+- User personas: personal Windows power user rebuilding a PC; small IT/helpdesk user preparing repeatable workstation profiles; privacy/corporate user enforcing allowed sources; admin who wants local evidence without a full endpoint-management stack.
+- Platforms and distribution: Windows 10/11, Windows PowerShell 5.1+, WPF, raw GitHub quick-launch, checked-in `Wingetter.exe`, MIT license, local validation through `tools\Invoke-Validation.ps1`.
+- Key integrations and data flows: `winget.exe`; optional `Microsoft.WinGet.Client`; `%APPDATA%\Wingetter` groups/source policy/logs/cache; `catalog\winget.json`; SHA256-verified `profiles\gallery\*.wingetter.json`; remote favicon URLs unless private/offline icon mode is implemented.
 
 ## Competitive Landscape
-- UniGetUI: strong at multi-manager breadth, per-package options, import/export, auto-update notifications, translations, log viewing, installer checksums, and active UI iteration. Wingetter should borrow option persistence, source trust messaging, and workflow polish; avoid cloning the full manager surface before the existing adapter contract is proven beyond WinGet.
-- Winget-AutoUpdate: strong at scheduled updates, system/user context handling, allow/block lists, GPO/Intune-friendly configuration, metered-network behavior, log rotation, mods, locale/version arguments, and user-requested deferral controls. Wingetter should borrow deferral/maintenance policy and argument modeling while keeping updates check-only by default.
-- Ninite/Ninite Pro: strong at fast batch install, skip-current behavior, simple patching, and reporting. Wingetter should keep the low-friction setup path but continue exposing source, pin, version, and command details.
-- Patch My PC / PDQ: strong at tested package chains, reporting, deployment rings, vulnerability/workstation reporting, and package request workflows. Wingetter should borrow diagnostics and chain-of-custody ideas for local/offline runs; avoid claiming endpoint-management depth.
-- Chocolatey GUI / Chocolatey for Business: mature Windows package-source and internal-repository patterns, plus issue templates that require debug logs and secret redaction. Wingetter should treat Chocolatey as a future adapter with separate trust semantics; avoid mixing Chocolatey assumptions into WinGet source policy.
-- Scoop / Awesome Scoop: strong portable-app ecosystem, bucket indexes, repeatable script-friendly setup, and side-effect-minimized installs. Wingetter's planned read-only Scoop adapter is the right first step; write support should wait for bucket trust and duplicate-ID modeling.
-- guinget / winstall-style tools / newer WinGet GUI wrappers: validate demand for simple WinGet browsing, profiles, and update views. Wingetter should keep its curated catalog, source policy, offline cache, and validation advantage; avoid becoming a stale one-screen wrapper.
+- UniGetUI: strong at multi-manager breadth, package options, import/export, update views, translations, and active log/UI iteration. Wingetter should learn from operation separation, remembered update ordering, and readable logs; avoid cloning all managers before the existing adapter boundary proves source-specific trust semantics.
+- Winget-AutoUpdate: strong at scheduled update policy, allow/block lists, system/user-context behavior, metered-network handling, and deferrals. Wingetter should borrow policy/deferral and bootstrap-failure clarity while preserving its check-only scheduled update stance.
+- Chocolatey GUI / Chocolatey: mature Windows package-source, internal repository, and log/error-reporting patterns. Wingetter should borrow single-instance handling and progress/error clarity; avoid applying Chocolatey assumptions to WinGet source policy.
+- Scoop / Awesome Scoop: strong portable-app and bucket ecosystem with script-friendly repeatability. Wingetter's existing read-only Scoop adapter item is the right first step; write support should wait for duplicate-ID, bucket-trust, and portable-app state modeling.
+- Ninite Pro / Patch My PC: strong at fast batch install, patching cadence, skip-current behavior, and reporting. Wingetter should borrow simple recovery/diagnostic artifacts and chain-of-custody thinking; avoid claiming endpoint-management or vulnerability-remediation coverage.
 
 ## Security, Privacy, and Reliability
-- Verified supply-chain gap: `Wingetter.ps1` hash-pins downloaded modules, and `release\manifest.json` verifies checked-in artifacts, but the launcher/EXE still need explicit Authenticode status and build-input provenance as tracked in the existing release roadmap item.
-- Verified source-trust gap: `src\Wingetter.Sources.ps1` has allow-source/private-source helpers, but source priority and live drift comparison against `winget source list` remain unfinished and are already captured in ROADMAP.
-- Verified privacy gap: `src\Wingetter.Ui.ps1:131-180` and icon-loading state use remote favicon URLs with a temp cache; private/offline icon mode remains a worthwhile P2 already in ROADMAP.
-- Verified catalog freshness gap: `tools\Test-Catalog.ps1:192-279` validates local structure, counts, generated fallbacks, README, and changelog, but only one optional `winget show` path is visible and there is no bounded live audit for removed/renamed IDs, metadata drift, or icon URL drift across the 765-app catalog.
-- Verified recovery gap: offline caches now hash-check replay files, but exported profiles do not yet carry a lockfile of resolved source, version, installer hash, and options, so migration can still drift when upstream manifests change.
-- Verified UX reliability gap: `src\Wingetter.Ui.ps1:780-781` starts at fixed 1450x920 centered dimensions; no persisted safe restore exists for multi-monitor or DPI changes, while competitor issue traffic shows window placement still matters for package managers.
-- Verified log-readability gap: WinGet 1.29 `--no-progress` support helps, but older WinGet or installer-specific spinner/progress output can still flood logs; UniGetUI issue traffic shows users need readable operation logs during long package runs.
-- Verified validation blocker: `tools\Invoke-Validation.ps1` currently fails in the working tree. UI smoke throws from `ShowDialog`, launcher manifest reports a stale `Wingetter.Ui.ps1` hash, and PSScriptAnalyzer flags `src\Wingetter.Ui.ps1:3591` for assigning to automatic variable `$eventArgs`.
+- Verified risk: `src\Wingetter.WinGet.ps1:5-114` detects/repairs WinGet availability but does not classify Group Policy disabled CLI, constrained language mode, or broken App Installer registration as distinct blockers; WAU issues #1162 and #1112 show these are real operational failures.
+- Verified risk: no `Mutex`/single-instance guard was found, while the UI uses background operations and `%APPDATA%\Wingetter` state; ChocolateyGUI issue #1099 shows a second package-manager instance silently failing is a user-visible reliability problem.
+- Verified privacy gap: `src\Wingetter.Ui.ps1:134-180` remote favicon fetching and `src\Wingetter.Ui.ps1:4241-4304` icon queue processing still need the existing private/offline icon-mode roadmap item.
+- Verified governance gap: `src\Wingetter.Sources.ps1:425-954` supports policy storage, export, drift, and private-source redaction, but `src\Wingetter.Ui.ps1:2739-2742` only toggles corporate mode; there is no safe GUI to edit allowlist/blocklist/source definitions.
+- Verified recovery gap: offline cache metadata records files and SHA256 values, but profiles and migration outputs still need the existing lockfile roadmap item to capture resolved source/version/options before upstream WinGet manifests drift.
+- Verified operational gap: `src\Wingetter.Ui.ps1:985` and `src\Wingetter.Ui.ps1:3263-3458` use one global `OperationRunning` state for package operations and offline-cache downloads; UniGetUI issue #5025 shows users expect downloads and installs to have clearer independent states.
+- Verified upgrade-strategy gap: WinGet stable `v1.28.240` and prerelease `v1.29.280` differ on features Wingetter already probes, and WinGet issues #6330/#6289 show client self-update and native DSC resources are active platform changes; Wingetter should feature-detect rather than assume prerelease capabilities.
 
 ## Architecture Assessment
-- `src\Wingetter.Ui.ps1` is still the dominant module at 3995 lines; feature additions should keep moving durable policy, diagnostics, window settings, and log normalization into small helper modules instead of adding more event-handler bulk.
-- `tools\Test-UiSmoke.ps1` is present and is wired into validation, but the current smoke run fails before it can prove the screenshots; the existing P1 UI smoke roadmap item should be interpreted as stabilizing the harness plus adding focus/screen-reader/overlap assertions.
-- Profile import/export lives in `src\Wingetter.Groups.ps1:137-269` and currently centers on IDs/source names/warnings; WinGet 1.29 preserved custom/override arguments make safe option persistence and lockfile export more valuable now.
-- Offline cache metadata in `src\Wingetter.OfflineCache.ps1:175-361` already records package files and SHA256; a profile/run lockfile should reuse that model rather than inventing a separate provenance format.
-- Scheduled update checks in `src\Wingetter.UpdateWatcher.ps1` are check-only and already respect metered networks/log rotation; roadmap deferrals should extend this policy layer without introducing unattended installs.
-- `tools\Invoke-Validation.ps1` is the right local validation contract; research-driven changes should add targeted tests there instead of new one-off validation entry points.
+- `src\Wingetter.Ui.ps1` remains the dominant boundary; new source-policy, diagnostics, single-instance, window-state, operation-queue, and log-normalization work should move durable logic into focused helper modules instead of growing event handlers.
+- `src\Wingetter.WinGet.ps1` is the right place to extend `Test-WinGet` into a structured readiness object because operation argument building, WinGet version gates, and bootstrap repair already live there.
+- `src\Wingetter.Sources.ps1` already has the policy model needed for an editor; the missing work is validation UX and tests, not a new policy format.
+- `src\Wingetter.Configuration.ps1:55-91` emits configuration schema `0.2.0` with `Microsoft.WinGet.DSC/WinGetPackage`; future DSC v3 PackageList/Source/Pin support should be a compatibility layer, not a rewrite.
+- `tools\Invoke-Validation.ps1` is the local quality gate; every roadmap implementation should add targeted tests there instead of new one-off validation scripts.
+- Accessibility, i18n, and mobile/multi-user paths are consciously sequenced: UI smoke/accessibility checks exist and should be extended with each UI item, string extraction is already deferred in ROADMAP.md, and mobile/multi-user/fleet management do not match a local WPF reviewed-run tool.
 
 ## Rejected Ideas
-- Full enterprise agent: rejected because Wingetter's strength is local setup/recovery and reviewed runs; WAU, Patch My PC, PDQ, and Intune already cover unattended fleet deployment.
-- Auto-installing scheduled updates: rejected because current update watcher is deliberately check-only; deferrals and maintenance windows should improve review timing, not bypass review.
-- Immediate write-capable Scoop/Chocolatey adapters: rejected until the read-only adapter proves search, installed scan, duplicate handling, and trust UI.
-- Mobile or web companion: rejected because WinGet, App Installer, WPF, source policy, and offline replay are Windows desktop workflows.
-- Recommendation engine: rejected because repo and competitor evidence points to trust, recovery, catalog quality, and workflow reliability first.
-- Full localization before UI module/test cleanup: rejected because UI string extraction is already correctly deferred until workflow tests and smaller boundaries exist.
+- Full unattended fleet agent: rejected because WAU, Patch My PC, and Ninite Pro already target unattended or managed deployment; Wingetter's verified strength is reviewed local setup and recovery.
+- Auto-install scheduled updates: rejected because `src\Wingetter.UpdateWatcher.ps1` is intentionally check-only; deferrals and maintenance windows should improve review timing, not bypass it.
+- Immediate write-capable Scoop/Chocolatey adapters: rejected until the read-only adapter proves search, installed-state mapping, duplicate handling, and trust UI.
+- Native DSC v3 as the default export now: rejected because WinGet `v1.29.280` is prerelease; add feature detection and fixtures first.
+- Mobile/web companion: rejected because WinGet, WPF, offline replay, source policy, and App Installer repair are Windows desktop workflows.
+- Full localization before UI boundary/test cleanup: rejected because ROADMAP.md already correctly defers string extraction until workflow tests and smaller UI boundaries exist.
 
 ## Sources
-Official docs and platform:
-- https://github.com/microsoft/winget-cli/releases/tag/v1.29.280
+Official docs, releases, and standards:
+- https://learn.microsoft.com/en-us/windows/package-manager/winget/
 - https://learn.microsoft.com/en-us/windows/package-manager/winget/install
-- https://learn.microsoft.com/en-us/windows/package-manager/winget/upgrade
-- https://learn.microsoft.com/en-us/windows/package-manager/winget/export
-- https://learn.microsoft.com/en-us/windows/package-manager/winget/import
 - https://learn.microsoft.com/en-us/windows/package-manager/winget/source
-- https://learn.microsoft.com/en-us/windows/package-manager/winget/pinning
 - https://learn.microsoft.com/en-us/windows/package-manager/configuration/
-- https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/set-authenticodesignature
+- https://github.com/microsoft/winget-cli/releases/tag/v1.28.240
+- https://github.com/microsoft/winget-cli/releases/tag/v1.29.280
+- https://github.com/microsoft/winget-cli/issues/6289
+- https://github.com/microsoft/winget-cli/issues/6330
 - https://slsa.dev/spec/v1.2/
 
-Competitors and adjacent tools:
+OSS competitors and adjacent projects:
 - https://github.com/Devolutions/UniGetUI
-- https://github.com/Devolutions/UniGetUI/releases/tag/v2026.2.2
-- https://github.com/Devolutions/UniGetUI/issues/5018
+- https://github.com/Devolutions/UniGetUI/issues/5025
+- https://github.com/Devolutions/UniGetUI/issues/4984
 - https://github.com/Devolutions/UniGetUI/issues/5004
 - https://github.com/Devolutions/UniGetUI/issues/4799
 - https://github.com/Romanitho/Winget-AutoUpdate
+- https://github.com/Romanitho/Winget-AutoUpdate/releases/tag/v2.12.0
+- https://github.com/Romanitho/Winget-AutoUpdate/issues/1162
+- https://github.com/Romanitho/Winget-AutoUpdate/issues/1112
 - https://github.com/Romanitho/Winget-AutoUpdate/issues/1153
 - https://github.com/Romanitho/Winget-AutoUpdate/issues/1121
-- https://ninite.com/pro
-- https://patchmypc.com/product/home-updater/
-- https://www.pdq.com/package-library/
+- https://github.com/Romanitho/Winget-AutoUpdate/issues/1159
 - https://github.com/chocolatey/ChocolateyGUI
+- https://github.com/chocolatey/ChocolateyGUI/issues/1099
+- https://github.com/chocolatey/ChocolateyGUI/issues/1092
 - https://github.com/ScoopInstaller/Scoop
 - https://github.com/ScoopInstaller/Awesome-Scoop
-- https://github.com/DrewNaylor/guinget
-- https://winstall.app/
+
+Commercial and community signal:
+- https://ninite.com/pro
+- https://patchmypc.com/product/home-updater/
+- https://www.reddit.com/r/sysadmin/comments/1t22xqy/winget_is_this_awesome_as_it_seems/
+- https://stackoverflow.com/questions/tagged/winget
 
 ## Open Questions
-None block prioritization. Code-signing certificate availability only changes whether release provenance lands first as Authenticode signing or as explicit unsigned build-input verification.
+None block prioritization. Code-signing certificate availability only changes whether future release hardening lands as Authenticode signing or as explicit unsigned-build provenance.

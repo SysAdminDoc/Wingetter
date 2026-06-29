@@ -2,46 +2,7 @@
 
 ## Research-Driven Additions
 
-### P0
-
-- [ ] P0 - Restore the one-command validation contract
-  Why: `tools\Invoke-Validation.ps1` is the repo's safety gate and currently fails in the working tree on UI smoke, launcher manifest, and analyzer checks.
-  Evidence: `tools\Invoke-Validation.ps1`; `tools\Test-UiSmoke.ps1`; `tools\Test-LauncherManifest.ps1`; `src/Wingetter.Ui.ps1:3591`; local validation run on 2026-06-28.
-  Touches: `src\Wingetter.Ui.ps1`, `Wingetter.ps1`, `tools\Sync-LauncherManifest.ps1`, `tools\Test-UiSmoke.ps1`, `PSScriptAnalyzerSettings.psd1`.
-  Acceptance: `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-Validation.ps1` exits 0; UI smoke captures all required screenshots; launcher module hashes match disk; analyzer has no findings.
-  Complexity: M
-
-### P1
-
-- [ ] P1 - Add UI automation and screenshot accessibility smoke tests
-  Why: Current tests parse XAML and control labels but do not exercise dark/light themes, profile/gallery dialogs, update mode, empty states, overflow, or screen-reader flow.
-  Evidence: `tools\Test-VisualAccessibility.ps1`; `tools\Test-Xaml.ps1`; `src/Wingetter.Ui.ps1:624-680`; Chocolatey GUI issue #645; UniGetUI v2026.2.2 UI-state release notes.
-  Touches: `tools\Test-UiSmoke.ps1` (new), `src\Wingetter.Ui.ps1`, `README.md`.
-  Acceptance: an STA smoke test launches the app against fixture data, toggles themes, searches to empty state, opens profile gallery, enters/exits update mode, captures screenshots, and fails on missing focus labels or obvious clipping/overlap.
-  Complexity: L
-
-- [ ] P1 - Rebuild and verify release artifacts from the bundled launcher
-  Why: Hash verification proves checked-in artifacts are unchanged, not that `Wingetter.exe` reflects the current modular source or carries a trusted signature/provenance.
-  Evidence: `release/manifest.json`; `release/README.md:31-45`; `tools\Build-WingetterExe.ps1`; `tools\Test-Bundle.ps1`; Authenticode docs; SLSA provenance guidance.
-  Touches: `tools\Build-WingetterExe.ps1`, `tools\Test-ReleaseArtifact.ps1`, `release\manifest.json`, `release\README.md`, `Wingetter.exe`.
-  Acceptance: release verifier proves the EXE was built from the current bundled script hash; manifest records bundle hash, tool version, and Authenticode status; signing is applied when a code-signing cert is available or the unsigned state is explicit.
-  Complexity: M
-
 ### P2
-
-- [ ] P2 - Add source priority and source drift audit
-  Why: WinGet 1.29 source priority changes search/disambiguation behavior, while Wingetter source policy currently stores allow/trust data without priority or live drift checks.
-  Evidence: `microsoft/winget-cli` v1.29.280 release; `src/Wingetter.Sources.ps1:418-452`; `src/Wingetter.Sources.ps1:684-739`; Microsoft `winget source` docs.
-  Touches: `src\Wingetter.Sources.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-SourcePolicy.ps1`, `README.md`.
-  Acceptance: policy supports optional `Priority`; export emits priority-aware commands when WinGet supports them; a drift check compares policy to `winget source list` and reports missing, extra, changed, explicit, trust, and priority differences.
-  Complexity: M
-
-- [ ] P2 - Preserve safe per-package install options in profiles
-  Why: WinGet and UniGetUI both support per-package scope/architecture/installer type/location/customization, but Wingetter profiles mostly preserve IDs and source names.
-  Evidence: Microsoft install/upgrade docs; WinGet 1.29 preserved custom/override release note; `microsoft/winget-cli#3401`; `src/Wingetter.Groups.ps1:137-166`; `src/Wingetter.ProfileGallery.ps1:28-45`.
-  Touches: `src\Wingetter.Groups.ps1`, `src\Wingetter.ProfileGallery.ps1`, `src\Wingetter.WinGet.ps1`, `src\Wingetter.Configuration.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ProfileJson.ps1`.
-  Acceptance: Wingetter group JSON can store vetted install options; official WinGet imports preserve safe fields as warnings/metadata; gallery profiles continue rejecting unsafe install-argument fields unless explicitly allowlisted; generated commands quote and test every option.
-  Complexity: L
 
 - [ ] P2 - Prototype a read-only Scoop source adapter
   Why: The adapter contract exists but only WinGet is registered; Scoop is a high-signal adjacent ecosystem with buckets and portable-app semantics that should be proven read-only before install support.
@@ -109,3 +70,61 @@
   Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`.
   Acceptance: captured stdout/stderr records keep raw logs on disk but the GUI/log summary collapses repeated spinner/progress-only lines, preserves meaningful installer output, and tests cover common `|/-\` and carriage-return progress patterns.
   Complexity: M
+
+## Research-Driven Additions
+
+### P1
+
+- [ ] P1 - Classify policy-blocked and constrained-language WinGet failures
+  Why: A missing `winget.exe`, a Group Policy disabled CLI, constrained language mode, and broken App Installer registration require different recovery paths, but Wingetter currently treats availability mostly as command detection plus repair.
+  Evidence: `src\Wingetter.WinGet.ps1:5-114`; Romanitho/Winget-AutoUpdate issues #1162 and #1112; Stack Overflow `winget` questions.
+  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`.
+  Acceptance: `Test-WinGet` returns a structured status for available, missing, disabled-by-policy, constrained-language, and broken-registration states; UI/bootstrap logs show the exact blocker and do not attempt repair when policy or language mode prevents success; tests cover every status.
+  Complexity: M
+
+### P2
+
+- [ ] P2 - Add editable source-policy allowlist and blocklist UI
+  Why: Corporate source policy already exists but can only be toggled/exported in the UI, leaving source edits and blocklist maintenance to manual JSON changes.
+  Evidence: `src\Wingetter.Sources.ps1:425-954`; `src\Wingetter.Ui.ps1:2739-2742`; Romanitho/Winget-AutoUpdate issue #1159; Microsoft `winget source` docs.
+  Touches: `src\Wingetter.Sources.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-SourcePolicy.ps1`, `README.md`.
+  Acceptance: a Source Policy dialog can add/edit/remove allowed sources and package/source block rules, validates names/URLs/priority/header redaction before save, imports/exports the existing schema, shows drift results, and preserves private headers only when explicitly requested.
+  Complexity: M
+
+- [ ] P2 - Add single-instance guard and activation handoff
+  Why: Package-manager GUIs should not silently fail or race shared app-state/log paths when launched twice.
+  Evidence: no `Mutex`/single-instance guard in repo scan; `src\Wingetter.Ui.ps1:985`; ChocolateyGUI issue #1099.
+  Touches: `Wingetter.ps1`, `src\Wingetter.App.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-Catalog.ps1` or a focused helper test.
+  Acceptance: first launch owns a named user-scoped mutex; a second launch sends an activation request to the existing window and exits with a clear status; if activation IPC fails, the second launch reports the lock owner and does not start package operations.
+  Complexity: M
+
+- [ ] P2 - Split install/update and offline-cache operation state
+  Why: One global `OperationRunning` flag blocks and reports installs, upgrades, and offline downloads the same way, even though downloads and mutating package operations need different queue and cancellation semantics.
+  Evidence: `src\Wingetter.Ui.ps1:985`; `src\Wingetter.Ui.ps1:3263-3458`; Devolutions/UniGetUI issue #5025.
+  Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.OfflineCache.ps1`, `src\Wingetter.WinGet.ps1`, `tools\Test-UiSmoke.ps1`.
+  Acceptance: UI state tracks package operations and offline downloads separately, prevents overlapping mutating installs/upgrades, allows safe non-conflicting cache downloads, shows separate progress/cancel text, and smoke tests verify the enabled/disabled control matrix.
+  Complexity: L
+
+- [ ] P2 - Persist update-view sort and filter state
+  Why: Update review is a repeated workflow, and users expect sort/order choices to survive refreshes instead of resetting during each update-mode rebuild.
+  Evidence: `src\Wingetter.Ui.ps1:3553-3680`; Devolutions/UniGetUI issue #4984.
+  Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.Common.ps1`, `tools\Test-UiSmoke.ps1`.
+  Acceptance: update mode exposes explicit sort/filter controls for name, category, source, installed version, available version, and blocked/deferred status; choices persist under `%APPDATA%\Wingetter`; invalid saved state falls back safely.
+  Complexity: M
+
+- [ ] P2 - Add WinGet client readiness and prerelease feature gates
+  Why: Wingetter already branches on WinGet feature support, but it does not surface whether the installed client is stable/prerelease, stale, policy-blocked, or missing features needed for source priority and clean output.
+  Evidence: `src\Wingetter.WinGet.ps1:160-188`; WinGet releases `v1.28.240` and `v1.29.280`; microsoft/winget-cli issue #6330.
+  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `README.md`.
+  Acceptance: the WinGet status surface reports version, stable/prerelease channel, supported feature flags, stale-client warning, and the exact update/repair command; tests cover stable, prerelease, old, and unparsable version strings.
+  Complexity: S
+
+### P3
+
+- [ ] P3 - Prepare native WinGet DSC v3 PackageList export path
+  Why: Current WinGet Configuration export uses schema `0.2.0` and per-package `Microsoft.WinGet.DSC/WinGetPackage`; native DSC v3 PackageList/Source/Pin resources are active upstream work that may simplify future reproducible exports.
+  Evidence: `src\Wingetter.Configuration.ps1:55-91`; README WinGet Configuration section; microsoft/winget-cli issue #6289.
+  Touches: `src\Wingetter.Configuration.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ConfigurationExport.ps1`, `README.md`.
+  Acceptance: configuration export has a feature-detected compatibility layer for native DSC v3 resources while defaulting to the current schema until stable; fixture tests cover current schema and simulated v3 resource availability without requiring prerelease WinGet on normal validation.
+  Complexity: M
+
