@@ -54,7 +54,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`; WinGet 1.29+ runs use cleaner `--no-progress` output where supported
 - **Redacted diagnostics bundle** -- export catalog/version info, recent logs, update-check summaries, migration reports, WinGet info, source and pin lists, and redacted source policy data as one support ZIP
 - **Migration reports** -- completed install/update runs create exportable Markdown or JSON reports with the preflight plan, summary counts, commands, result paths, versions, and sources
-- **Scheduled update checks** -- optional Windows scheduled task checks for available updates, respects pins/source policy, can skip metered networks, rotates logs, and never auto-installs
+- **Scheduled update checks** -- optional Windows scheduled task checks for available updates, respects pins/source policy/deferrals/maintenance windows, can skip metered networks, rotates logs, and never auto-installs
 - **Offline download cache** -- download selected installers in the background with `winget download`, write an offline manifest, and generate a replay script for later installer launch
 - **Toast notifications** -- Windows notification when batch install completes
 - **Splash screen** -- loading progress indicator while icons are fetched
@@ -170,6 +170,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Register-UpdateWatch
 ```
 
 Update-check logs are written under `%APPDATA%\Wingetter\logs\update-checks`.
+
+Update policy is stored at `%APPDATA%\Wingetter\update-policy.json` or passed with `-UpdatePolicyPath`. The policy supports global `GlobalNotBeforeUtc`, `MaxDeferrals`, local maintenance windows, and per-package `PackagePolicies` with `PackageId`, `NotBeforeUtc`, `MaxDeferrals`, and `DeferralCount`. Deferred and outside-window updates are logged in the check result; Wingetter still only reports updates and never auto-installs them.
 
 ### Offline Download Cache
 

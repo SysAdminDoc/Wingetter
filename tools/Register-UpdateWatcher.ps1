@@ -2,6 +2,7 @@ param(
     [string]$TaskName = "Wingetter Update Check",
     [string]$DailyAt = "09:00",
     [int]$KeepLogs = 30,
+    [string]$UpdatePolicyPath = "",
     [switch]$NoSkipMeteredNetwork,
     [switch]$NoToast,
     [switch]$Unregister
@@ -34,6 +35,7 @@ $task = Register-WingetterUpdateWatcherTask `
     -DailyAt $time `
     -SkipMeteredNetwork (-not [bool]$NoSkipMeteredNetwork) `
     -Toast (-not [bool]$NoToast) `
-    -KeepLogs $KeepLogs
+    -KeepLogs $KeepLogs `
+    -UpdatePolicyPath $UpdatePolicyPath
 
 Write-Host "Registered scheduled task '$($task.TaskName)' for $DailyAt."

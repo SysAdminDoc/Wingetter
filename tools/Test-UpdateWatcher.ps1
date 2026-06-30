@@ -96,13 +96,54 @@ if ($failures.Count -eq 0) {
         Add-Failure "Private source update was not marked available/trusted."
     }
 
+    $future = (Get-Date).ToUniversalTime().AddDays(3).ToString("o")
+    $deferPolicy = New-WingetterDefaultUpdatePolicy
+    $deferPolicy.GlobalNotBeforeUtc = $future
+    $deferPolicy.MaxDeferrals = 3
+    $deferred = New-WingetterUpdateCheckResult -InstalledPackages @($records[2]) -SourcePolicy $policy -UpdatePolicy $deferPolicy
+    $deferredItem = @($deferred.Updates | Select-Object -First 1)
+    if ($deferredItem.Status -ne "Deferred" -or $deferred.Counts.Deferred -ne 1 -or $deferredItem.Reason -notlike "*Deferred until*") {
+        Add-Failure "Global NotBefore policy did not defer an available update."
+    }
+
+    $limitPolicy = New-WingetterDefaultUpdatePolicy
+    $limitPolicy.PackagePolicies = @(
+        New-WingetterUpdatePackagePolicy -PackageId "Internal.Tool" -NotBeforeUtc $future -MaxDeferrals 2 -DeferralCount 2
+    )
+    $limitResult = New-WingetterUpdateCheckResult -InstalledPackages @($records[2]) -SourcePolicy $policy -UpdatePolicy $limitPolicy
+    $limitItem = @($limitResult.Updates | Select-Object -First 1)
+    if ($limitItem.Status -ne "Available" -or $limitItem.Reason -notlike "*Deferral limit reached*") {
+        Add-Failure "Per-package max deferral policy did not allow review after the limit."
+    }
+
+    $localNow = (Get-Date).ToUniversalTime().ToLocalTime()
+    $otherDay = @("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday") | Where-Object { $_ -ne [string]$localNow.DayOfWeek } | Select-Object -First 1
+    $windowPolicy = New-WingetterDefaultUpdatePolicy
+    $windowPolicy.MaintenanceWindows = @(New-WingetterUpdateMaintenanceWindow -Name "Other day" -DaysOfWeek @($otherDay) -StartLocalTime "00:00" -EndLocalTime "23:59")
+    $windowResult = New-WingetterUpdateCheckResult -InstalledPackages @($records[2]) -SourcePolicy $policy -UpdatePolicy $windowPolicy
+    $windowItem = @($windowResult.Updates | Select-Object -First 1)
+    if ($windowItem.Status -ne "OutsideMaintenanceWindow" -or $windowResult.Counts.OutsideWindow -ne 1) {
+        Add-Failure "Maintenance-window policy did not mark the update outside the allowed window."
+    }
+
+    $policyPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-update-policy-" + [System.Guid]::NewGuid().ToString("N") + ".json")
+    try {
+        $savedPolicy = Save-WingetterUpdatePolicy -Policy $limitPolicy -Path $policyPath
+        $loadedPolicy = Get-WingetterUpdatePolicy -Path $policyPath
+        if ($savedPolicy.Schema -ne "Wingetter.UpdatePolicy.v1" -or @($loadedPolicy.PackagePolicies).Count -ne 1 -or $loadedPolicy.PackagePolicies[0].PackageId -ne "Internal.Tool") {
+            Add-Failure "Update policy save/load did not preserve per-package deferral rules."
+        }
+    } finally {
+        Remove-Item -Path $policyPath -Force -ErrorAction SilentlyContinue
+    }
+
     $metered = New-WingetterUpdateCheckResult -SkippedForMeteredNetwork $true
     if (!$metered.SkippedForMeteredNetwork) {
         Add-Failure "Metered-network skip flag was not preserved."
     }
 
-    $taskArgs = New-WingetterUpdateWatcherTaskActionArguments -ScriptPath "C:\Wingetter\tools\Invoke-UpdateCheck.ps1" -SkipMeteredNetwork $true -Toast $true -KeepLogs 7
-    foreach ($expected in @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "-SkipMeteredNetwork", "-Toast", "-KeepLogs", "7")) {
+    $taskArgs = New-WingetterUpdateWatcherTaskActionArguments -ScriptPath "C:\Wingetter\tools\Invoke-UpdateCheck.ps1" -SkipMeteredNetwork $true -Toast $true -KeepLogs 7 -UpdatePolicyPath "C:\Wingetter\update-policy.json"
+    foreach ($expected in @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "-SkipMeteredNetwork", "-Toast", "-KeepLogs", "7", "-UpdatePolicyPath", "C:\Wingetter\update-policy.json")) {
         if ($taskArgs -notcontains $expected) {
             Add-Failure "Scheduled task action arguments did not include '$expected'."
         }

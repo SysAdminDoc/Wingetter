@@ -11,13 +11,6 @@
   Acceptance: if Scoop is installed, Wingetter can discover/search installed Scoop apps and show source-specific details under a capability flag; no Scoop install/update commands are emitted; tests use local fixture bucket data.
   Complexity: L
 
-- [ ] P2 - Add update review deferrals and maintenance policy
-  Why: Update checks are useful but lack deferral/maintenance controls that WAU users explicitly request for supply-chain delay and work-hours friendliness.
-  Evidence: `src/Wingetter.UpdateWatcher.ps1:156-240`; Romanitho/Winget-AutoUpdate issues #1153 and #1121.
-  Touches: `src\Wingetter.UpdateWatcher.ps1`, `src\Wingetter.Ui.ps1`, `tools\Invoke-UpdateCheck.ps1`, `tools\Register-UpdateWatcher.ps1`, `tools\Test-UpdateWatcher.ps1`.
-  Acceptance: update-check policy can set per-package or global `NotBeforeUtc`, max deferrals, and maintenance windows; logs explain skipped/deferred updates; no path auto-installs packages.
-  Complexity: M
-
 ### P3
 
 - [ ] P3 - Extract UI strings after workflow tests exist
