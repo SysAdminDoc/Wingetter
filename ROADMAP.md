@@ -73,15 +73,6 @@
 
 ## Research-Driven Additions
 
-### P1
-
-- [ ] P1 - Classify policy-blocked and constrained-language WinGet failures
-  Why: A missing `winget.exe`, a Group Policy disabled CLI, constrained language mode, and broken App Installer registration require different recovery paths, but Wingetter currently treats availability mostly as command detection plus repair.
-  Evidence: `src\Wingetter.WinGet.ps1:5-114`; Romanitho/Winget-AutoUpdate issues #1162 and #1112; Stack Overflow `winget` questions.
-  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`.
-  Acceptance: `Test-WinGet` returns a structured status for available, missing, disabled-by-policy, constrained-language, and broken-registration states; UI/bootstrap logs show the exact blocker and do not attempt repair when policy or language mode prevents success; tests cover every status.
-  Complexity: M
-
 ### P2
 
 - [ ] P2 - Add editable source-policy allowlist and blocklist UI
@@ -152,4 +143,3 @@
   Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`, `README.md`.
   Acceptance: `winget show/search --details` warning text and catalog risk notes map to severity-coded warnings shown in details and preflight; hard blocks are policy-driven, soft warnings remain reviewable, raw output is preserved in logs, and tests cover PUA, missing hash, unknown risk, and benign fixtures.
   Complexity: M
-

@@ -2,15 +2,117 @@
 # WINGET DETECTION AND INSTALLATION
 # ============================================================================
 
+function ConvertTo-WinGetProbeText {
+    param([object[]]$Parts = @())
+
+    ($Parts | Where-Object { $null -ne $_ } | ForEach-Object {
+        if ($_ -is [System.Management.Automation.ErrorRecord]) {
+            [string]$_.Exception.Message
+        } else {
+            [string]$_
+        }
+    }) -join "`n"
+}
+
+function Get-WinGetVersionTokenFromText {
+    param([string]$Text)
+
+    foreach ($line in @($Text -split "(`r`n|`n|`r)")) {
+        $trimmed = $line.Trim()
+        if ($trimmed -match '^(v?\d+(?:\.\d+){1,3})(?:\s|$)') {
+            return $matches[1]
+        }
+    }
+    return ""
+}
+
+function Test-WinGetPolicyBlockedText {
+    param([string]$Text)
+
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $false }
+    return ($Text -match '(?i)group\s+policy|disabled\s+by\s+(?:your\s+)?administrator|windows\s+package\s+manager\s+.*disabled|app\s+installer\s+.*disabled')
+}
+
+function New-WinGetAvailabilityStatus {
+    param(
+        [ValidateSet("Available", "Missing", "PolicyBlocked", "ConstrainedLanguage", "BrokenRegistration")]
+        [string]$Status,
+        [bool]$Installed,
+        [string]$Version = "",
+        [string]$Path = "",
+        [string]$Message = "",
+        [string]$Blocker = "",
+        [bool]$CanRepair = $false,
+        [string]$LanguageMode = "",
+        [object]$ExitCode = $null,
+        [string]$ProbeOutput = ""
+    )
+
+    @{
+        Installed    = [bool]$Installed
+        Version      = if ($null -ne $Version) { [string]$Version } else { "" }
+        Path         = if ($null -ne $Path) { [string]$Path } else { "" }
+        Status       = $Status
+        Blocker      = $Blocker
+        Message      = $Message
+        CanRepair    = [bool]$CanRepair
+        LanguageMode = $LanguageMode
+        ExitCode     = $ExitCode
+        ProbeOutput  = Get-TextExcerpt -Text $ProbeOutput -MaxLength 800
+    }
+}
+
+function ConvertTo-WinGetAvailabilityStatus {
+    param(
+        [bool]$CommandFound,
+        [string]$Path = "",
+        [object[]]$VersionOutput = @(),
+        [object[]]$ErrorOutput = @(),
+        [object]$ExitCode = $null,
+        [string]$ExceptionMessage = "",
+        [string]$LanguageMode = ""
+    )
+
+    $probeText = ConvertTo-WinGetProbeText -Parts @($VersionOutput + $ErrorOutput + @($ExceptionMessage))
+    $version = Get-WinGetVersionTokenFromText -Text $probeText
+    if ($CommandFound -and $version -and (($null -eq $ExitCode) -or ([int]$ExitCode -eq 0))) {
+        return New-WinGetAvailabilityStatus -Status "Available" -Installed $true -Version $version -Path $Path -Message "WinGet is available." -Blocker "None" -CanRepair $false -LanguageMode $LanguageMode -ExitCode $ExitCode -ProbeOutput $probeText
+    }
+
+    if (Test-WinGetPolicyBlockedText -Text $probeText) {
+        return New-WinGetAvailabilityStatus -Status "PolicyBlocked" -Installed $false -Path $Path -Message "WinGet is disabled by policy or administrator settings." -Blocker "GroupPolicy" -CanRepair $false -LanguageMode $LanguageMode -ExitCode $ExitCode -ProbeOutput $probeText
+    }
+
+    if ($LanguageMode -eq "ConstrainedLanguage") {
+        return New-WinGetAvailabilityStatus -Status "ConstrainedLanguage" -Installed $false -Path $Path -Message "PowerShell constrained language mode prevents automated WinGet repair." -Blocker "ConstrainedLanguage" -CanRepair $false -LanguageMode $LanguageMode -ExitCode $ExitCode -ProbeOutput $probeText
+    }
+
+    if ($CommandFound) {
+        return New-WinGetAvailabilityStatus -Status "BrokenRegistration" -Installed $false -Path $Path -Message "WinGet was found but could not run; App Installer registration may be broken." -Blocker "AppInstallerRegistration" -CanRepair $true -LanguageMode $LanguageMode -ExitCode $ExitCode -ProbeOutput $probeText
+    }
+
+    return New-WinGetAvailabilityStatus -Status "Missing" -Installed $false -Message "WinGet was not found on PATH." -Blocker "Missing" -CanRepair $true -LanguageMode $LanguageMode -ExitCode $ExitCode -ProbeOutput $probeText
+}
+
 function Test-WinGet {
+    $languageMode = try { [string]$ExecutionContext.SessionState.LanguageMode } catch { "" }
     try {
         $wingetPath = Get-Command winget -ErrorAction SilentlyContinue
         if ($wingetPath) {
-            $version = (winget --version) 2>$null
-            return @{ Installed = $true; Version = $version; Path = $wingetPath.Source }
+            $output = @()
+            $exitCode = $null
+            try {
+                $output = @(& $wingetPath.Source --version 2>&1)
+                $exitCode = $LASTEXITCODE
+            } catch {
+                return ConvertTo-WinGetAvailabilityStatus -CommandFound $true -Path $wingetPath.Source -ErrorOutput @($_) -ExitCode $LASTEXITCODE -ExceptionMessage $_.Exception.Message -LanguageMode $languageMode
+            }
+            return ConvertTo-WinGetAvailabilityStatus -CommandFound $true -Path $wingetPath.Source -VersionOutput $output -ExitCode $exitCode -LanguageMode $languageMode
         }
-    } catch { }
-    return @{ Installed = $false; Version = $null; Path = $null }
+    } catch {
+        return ConvertTo-WinGetAvailabilityStatus -CommandFound $false -ErrorOutput @($_) -ExceptionMessage $_.Exception.Message -LanguageMode $languageMode
+    }
+    return ConvertTo-WinGetAvailabilityStatus -CommandFound $false -LanguageMode $languageMode
 }
 
 function New-WinGetBootstrapLogPath {
@@ -47,6 +149,12 @@ function Write-WinGetBootstrapLog {
 function Install-WinGet {
     $wingetStatus = Test-WinGet
     if ($wingetStatus.Installed) { return $true }
+
+    if ($wingetStatus.ContainsKey("CanRepair") -and -not [bool]$wingetStatus.CanRepair) {
+        $logPath = New-WinGetBootstrapLogPath
+        Write-WinGetBootstrapLog -Path $logPath -Step "blocked" -Status "blocked" -Message $wingetStatus.Message -Data $wingetStatus
+        return $false
+    }
 
     $logPath = New-WinGetBootstrapLogPath
     Write-WinGetBootstrapLog -Path $logPath -Step "start" -Status "info" -Message "Starting WinGet bootstrap." -Data @{

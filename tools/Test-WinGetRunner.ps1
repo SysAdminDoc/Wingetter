@@ -104,6 +104,28 @@ if ($failures.Count -eq 0) {
     if ($null -ne (Get-WinGetExitCodeMeaning -ExitCode 1603)) {
         Add-Failure "Get-WinGetExitCodeMeaning should return `$null for unknown exit codes."
     }
+
+    $availableStatus = ConvertTo-WinGetAvailabilityStatus -CommandFound $true -Path "C:\Windows\winget.exe" -VersionOutput @("v1.29.280") -ExitCode 0 -LanguageMode "FullLanguage"
+    if (-not $availableStatus.Installed -or $availableStatus.Status -ne "Available" -or $availableStatus.Version -ne "v1.29.280") {
+        Add-Failure "WinGet availability classifier did not classify an available client."
+    }
+    $missingStatus = ConvertTo-WinGetAvailabilityStatus -CommandFound $false -LanguageMode "FullLanguage"
+    if ($missingStatus.Installed -or $missingStatus.Status -ne "Missing" -or -not $missingStatus.CanRepair) {
+        Add-Failure "WinGet availability classifier did not classify a missing client as repairable."
+    }
+    $policyStatus = ConvertTo-WinGetAvailabilityStatus -CommandFound $true -Path "C:\Windows\winget.exe" -ErrorOutput @("This command has been disabled by your administrator through Group Policy.") -ExitCode 1 -LanguageMode "FullLanguage"
+    if ($policyStatus.Installed -or $policyStatus.Status -ne "PolicyBlocked" -or $policyStatus.CanRepair -or $policyStatus.Blocker -ne "GroupPolicy") {
+        Add-Failure "WinGet availability classifier did not classify a policy-disabled client."
+    }
+    $constrainedStatus = ConvertTo-WinGetAvailabilityStatus -CommandFound $false -LanguageMode "ConstrainedLanguage"
+    if ($constrainedStatus.Installed -or $constrainedStatus.Status -ne "ConstrainedLanguage" -or $constrainedStatus.CanRepair) {
+        Add-Failure "WinGet availability classifier did not classify constrained language mode as non-repairable."
+    }
+    $brokenStatus = ConvertTo-WinGetAvailabilityStatus -CommandFound $true -Path "C:\Windows\winget.exe" -ErrorOutput @("App Installer registration failed. Class not registered.") -ExitCode 1 -LanguageMode "FullLanguage"
+    if ($brokenStatus.Installed -or $brokenStatus.Status -ne "BrokenRegistration" -or -not $brokenStatus.CanRepair -or $brokenStatus.Blocker -ne "AppInstallerRegistration") {
+        Add-Failure "WinGet availability classifier did not classify broken App Installer registration as repairable."
+    }
+
     if (Test-WinGetCleanOutputSupported -VersionText "v1.28.240") {
         Add-Failure "WinGet clean-output support should be disabled for v1.28.240."
     }

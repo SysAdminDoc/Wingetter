@@ -2645,16 +2645,41 @@ function Show-WinGetInstallerGUI {
     # ========================================================
     # WINGET CHECK
     # ========================================================
+    $GetWinGetStatusMessage = {
+        param([object]$Status)
+        if ($null -eq $Status) { return "WinGet status unavailable." }
+        if ($Status.Installed) { return "WinGet $($Status.Version)" }
+        if ($Status.Message) { return [string]$Status.Message }
+        return "WinGet required"
+    }
+    $GetWinGetRequiredMessage = {
+        param([object]$Status, [string]$Action)
+        if ($null -eq $Status) { return "WinGet is required before Wingetter can $Action." }
+        if ($Status.Message) { return "WinGet is required before Wingetter can $Action. $($Status.Message)" }
+        return "WinGet is required before Wingetter can $Action."
+    }
+    $GetWinGetCanRepair = {
+        param([object]$Status)
+        if ($null -eq $Status) { return $true }
+        if ($Status -is [System.Collections.IDictionary] -and $Status.Contains("CanRepair")) {
+            return [bool]$Status["CanRepair"]
+        }
+        if ($Status.PSObject.Properties["CanRepair"]) {
+            return [bool]$Status.CanRepair
+        }
+        return $true
+    }
     $checkWinGet = {
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if ($status.Installed) {
-            $WinGetStatus.Text = "WinGet $($status.Version)"
+            $WinGetStatus.Text = & $GetWinGetStatusMessage $status
             $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1fb879")
             $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Collapsed
         } else {
-            $WinGetStatus.Text = "WinGet required"
+            $WinGetStatus.Text = & $GetWinGetStatusMessage $status
             $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#dc3545")
-            $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Visible
+            $canRepair = & $GetWinGetCanRepair $status
+            $InstallWinGetBtn.Visibility = if ($canRepair) { [System.Windows.Visibility]::Visible } else { [System.Windows.Visibility]::Collapsed }
         }
     }
     if ($SmokeTest) {
@@ -2729,10 +2754,17 @@ function Show-WinGetInstallerGUI {
 
     $InstallWinGetBtn.Add_Click({
         $ProgressText.Text = "Repairing WinGet/App Installer..."
+        $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
+        if (-not (& $GetWinGetCanRepair $status)) {
+            $ProgressText.Text = "WinGet repair blocked: $($status.Message)"
+            & $checkWinGet
+            return
+        }
         $installed = Install-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         & $checkWinGet
         $logSuffix = if ($Script:LastBootstrapLogPath) { " Log: $Script:LastBootstrapLogPath" } else { "" }
-        $ProgressText.Text = if ($installed) { "WinGet is ready.$logSuffix" } else { "WinGet repair needs manual follow-up.$logSuffix" }
+        $afterStatus = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
+        $ProgressText.Text = if ($installed) { "WinGet is ready.$logSuffix" } else { "WinGet repair needs manual follow-up: $(& $GetWinGetStatusMessage $afterStatus)$logSuffix" }
     }.GetNewClosure())
 
     $CorporateModeCheck.Add_Click({
@@ -3402,7 +3434,7 @@ function Show-WinGetInstallerGUI {
     $DownloadCacheBtn.Add_Click({
         if ([bool]$ui["OperationRunning"]) { return }
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
-        if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can download package installers.", "WinGet Required", "OK", "Warning"); return }
+        if (-not $status.Installed) { [System.Windows.MessageBox]::Show((& $GetWinGetRequiredMessage $status "download package installers"), "WinGet Required", "OK", "Warning"); return }
 
         $selected = @()
         $blockedByPolicy = @()
@@ -3457,7 +3489,7 @@ function Show-WinGetInstallerGUI {
     $InstallBtn.Add_Click({
         if ([bool]$ui["OperationRunning"]) { return }
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
-        if (-not $status.Installed) { [System.Windows.MessageBox]::Show("WinGet is required before Wingetter can install packages. Use 'Install WinGet' and try again.", "WinGet Required", "OK", "Warning"); return }
+        if (-not $status.Installed) { [System.Windows.MessageBox]::Show((& $GetWinGetRequiredMessage $status "install packages"), "WinGet Required", "OK", "Warning"); return }
         $selected = @()
         foreach ($cb in $ui["AllCheckboxes"].Values) {
             if ($cb.IsChecked) {
