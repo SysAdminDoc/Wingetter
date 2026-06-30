@@ -115,3 +115,51 @@
   Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`, `README.md`.
   Acceptance: `winget show/search --details` warning text and catalog risk notes map to severity-coded warnings shown in details and preflight; hard blocks are policy-driven, soft warnings remain reviewable, raw output is preserved in logs, and tests cover PUA, missing hash, unknown risk, and benign fixtures.
   Complexity: M
+
+## Research-Driven Additions
+
+### P1
+
+- [ ] P1 - Make mutable app-state writes atomic and recoverable
+  Why: Wingetter already has partial atomic writes, but settings and several update/report paths still use direct writes that can corrupt user state after a crash or interruption.
+  Evidence: `src\Wingetter.Common.ps1:80-104`; `src\Wingetter.WinGet.ps1:936-958`; `src\Wingetter.UpdateWatcher.ps1:145-149`; NIST SSDF; SLSA package-management trust guidance.
+  Touches: `src\Wingetter.Common.ps1`, `src\Wingetter.WinGet.ps1`, `src\Wingetter.Groups.ps1`, `src\Wingetter.Sources.ps1`, `src\Wingetter.UpdateWatcher.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\Test-UpdateWatcher.ps1`, `tools\Test-SourcePolicy.ps1`.
+  Acceptance: atomic write and corrupt-JSON recovery helpers live in `Common`; settings, groups, source policy, update policy, installed cache, update-check results, and user-facing JSON exports use same-directory temp plus replace; corrupt settings/policy/result files are moved aside; tests simulate interrupted and corrupt writes.
+  Complexity: M
+
+- [ ] P1 - Add WinGet source-health diagnostics and recovery guidance
+  Why: Client readiness is now classified, but stale/offline/corrupt WinGet sources still appear as package failures unless source health is probed separately.
+  Evidence: `src\Wingetter.WinGet.ps1:5-114`; `src\Wingetter.Diagnostics.ps1:309-424`; Microsoft WinGet troubleshooting docs; microsoft/winget-cli issues #6015 and #6329.
+  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Sources.ps1`, `src\Wingetter.Diagnostics.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\Test-SourcePolicy.ps1`, `tools\Test-Diagnostics.ps1`.
+  Acceptance: startup/status and diagnostics run bounded `winget source list/update` probes, classify ok/stale/offline/corrupt/auth-required/package-offline states, show non-mutating repair/reset guidance, include redacted source-health JSON in diagnostics, and cover fixture outputs/exit codes in tests.
+  Complexity: M
+
+### P2
+
+- [ ] P2 - Add Wingetter self-update and provenance review
+  Why: Launcher and release hashes are verified locally, but users cannot compare the running app or checked-in EXE to the current GitHub release/raw manifest from inside Wingetter.
+  Evidence: `Wingetter.ps1:33-60`; `release\manifest.json`; README Quick Launch section; UniGetUI README; Patch My PC Home Updater; SLSA provenance guidance.
+  Touches: `Wingetter.ps1`, `src\Wingetter.App.ps1`, `src\Wingetter.Diagnostics.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ReleaseArtifact.ps1`, `tools\Test-LauncherManifest.ps1`.
+  Acceptance: a non-mutating "Check Wingetter update" path fetches the release/raw manifest with a timeout, compares version/module/bundle hashes and Authenticode status, reports current/stale/tampered/unsigned states, writes diagnostics evidence, and never replaces files without explicit user action.
+  Complexity: M
+
+- [ ] P2 - Add scheduled update-policy editor UI
+  Why: update-policy JSON supports deferrals and maintenance windows, but users cannot safely review or edit it from the WPF app.
+  Evidence: `README.md:174`; `src\Wingetter.UpdateWatcher.ps1:120-153`; Winget-AutoUpdate policy/GUI docs; Patch My PC scheduler features.
+  Touches: `src\Wingetter.UpdateWatcher.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-UpdateWatcher.ps1`, `tools\Test-UiSmoke.ps1`, `README.md`.
+  Acceptance: a settings dialog edits global not-before, max deferrals, local maintenance windows, and per-package policy rows; validates UTC/local conversions and invalid windows; saves the existing schema; scheduled-task registration can consume the selected policy path; UI smoke covers invalid and saved policies.
+  Complexity: M
+
+- [ ] P2 - Add failed-run retry from the last migration report
+  Why: migration reports capture per-package outcomes, but the UI cannot reselect only failed, cancelled, or unresolved rows for a fresh reviewed run.
+  Evidence: `src\Wingetter.Groups.ps1:478-660`; `src\Wingetter.Ui.ps1:3515-3548`; Ninite Pro retry/current reporting; PDQ retry queue documentation.
+  Touches: `src\Wingetter.Groups.ps1`, `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ProfileJson.ps1`, `tools\Test-UiSmoke.ps1`.
+  Acceptance: after install/update completes, "Retry failed" builds a new preflight plan from last-run failed/cancelled/unresolved package IDs plus safe options/source, excludes successes/current rows, preserves original report links, and tests cover empty/no-failure and partial-failure runs.
+  Complexity: M
+
+- [ ] P2 - Add catalog curation diff and impact report
+  Why: catalog validation proves current structure, but maintainers need a local review of package/category/source/profile impact before curated catalog changes land.
+  Evidence: `catalog\winget.json`; `profiles\gallery.json`; `tools\Test-Catalog.ps1`; winstall package-list/search patterns.
+  Touches: `tools\Test-Catalog.ps1`, `tools\Export-WingetterCatalog.ps1`, `catalog\winget.json`, `profiles\gallery.json`.
+  Acceptance: a local tool compares current catalog/groups/profiles with `HEAD` or a supplied baseline and reports added, removed, renamed, category-moved, source/trust-changed, profile-referenced, README-count-drift, and validation-blocking deltas without mutating catalog data.
+  Complexity: S
