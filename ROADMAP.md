@@ -25,13 +25,6 @@
   Acceptance: update-check policy can set per-package or global `NotBeforeUtc`, max deferrals, and maintenance windows; logs explain skipped/deferred updates; no path auto-installs packages.
   Complexity: M
 
-- [ ] P2 - Add private/offline icon mode
-  Why: Parallel Google favicon fetches improve polish but leak package-interest traffic and can slow restricted networks.
-  Evidence: `src/Wingetter.Ui.ps1:3020-3060`; privacy-oriented profile/persona; prior security review.
-  Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.Common.ps1`, `README.md`, `tools\Test-VisualAccessibility.ps1`.
-  Acceptance: a persisted setting disables remote icon fetches and uses deterministic letter icons; remote icon fetches have timeout and TTL; UI remains responsive when network is blocked.
-  Complexity: S
-
 ### P3
 
 - [ ] P3 - Extract UI strings after workflow tests exist

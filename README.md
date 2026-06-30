@@ -30,6 +30,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Dark / Light mode** -- defaults to dark, toggle with one click
 - **Metadata-rich search** -- ranked local search across names, package IDs, categories, built-in groups, publisher-like ID tokens, installed state, source, scope, update state, and pin state
 - **Favicon icons** -- parallel-fetched from app domains with colored letter fallbacks and local caching
+- **Private icon mode** -- disable remote favicon fetches and use deterministic letter icons for restricted or privacy-sensitive networks
 - **Bulk install** -- select any combination and install them all in sequence via a responsive background worker
 - **Preflight run plan** -- review what will run, skip current/pinned/blocked/unresolved packages, and save the JSON plan with the run logs
 - **Update mode** -- toggle between Install and Update mode to upgrade already-installed apps
@@ -146,6 +147,8 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 **Import JSON** accepts official WinGet import/export JSON, Wingetter group JSON, or a simple JSON array of package IDs. Packages not present in the Wingetter catalog are reported and skipped during selection. Safe package metadata such as WinGet `Version` plus Wingetter `InstallOptions` is preserved with an import warning so it can be reviewed before a run starts; raw `Override` / arbitrary argument fields are rejected.
 
 **Profile Gallery** opens the read-only checked-in profile index from `profiles/gallery.json`. Each profile file under `profiles/gallery/` must match its SHA256 hash, may contain only package IDs/names/sources plus constrained safe install options, and is imported only after the package review dialog is accepted. Gallery import selects packages in Wingetter; it never starts install or update.
+
+**Private icon mode** is stored in `%APPDATA%\Wingetter\settings.json`. Enable **Private icons** in the footer to disable all remote favicon downloads and keep deterministic letter icons. When remote icons are enabled, cached icons expire after the configured TTL and network fetches use short timeouts so restricted networks do not stall the UI.
 
 **Corporate source policy** is stored at `%APPDATA%\Wingetter\source-policy.json`. Enable **Corporate policy** in the footer to refuse selected packages whose source is not listed in that policy. Sources can include optional WinGet 1.29+ priority values, and **Export Sources** writes reproducible `winget source add` commands with `--priority` only when the detected WinGet version supports it. Private source headers are redacted by default; use `Export-WingetterSourcePolicy -IncludeRawHeaders` only when deliberately creating a secret-bearing policy file. `Get-WingetterSourcePolicyDrift` compares policy sources with live `winget source list` output and reports missing, extra, changed, explicit, trust, and priority drift.
 

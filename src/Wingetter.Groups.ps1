@@ -6,22 +6,6 @@ $Script:GroupsDir = "$env:APPDATA\Wingetter"
 $Script:GroupsFile = "$Script:GroupsDir\groups.json"
 if (!(Test-Path $Script:GroupsDir)) { New-Item -ItemType Directory -Path $Script:GroupsDir -Force | Out-Null }
 
-function Move-WingetterCorruptFileAside {
-    # When a settings file fails to parse we keep a single .corrupt sibling so
-    # the user can recover it manually, and surface a warning rather than
-    # silently overwriting their data on the next save.
-    param([string]$Path)
-    if ([string]::IsNullOrWhiteSpace($Path) -or !(Test-Path $Path)) { return }
-    $corruptPath = "$Path.corrupt"
-    try {
-        if (Test-Path $corruptPath) { Remove-Item -Path $corruptPath -Force -ErrorAction SilentlyContinue }
-        Move-Item -Path $Path -Destination $corruptPath -Force -ErrorAction Stop
-        Write-Warning "Wingetter could not parse '$Path'; moved it to '$corruptPath' so a clean file can be written. The original is preserved for manual recovery."
-    } catch {
-        Write-Warning "Wingetter could not parse '$Path' and also could not move it aside: $($_.Exception.Message)"
-    }
-}
-
 function Get-SavedGroups {
     if (Test-Path $Script:GroupsFile) {
         try { return (Get-Content $Script:GroupsFile -Raw | ConvertFrom-Json) }

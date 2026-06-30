@@ -63,6 +63,25 @@ if ($failures.Count -eq 0) {
         Add-Failure "Get-TextExcerpt did not honor MaxLength."
     }
 
+    $settingsPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-settings-" + [System.Guid]::NewGuid().ToString("N") + ".json")
+    try {
+        $defaultSettings = Get-WingetterSettings -Path $settingsPath
+        if ($defaultSettings.Schema -ne "Wingetter.Settings.v1" -or $defaultSettings.PrivateIconMode -or $defaultSettings.IconCacheTtlDays -ne 30) {
+            Add-Failure "Default Wingetter settings did not include expected private-icon defaults."
+        }
+        $savedSettings = Set-WingetterPrivateIconMode -Enabled $true -Path $settingsPath
+        $loadedSettings = Get-WingetterSettings -Path $settingsPath
+        if (-not $savedSettings.PrivateIconMode -or -not $loadedSettings.PrivateIconMode) {
+            Add-Failure "Private icon mode setting did not persist."
+        }
+        [void](Set-WingetterPrivateIconMode -Enabled $false -Path $settingsPath)
+        if ((Get-WingetterSettings -Path $settingsPath).PrivateIconMode) {
+            Add-Failure "Private icon mode setting did not persist when disabled."
+        }
+    } finally {
+        Remove-Item -Path $settingsPath -Force -ErrorAction SilentlyContinue
+    }
+
     if ((Get-WinGetOperationStatus -ExitCode 0 -StdOut "Successfully installed" -StdErr "" -Cancelled $false) -ne "SUCCESS") {
         Add-Failure "Status classifier did not classify success."
     }

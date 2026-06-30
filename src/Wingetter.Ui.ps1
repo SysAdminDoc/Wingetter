@@ -134,14 +134,61 @@ function Update-Splash {
 $Script:IconCacheDir = "$env:TEMP\WingetterIcons"
 if (!(Test-Path $Script:IconCacheDir)) { New-Item -ItemType Directory -Path $Script:IconCacheDir -Force | Out-Null }
 
+function Test-WingetterIconCacheFresh {
+    param([string]$Path, [int]$TtlDays = 30)
+
+    if (!(Test-Path -LiteralPath $Path)) { return $false }
+    try {
+        $file = Get-Item -LiteralPath $Path -ErrorAction Stop
+        if ($file.Length -le 100) { return $false }
+        if ($TtlDays -le 0) { return $true }
+        return ($file.LastWriteTimeUtc -ge (Get-Date).ToUniversalTime().AddDays(-1 * $TtlDays))
+    } catch {
+        return $false
+    }
+}
+
+function Save-WingetterIconDownload {
+    param([string]$Url, [string]$Path, [int]$TimeoutMs = 2500)
+
+    $request = [System.Net.WebRequest]::Create($Url)
+    $request.Timeout = $TimeoutMs
+    $request.ReadWriteTimeout = $TimeoutMs
+    $request.UserAgent = "Wingetter"
+    $response = $null
+    $inputStream = $null
+    $outputStream = $null
+    try {
+        $response = $request.GetResponse()
+        $inputStream = $response.GetResponseStream()
+        $outputStream = [System.IO.File]::Create($Path)
+        $buffer = New-Object byte[] 8192
+        while (($read = $inputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $outputStream.Write($buffer, 0, $read)
+        }
+    } finally {
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+        if ($response) { $response.Dispose() }
+    }
+}
+
 function Get-AppIcon {
-    param([string]$Url, [string]$AppName)
+    param(
+        [string]$Url,
+        [string]$AppName,
+        [bool]$PrivateIconMode = $false,
+        [int]$CacheTtlDays = 30,
+        [int]$TimeoutMs = 2500
+    )
+
+    if ($PrivateIconMode) { return $null }
     
     $safeName = ($AppName -replace '[^\w]', '_') + ".png"
     $cachePath = Join-Path $Script:IconCacheDir $safeName
     
     # Return cached
-    if (Test-Path $cachePath) {
+    if (Test-WingetterIconCacheFresh -Path $cachePath -TtlDays $CacheTtlDays) {
         try {
             $bitmap = New-Object System.Windows.Media.Imaging.BitmapImage
             $bitmap.BeginInit()
@@ -156,10 +203,7 @@ function Get-AppIcon {
     
     # Download
     try {
-        $wc = New-Object System.Net.WebClient
-        $wc.Headers.Add("User-Agent", "Mozilla/5.0")
-        $wc.DownloadFile($Url, $cachePath)
-        $wc.Dispose()
+        Save-WingetterIconDownload -Url $Url -Path $cachePath -TimeoutMs $TimeoutMs
         
         $fi = [System.IO.FileInfo]::new($cachePath)
         if ($fi.Length -gt 100) {
@@ -1529,6 +1573,7 @@ function Show-WinGetInstallerGUI {
                         <CheckBox x:Name="SilentCheck" Content="Use silent install where available" IsChecked="True" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center"/>
                         <CheckBox x:Name="AcceptCheck" Content="Accept package and source agreements" IsChecked="True" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center"/>
                         <CheckBox x:Name="IncludePinnedCheck" Content="Include pinned updates" IsChecked="False" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center" ToolTip="Applies --include-pinned to update runs. Blocking pins still cannot be overridden."/>
+                        <CheckBox x:Name="PrivateIconModeCheck" Content="Private icons" IsChecked="False" FontSize="12.5" Margin="0,0,20,0" VerticalAlignment="Center" ToolTip="Disable remote favicon fetches and use deterministic letter icons."/>
                         <CheckBox x:Name="CorporateModeCheck" Content="Corporate policy" IsChecked="False" FontSize="12.5" VerticalAlignment="Center" ToolTip="Refuse packages whose source is not listed in the Wingetter source policy."/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -1637,6 +1682,7 @@ function Show-WinGetInstallerGUI {
     $SilentCheck      = $Window.FindName("SilentCheck")
     $AcceptCheck      = $Window.FindName("AcceptCheck")
     $IncludePinnedCheck = $Window.FindName("IncludePinnedCheck")
+    $PrivateIconModeCheck = $Window.FindName("PrivateIconModeCheck")
     $CorporateModeCheck = $Window.FindName("CorporateModeCheck")
     $ModeBtn          = $Window.FindName("ModeBtn")
 
@@ -1759,12 +1805,15 @@ function Show-WinGetInstallerGUI {
     $ui["BuiltInGroups"]       = $Script:BuiltInGroups
     $ui["PackageSource"]       = Get-WingetterPackageSourceAdapter -Name "winget"
     $ui["SourcePolicy"]        = Get-WingetterSourcePolicy
+    $ui["Settings"]            = Get-WingetterSettings
+    $ui["PrivateIconMode"]     = [bool]$ui["Settings"].PrivateIconMode
     $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
+    $PrivateIconModeCheck.IsChecked = [bool]$ui["PrivateIconMode"]
 
     foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
-    foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck, $CorporateModeCheck)) {
+    foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck, $PrivateIconModeCheck, $CorporateModeCheck)) {
         [void]$ui["Elements"]["FooterChecks"].Add($chk)
     }
 
@@ -2365,7 +2414,9 @@ function Show-WinGetInstallerGUI {
 
             # Instant letter-icon placeholder; real icons load async after window opens
             $iconImage.Source = New-LetterIcon -Letter $app.Name[0] -ColorHex (Get-LetterColor $app.Name)
-            [void]$ui["IconQueue"].Add(@{ Image = $iconImage; Url = $app.Icon; Name = $app.Name })
+            if (-not [bool]$ui["PrivateIconMode"]) {
+                [void]$ui["IconQueue"].Add(@{ Image = $iconImage; Url = $app.Icon; Name = $app.Name })
+            }
 
             $appLabel = New-Object System.Windows.Controls.TextBlock
             $appLabel.Text = $app.Name
@@ -2777,6 +2828,22 @@ function Show-WinGetInstallerGUI {
         $logSuffix = if ($Script:LastBootstrapLogPath) { " Log: $Script:LastBootstrapLogPath" } else { "" }
         $afterStatus = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         $ProgressText.Text = if ($installed) { "WinGet is ready.$logSuffix" } else { "WinGet repair needs manual follow-up: $(& $GetWinGetStatusMessage $afterStatus)$logSuffix" }
+    }.GetNewClosure())
+
+    $PrivateIconModeCheck.Add_Click({
+        $enabled = [bool]$PrivateIconModeCheck.IsChecked
+        $ui["Settings"] = Set-WingetterPrivateIconMode -Enabled $enabled
+        $ui["PrivateIconMode"] = [bool]$ui["Settings"].PrivateIconMode
+        if ($enabled) {
+            foreach ($entry in @($ui["IconQueue"])) {
+                try {
+                    $entry.Image.Source = New-LetterIcon -Letter ([string]$entry.Name)[0] -ColorHex (Get-LetterColor ([string]$entry.Name))
+                } catch {}
+            }
+            $ProgressText.Text = "Private icon mode enabled. Remote favicon fetches are disabled."
+        } else {
+            $ProgressText.Text = "Private icon mode disabled. Remote icons will refresh on next launch."
+        }
     }.GetNewClosure())
 
     $CorporateModeCheck.Add_Click({
@@ -4286,7 +4353,7 @@ function Show-WinGetInstallerGUI {
         $entry = $ui["IconQueue"][$i]
         $safeName = ($entry.Name -replace '[^\w]', '_') + ".png"
         $cachePath = Join-Path $Script:IconCacheDir $safeName
-        [void]$iconWork.Add(@{ Index = $i; Url = $entry.Url; CachePath = $cachePath; Name = $entry.Name })
+        [void]$iconWork.Add(@{ Index = $i; Url = $entry.Url; CachePath = $cachePath; Name = $entry.Name; TtlDays = [int]$ui["Settings"].IconCacheTtlDays })
     }
 
     $doneQueue = [System.Collections.Concurrent.ConcurrentQueue[hashtable]]::new()
@@ -4305,16 +4372,40 @@ function Show-WinGetInstallerGUI {
         param($chunk, $done, $counter)
         foreach ($item in $chunk) {
             $path = $item.CachePath
-            if ((Test-Path $path) -and ([System.IO.FileInfo]::new($path)).Length -gt 100) {
+            $fresh = $false
+            if (Test-Path $path) {
+                try {
+                    $file = [System.IO.FileInfo]::new($path)
+                    $ttlDays = [int]$item.TtlDays
+                    $fresh = ($file.Length -gt 100 -and ($ttlDays -le 0 -or $file.LastWriteTimeUtc -ge [DateTime]::UtcNow.AddDays(-1 * $ttlDays)))
+                } catch { $fresh = $false }
+            }
+            if ($fresh) {
                 $done.Enqueue(@{ Index = $item.Index; Path = $path })
                 [void]$counter.AddOrUpdate("count", 1, [Func[string,int,int]]{ param($k,$v) [void]$k; $v + 1 })
                 continue
             }
             try {
-                $wc = New-Object System.Net.WebClient
-                $wc.Headers.Add("User-Agent", "Mozilla/5.0")
-                $wc.DownloadFile($item.Url, $path)
-                $wc.Dispose()
+                $request = [System.Net.WebRequest]::Create([string]$item.Url)
+                $request.Timeout = 2500
+                $request.ReadWriteTimeout = 2500
+                if ($request.PSObject.Properties["UserAgent"]) { $request.UserAgent = "Wingetter" }
+                $response = $request.GetResponse()
+                try {
+                    $inputStream = $response.GetResponseStream()
+                    $outputStream = [System.IO.File]::Create($path)
+                    try {
+                        $buffer = New-Object byte[] 8192
+                        while (($read = $inputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+                            $outputStream.Write($buffer, 0, $read)
+                        }
+                    } finally {
+                        if ($outputStream) { $outputStream.Dispose() }
+                        if ($inputStream) { $inputStream.Dispose() }
+                    }
+                } finally {
+                    if ($response) { $response.Dispose() }
+                }
                 if ((Test-Path $path) -and ([System.IO.FileInfo]::new($path)).Length -gt 100) {
                     $done.Enqueue(@{ Index = $item.Index; Path = $path })
                 }

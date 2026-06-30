@@ -10,6 +10,111 @@ function Get-WingetterRootPath {
     return $null
 }
 
+function Get-WingetterAppDataPath {
+    $root = Join-Path $env:APPDATA "Wingetter"
+    if (!(Test-Path -LiteralPath $root)) {
+        New-Item -ItemType Directory -Path $root -Force | Out-Null
+    }
+    return $root
+}
+
+function Get-WingetterSettingsPath {
+    Join-Path (Get-WingetterAppDataPath) "settings.json"
+}
+
+function Move-WingetterCorruptFileAside {
+    # Preserve the unreadable file for manual recovery instead of replacing it
+    # with fresh defaults on the next save.
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or !(Test-Path -LiteralPath $Path)) { return }
+    $corruptPath = "$Path.corrupt"
+    try {
+        if (Test-Path -LiteralPath $corruptPath) {
+            Remove-Item -LiteralPath $corruptPath -Force -ErrorAction SilentlyContinue
+        }
+        Move-Item -LiteralPath $Path -Destination $corruptPath -Force -ErrorAction Stop
+        Write-Warning "Wingetter could not parse '$Path'; moved it to '$corruptPath' so a clean file can be written. The original is preserved for manual recovery."
+    } catch {
+        Write-Warning "Wingetter could not parse '$Path' and also could not move it aside: $($_.Exception.Message)"
+    }
+}
+
+function New-WingetterDefaultSettings {
+    [PSCustomObject][ordered]@{
+        Schema          = "Wingetter.Settings.v1"
+        PrivateIconMode = $false
+        IconCacheTtlDays = 30
+        UpdatedAtUtc    = (Get-Date).ToUniversalTime().ToString("o")
+    }
+}
+
+function Get-WingetterSettings {
+    param([string]$Path = (Get-WingetterSettingsPath))
+
+    $settings = New-WingetterDefaultSettings
+    if (Test-Path -LiteralPath $Path) {
+        try {
+            $loaded = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+            foreach ($propertyName in Get-WingetterObjectPropertyNames -InputObject $settings) {
+                $value = Get-WingetterObjectPropertyValue -InputObject $loaded -PropertyName $propertyName
+                if ($null -ne $value) {
+                    $settings.$propertyName = $value
+                }
+            }
+        } catch {
+            Move-WingetterCorruptFileAside -Path $Path
+        }
+    }
+
+    $settings.Schema = "Wingetter.Settings.v1"
+    $settings.PrivateIconMode = [bool]$settings.PrivateIconMode
+    if ($null -eq $settings.IconCacheTtlDays -or "$($settings.IconCacheTtlDays)" -notmatch '^\d+$') {
+        $settings.IconCacheTtlDays = 30
+    } else {
+        $settings.IconCacheTtlDays = [int]$settings.IconCacheTtlDays
+    }
+    return $settings
+}
+
+function Save-WingetterSettings {
+    param(
+        [object]$Settings,
+        [string]$Path = (Get-WingetterSettingsPath)
+    )
+
+    $settingsToSave = Get-WingetterSettings -Path $Path
+    foreach ($propertyName in Get-WingetterObjectPropertyNames -InputObject $settingsToSave) {
+        $value = Get-WingetterObjectPropertyValue -InputObject $Settings -PropertyName $propertyName
+        if ($null -ne $value) {
+            $settingsToSave.$propertyName = $value
+        }
+    }
+    $settingsToSave.Schema = "Wingetter.Settings.v1"
+    $settingsToSave.PrivateIconMode = [bool]$settingsToSave.PrivateIconMode
+    $settingsToSave.UpdatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+
+    $parent = Split-Path -Parent $Path
+    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+    $targetPath = if ([System.IO.Path]::IsPathRooted($Path)) { $Path } else { (Join-Path (Get-Location).Path $Path) }
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    [System.IO.File]::WriteAllText($targetPath, (($settingsToSave | ConvertTo-Json -Depth 6) + [Environment]::NewLine), $utf8NoBom)
+    return $settingsToSave
+}
+
+function Set-WingetterPrivateIconMode {
+    param(
+        [bool]$Enabled,
+        [string]$Path = (Get-WingetterSettingsPath)
+    )
+
+    $settings = Get-WingetterSettings -Path $Path
+    $settings.PrivateIconMode = [bool]$Enabled
+    Save-WingetterSettings -Settings $settings -Path $Path
+}
+
 function Get-WingetterFileSha256 {
     param([string]$Path)
 
