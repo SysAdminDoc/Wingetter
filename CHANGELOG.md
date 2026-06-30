@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: Redacted diagnostics bundle export. The GUI **Diagnostics** action and `tools\Export-DiagnosticsBundle.ps1` write a ZIP with catalog/version metadata, recent logs, update-check summaries, migration report evidence, `winget --info`, source and pin captures, and source policy data with private headers redacted.
 - Added: Private icon mode. A persisted `settings.json` flag disables remote favicon fetches, keeps deterministic letter icons, and the non-private icon loader now uses cache TTL checks plus short network timeouts.
 - Added: WinGet client readiness reporting now labels stable, prerelease, old, and unparsable clients, exposes supported feature gates for clean output/list sorting/source priority, and shows exact update and repair commands in the GUI status tooltip.
 - Changed: WinGet availability detection now returns structured states for available, missing, disabled-by-policy, constrained-language, and broken App Installer registration cases. The GUI surfaces the exact blocker and skips automated repair when policy or constrained language mode makes repair impossible.

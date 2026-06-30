@@ -52,6 +52,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Enhanced tooltips** -- hover to see app name and WingetId
 - **Install log panel** -- color-coded per-app results (success/skipped/failed) with summary
 - **Structured run logs** -- per-package stdout, stderr, and JSON result records under `%APPDATA%\Wingetter\logs`; WinGet 1.29+ runs use cleaner `--no-progress` output where supported
+- **Redacted diagnostics bundle** -- export catalog/version info, recent logs, update-check summaries, migration reports, WinGet info, source and pin lists, and redacted source policy data as one support ZIP
 - **Migration reports** -- completed install/update runs create exportable Markdown or JSON reports with the preflight plan, summary counts, commands, result paths, versions, and sources
 - **Scheduled update checks** -- optional Windows scheduled task checks for available updates, respects pins/source policy, can skip metered networks, rotates logs, and never auto-installs
 - **Offline download cache** -- download selected installers in the background with `winget download`, write an offline manifest, and generate a replay script for later installer launch
@@ -144,6 +145,8 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 
 **Export Report** becomes available after an install or update run and writes a migration report as Markdown or JSON. The report includes selected packages, status counts, commands, result log paths, installed/available versions, sources, scan timestamps, and import warnings when applicable.
 
+**Diagnostics** writes a redacted support ZIP from the toolbar, or from the CLI with `tools\Export-DiagnosticsBundle.ps1`. The bundle includes catalog/version metadata, recent `%APPDATA%\Wingetter\logs` files, update-check summaries, the latest migration report when available, `winget --info`, `winget source list`, `winget pin list`, and source policy exports with private REST headers redacted.
+
 **Import JSON** accepts official WinGet import/export JSON, Wingetter group JSON, or a simple JSON array of package IDs. Packages not present in the Wingetter catalog are reported and skipped during selection. Safe package metadata such as WinGet `Version` plus Wingetter `InstallOptions` is preserved with an import warning so it can be reviewed before a run starts; raw `Override` / arbitrary argument fields are rejected.
 
 **Profile Gallery** opens the read-only checked-in profile index from `profiles/gallery.json`. Each profile file under `profiles/gallery/` must match its SHA256 hash, may contain only package IDs/names/sources plus constrained safe install options, and is imported only after the package review dialog is accepted. Gallery import selects packages in Wingetter; it never starts install or update.
@@ -186,9 +189,9 @@ The repo includes generated catalog snapshots in `catalog/` and validation tools
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-Validation.ps1
 ```
 
-`Invoke-Validation.ps1` runs the catalog, profile, gallery, WinGet runner, search, package-source, source-policy, update, offline-cache, configuration, accessibility, UI smoke screenshot, release-artifact, launcher-manifest, bundle, XAML, and PSScriptAnalyzer checks. Pass `-SkipAnalyzerInstall` if the validation run should fail instead of installing PSScriptAnalyzer when it is missing.
+`Invoke-Validation.ps1` runs the catalog, profile, gallery, WinGet runner, search, package-source, source-policy, update, diagnostics, offline-cache, configuration, accessibility, UI smoke screenshot, release-artifact, launcher-manifest, bundle, XAML, and PSScriptAnalyzer checks. Pass `-SkipAnalyzerInstall` if the validation run should fail instead of installing PSScriptAnalyzer when it is missing.
 
-`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.ProfileGallery.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.OfflineCache.ps1`, `src/Wingetter.Configuration.ps1`, `src/Wingetter.UpdateWatcher.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
+`Wingetter.ps1` is the launcher. Runtime code lives in `src/Wingetter.Common.ps1`, `src/Wingetter.Catalog.ps1`, `src/Wingetter.WinGet.ps1`, `src/Wingetter.Groups.ps1`, `src/Wingetter.ProfileGallery.ps1`, `src/Wingetter.Sources.ps1`, `src/Wingetter.OfflineCache.ps1`, `src/Wingetter.Configuration.ps1`, `src/Wingetter.UpdateWatcher.ps1`, `src/Wingetter.Diagnostics.ps1`, `src/Wingetter.Ui.ps1`, and `src/Wingetter.App.ps1`. The raw GitHub quick-launch command still works: when a local `src/` directory is not available, the launcher downloads those modules from the configured raw source URL.
 
 `catalog/winget.json` and `catalog/groups.json` are the curation files. `Sync-EmbeddedCatalog.ps1` regenerates the embedded fallback data in the catalog and group modules, and `Test-Catalog.ps1` checks launcher/module parse health, version agreement, unique package IDs, built-in group references, embedded fallback freshness, README counts, and changelog formatting.
 

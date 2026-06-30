@@ -23,6 +23,7 @@ try {
         "InstallBtn",
         "ExportBtn",
         "ExportSourcesBtn",
+        "DiagnosticsBtn",
         "DownloadCacheBtn",
         "ExportReportBtn",
         "ImportBtn",

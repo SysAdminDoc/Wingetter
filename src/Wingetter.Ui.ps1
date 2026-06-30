@@ -620,6 +620,72 @@ function Start-WingetterOperationWorker {
     }
 }
 
+function Start-WingetterDiagnosticsWorker {
+    param(
+        [string]$OutputPath,
+        [object]$SourcePolicy,
+        [object]$LastRunReport = $null,
+        [string]$ModuleDirectory = (Get-WingetterUiModuleDirectory)
+    )
+
+    $queue = [System.Collections.Concurrent.ConcurrentQueue[object]]::new()
+    $runspace = [runspacefactory]::CreateRunspace()
+    $runspace.Open()
+    $ps = [PowerShell]::Create()
+    $ps.Runspace = $runspace
+
+    $script = {
+        param(
+            $queue,
+            [string]$outputPath,
+            $sourcePolicy,
+            $lastRunReport,
+            [string]$moduleDirectory
+        )
+
+        try {
+            foreach ($moduleName in @(
+                "Wingetter.Common.ps1",
+                "Wingetter.Catalog.ps1",
+                "Wingetter.WinGet.ps1",
+                "Wingetter.Groups.ps1",
+                "Wingetter.Sources.ps1",
+                "Wingetter.UpdateWatcher.ps1",
+                "Wingetter.Diagnostics.ps1"
+            )) {
+                . (Join-Path $moduleDirectory $moduleName)
+            }
+
+            $result = Export-WingetterDiagnosticsBundle -OutputPath $outputPath -SourcePolicy $sourcePolicy -LastRunReport $lastRunReport
+            $queue.Enqueue([PSCustomObject]@{
+                Type      = "Done"
+                ZipPath   = [string]$result.ZipPath
+                FileCount = [int]$result.FileCount
+                Warnings  = [string[]]$result.Warnings
+            })
+        } catch {
+            $queue.Enqueue([PSCustomObject]@{
+                Type    = "Error"
+                Message = $_.Exception.Message
+            })
+        }
+    }
+
+    [void]$ps.AddScript($script)
+    [void]$ps.AddArgument($queue)
+    [void]$ps.AddArgument($OutputPath)
+    [void]$ps.AddArgument($SourcePolicy)
+    [void]$ps.AddArgument($LastRunReport)
+    [void]$ps.AddArgument($ModuleDirectory)
+
+    [PSCustomObject]@{
+        Queue      = $queue
+        PowerShell = $ps
+        Runspace   = $runspace
+        Handle     = $ps.BeginInvoke()
+    }
+}
+
 function Show-WingetterRunPlanDialog {
     param(
         [object]$RunPlan,
@@ -1416,6 +1482,7 @@ function Show-WinGetInstallerGUI {
                         <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="0,2,12,2"/>
                         <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON, PowerShell, or WinGet Configuration"/>
                         <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and redacted winget source commands"/>
+                        <Button x:Name="DiagnosticsBtn" Style="{StaticResource ToolBtn}" Content="Diagnostics" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export a redacted diagnostics ZIP for support and recovery"/>
                         <Button x:Name="DownloadCacheBtn" Style="{StaticResource ToolBtn}" Content="Download Cache" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Download selected installers and write an offline cache manifest"/>
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="GalleryBtn" Style="{StaticResource ToolBtn}" Content="Profile Gallery" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Browse hashed public profiles and review every package before import"/>
@@ -1670,6 +1737,7 @@ function Show-WinGetInstallerGUI {
     $DeselectAllBtn   = $Window.FindName("DeselectAllBtn")
     $ExportBtn        = $Window.FindName("ExportBtn")
     $ExportSourcesBtn = $Window.FindName("ExportSourcesBtn")
+    $DiagnosticsBtn   = $Window.FindName("DiagnosticsBtn")
     $DownloadCacheBtn = $Window.FindName("DownloadCacheBtn")
     $ImportBtn        = $Window.FindName("ImportBtn")
     $GalleryBtn       = $Window.FindName("GalleryBtn")
@@ -1810,7 +1878,7 @@ function Show-WinGetInstallerGUI {
     $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
     $PrivateIconModeCheck.IsChecked = [bool]$ui["PrivateIconMode"]
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
     foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck, $PrivateIconModeCheck, $CorporateModeCheck)) {
@@ -3129,6 +3197,42 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
+    $DiagnosticsBtn.Add_Click({
+        $dlg = New-Object Microsoft.Win32.SaveFileDialog
+        $dlg.Filter = "Diagnostics ZIP (*.zip)|*.zip"
+        $dlg.FileName = "Wingetter-Diagnostics.zip"
+        if ($dlg.ShowDialog() -ne $true) { return }
+
+        $DiagnosticsBtn.IsEnabled = $false
+        $ProgressText.Text = "Exporting redacted diagnostics bundle..."
+        $ProgressBar.Value = 20
+        $ProgressPercent.Text = ""
+        $worker = Start-WingetterDiagnosticsWorker -OutputPath $dlg.FileName -SourcePolicy $ui["SourcePolicy"] -LastRunReport $ui["LastRunReport"]
+        $timer = New-Object System.Windows.Threading.DispatcherTimer
+        $timer.Interval = [TimeSpan]::FromMilliseconds(160)
+        $timer.Add_Tick({
+            if (-not $worker.Handle.IsCompleted) { return }
+            $timer.Stop()
+            try { [void]$worker.PowerShell.EndInvoke($worker.Handle) } catch {}
+            try { $worker.PowerShell.Dispose(); $worker.Runspace.Close(); $worker.Runspace.Dispose() } catch {}
+            $DiagnosticsBtn.IsEnabled = $true
+            $ProgressBar.Value = 0
+
+            $message = $null
+            $item = $null
+            while ($worker.Queue.TryDequeue([ref]$item)) { $message = $item }
+            if ($message -and $message.Type -eq "Done") {
+                $warningSuffix = if (@($message.Warnings).Count -gt 0) { " ($(@($message.Warnings).Count) warning(s))" } else { "" }
+                $ProgressText.Text = "Exported diagnostics bundle with $($message.FileCount) files to $($message.ZipPath).$warningSuffix"
+            } elseif ($message -and $message.Type -eq "Error") {
+                $ProgressText.Text = "Diagnostics export failed: $($message.Message)"
+            } else {
+                $ProgressText.Text = "Diagnostics export finished without a result message."
+            }
+        }.GetNewClosure())
+        $timer.Start()
+    }.GetNewClosure())
+
     # ========================================================
     # PROFILE GALLERY / IMPORT
     # ========================================================
@@ -3375,7 +3479,7 @@ function Show-WinGetInstallerGUI {
         param([bool]$Running)
 
         $ui["OperationRunning"] = $Running
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
             if ($null -ne $ctl) { $ctl.IsEnabled = -not $Running }
         }
         foreach ($cb in @($ui["AllCheckboxes"].Values)) {
@@ -3675,6 +3779,7 @@ function Show-WinGetInstallerGUI {
         $DeleteGroupBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ExportBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Collapsed
+        $DiagnosticsBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ImportBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $GalleryBtn.Visibility = [System.Windows.Visibility]::Collapsed
@@ -3756,6 +3861,7 @@ function Show-WinGetInstallerGUI {
         $DeleteGroupBtn.Visibility = [System.Windows.Visibility]::Visible
         $ExportBtn.Visibility = [System.Windows.Visibility]::Visible
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Visible
+        $DiagnosticsBtn.Visibility = [System.Windows.Visibility]::Visible
         $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Visible
         $ImportBtn.Visibility = [System.Windows.Visibility]::Visible
         $GalleryBtn.Visibility = [System.Windows.Visibility]::Visible

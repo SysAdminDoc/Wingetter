@@ -94,6 +94,7 @@ if ($failures.Count -eq 0) {
         "Wingetter.OfflineCache.ps1",
         "Wingetter.Configuration.ps1",
         "Wingetter.UpdateWatcher.ps1",
+        "Wingetter.Diagnostics.ps1",
         "Wingetter.Ui.ps1"
     )) {
         $modulePath = Join-Path $SourceDir $moduleName

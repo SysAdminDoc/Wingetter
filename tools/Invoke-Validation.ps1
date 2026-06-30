@@ -57,6 +57,7 @@ $steps = @(
     @{ Name = "Package Sources"; RelativePath = "tools\Test-PackageSources.ps1" },
     @{ Name = "Source Policy"; RelativePath = "tools\Test-SourcePolicy.ps1" },
     @{ Name = "Update Watcher"; RelativePath = "tools\Test-UpdateWatcher.ps1" },
+    @{ Name = "Diagnostics"; RelativePath = "tools\Test-Diagnostics.ps1" },
     @{ Name = "Offline Cache"; RelativePath = "tools\Test-OfflineCache.ps1" },
     @{ Name = "WinGet Configuration"; RelativePath = "tools\Test-ConfigurationExport.ps1" },
     @{ Name = "Visual Accessibility"; RelativePath = "tools\Test-VisualAccessibility.ps1" },

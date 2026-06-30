@@ -155,6 +155,7 @@ foreach ($moduleName in @(
     "Wingetter.OfflineCache.ps1",
     "Wingetter.Configuration.ps1",
     "Wingetter.UpdateWatcher.ps1",
+    "Wingetter.Diagnostics.ps1",
     "Wingetter.Ui.ps1",
     "Wingetter.App.ps1"
 )) {

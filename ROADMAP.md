@@ -11,13 +11,6 @@
   Acceptance: if Scoop is installed, Wingetter can discover/search installed Scoop apps and show source-specific details under a capability flag; no Scoop install/update commands are emitted; tests use local fixture bucket data.
   Complexity: L
 
-- [ ] P2 - Add redacted diagnostics bundle export
-  Why: Logs, source policy, update checks, migration reports, WinGet info, sources, and pins are scattered, making support/recovery harder than competitor reporting workflows.
-  Evidence: `src/Wingetter.WinGet.ps1:394-414`; `src/Wingetter.UpdateWatcher.ps1:107-147`; `src/Wingetter.Groups.ps1:274-382`; PDQ/Patch My PC reporting patterns.
-  Touches: `src\Wingetter.Diagnostics.ps1` (new), `src\Wingetter.Ui.ps1`, `tools\Test-Diagnostics.ps1` (new), `README.md`.
-  Acceptance: one GUI action and one CLI helper export a ZIP containing recent logs, migration report, update-check summaries, catalog/version info, `winget --info`, source list, pin list, and redacted policy; tests assert no private headers are included.
-  Complexity: M
-
 - [ ] P2 - Add update review deferrals and maintenance policy
   Why: Update checks are useful but lack deferral/maintenance controls that WAU users explicitly request for supply-chain delay and work-hours friendliness.
   Evidence: `src/Wingetter.UpdateWatcher.ps1:156-240`; Romanitho/Winget-AutoUpdate issues #1153 and #1121.
