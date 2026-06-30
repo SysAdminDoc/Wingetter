@@ -128,3 +128,28 @@
   Acceptance: configuration export has a feature-detected compatibility layer for native DSC v3 resources while defaulting to the current schema until stable; fixture tests cover current schema and simulated v3 resource availability without requiring prerelease WinGet on normal validation.
   Complexity: M
 
+## Research-Driven Additions
+
+### P2
+
+- [ ] P2 - Add reviewed uninstall workflow with safety preflight
+  Why: The WinGet source adapter already exposes uninstall, but the UI and run-plan gate only support install/update; upstream WinGet issues show uninstall can affect dependencies and portable PATH links if exposed without review.
+  Evidence: `src\Wingetter.Sources.ps1:144-162`; `src\Wingetter.WinGet.ps1:280-401`; `src\Wingetter.Ui.ps1:3458-3548`; Microsoft WinGet uninstall docs; microsoft/winget-cli issues #6116, #6215, and #6247; ChocolateyGUI issue #900.
+  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Sources.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\Test-PackageSources.ps1`, `tools\Test-UiSmoke.ps1`.
+  Acceptance: installed packages can be selected for a reviewed uninstall plan that refuses non-installed packages, shows command/source/detection details, warns on dependency and portable PATH/symlink risk, exports the preflight plan, and only runs selected safe rows after confirmation; tests cover uninstall args, blocked rows, and fixture warning parsing.
+  Complexity: L
+
+- [ ] P2 - Add profile compliance and drift report
+  Why: Profiles, gallery imports, installed scans, pins, and source policy exist, but users cannot compare a desired profile against the current machine before deciding what to install, update, skip, or investigate.
+  Evidence: `src\Wingetter.Groups.ps1:494-616`; `src\Wingetter.ProfileGallery.ps1`; `src\Wingetter.WinGet.ps1:692-925`; UniGetUI issue #5020; Ninite/Patch My PC reporting patterns.
+  Touches: `src\Wingetter.Groups.ps1`, `src\Wingetter.ProfileGallery.ps1`, `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ProfileJson.ps1`, `tools\Test-WinGetRunner.ps1`.
+  Acceptance: selecting a saved group, built-in group, or gallery profile can generate a no-mutation report with desired, installed, missing, current, update-available, extra, pinned, source-blocked, and unresolved package states; report exports JSON and Markdown; fixture tests cover stale metadata and source-blocked packages.
+  Complexity: M
+
+- [ ] P2 - Add structured package risk warnings
+  Why: Package details show metadata warnings and SHA256 values, but WinGet is adding PUA warning semantics and users are asking package GUIs for pre-execution risk signals.
+  Evidence: `src\Wingetter.WinGet.ps1:1079-1130`; `src\Wingetter.Ui.ps1:2171-2215`; microsoft/winget-cli PR #6293; Devolutions/UniGetUI issue #4822; SLSA package-manager supply-chain guidance.
+  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`, `README.md`.
+  Acceptance: `winget show/search --details` warning text and catalog risk notes map to severity-coded warnings shown in details and preflight; hard blocks are policy-driven, soft warnings remain reviewable, raw output is preserved in logs, and tests cover PUA, missing hash, unknown risk, and benign fixtures.
+  Complexity: M
+
