@@ -103,13 +103,6 @@
   Acceptance: update mode exposes explicit sort/filter controls for name, category, source, installed version, available version, and blocked/deferred status; choices persist under `%APPDATA%\Wingetter`; invalid saved state falls back safely.
   Complexity: M
 
-- [ ] P2 - Add WinGet client readiness and prerelease feature gates
-  Why: Wingetter already branches on WinGet feature support, but it does not surface whether the installed client is stable/prerelease, stale, policy-blocked, or missing features needed for source priority and clean output.
-  Evidence: `src\Wingetter.WinGet.ps1:160-188`; WinGet releases `v1.28.240` and `v1.29.280`; microsoft/winget-cli issue #6330.
-  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `README.md`.
-  Acceptance: the WinGet status surface reports version, stable/prerelease channel, supported feature flags, stale-client warning, and the exact update/repair command; tests cover stable, prerelease, old, and unparsable version strings.
-  Complexity: S
-
 ### P3
 
 - [ ] P3 - Prepare native WinGet DSC v3 PackageList export path

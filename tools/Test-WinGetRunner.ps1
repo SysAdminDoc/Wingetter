@@ -126,6 +126,25 @@ if ($failures.Count -eq 0) {
         Add-Failure "WinGet availability classifier did not classify broken App Installer registration as repairable."
     }
 
+    $stableReadiness = Get-WinGetClientReadiness -AvailabilityStatus (New-WinGetAvailabilityStatus -Status "Available" -Installed $true -Version "v1.28.240" -Path "winget")
+    if ($stableReadiness.Channel -ne "Stable" -or $stableReadiness.IsStale -or $stableReadiness.Features.CleanOutputNoProgress -or $stableReadiness.Features.SourcePriority) {
+        Add-Failure "WinGet readiness did not classify v1.28.240 as stable without 1.29 feature gates."
+    }
+    $prereleaseReadiness = Get-WinGetClientReadiness -AvailabilityStatus (New-WinGetAvailabilityStatus -Status "Available" -Installed $true -Version "v1.29.280" -Path "winget")
+    if ($prereleaseReadiness.Channel -ne "Prerelease" -or -not $prereleaseReadiness.IsPrerelease -or -not $prereleaseReadiness.Features.CleanOutputNoProgress -or -not $prereleaseReadiness.Features.SourcePriority) {
+        Add-Failure "WinGet readiness did not classify v1.29.280 as prerelease with 1.29 feature gates."
+    }
+    $oldReadiness = Get-WinGetClientReadiness -AvailabilityStatus (New-WinGetAvailabilityStatus -Status "Available" -Installed $true -Version "v1.4.10173" -Path "winget")
+    $oldReadinessDetail = $oldReadiness.Detail -join "`n"
+    if ($oldReadiness.Channel -ne "Old" -or -not $oldReadiness.IsStale -or $oldReadiness.Warnings.Count -lt 1 -or $oldReadinessDetail -notmatch "Update command:") {
+        Add-Failure "WinGet readiness did not classify old clients with a stale warning and update command."
+    }
+    $unknownReadiness = Get-WinGetClientReadiness -AvailabilityStatus (New-WinGetAvailabilityStatus -Status "Available" -Installed $true -Version "winget-preview" -Path "winget")
+    $unknownReadinessDetail = $unknownReadiness.Detail -join "`n"
+    if ($unknownReadiness.Channel -ne "Unknown" -or $unknownReadiness.Warnings.Count -lt 1 -or $unknownReadinessDetail -notmatch "Repair command:") {
+        Add-Failure "WinGet readiness did not classify unparsable versions with warnings and repair command detail."
+    }
+
     if (Test-WinGetCleanOutputSupported -VersionText "v1.28.240") {
         Add-Failure "WinGet clean-output support should be disabled for v1.28.240."
     }

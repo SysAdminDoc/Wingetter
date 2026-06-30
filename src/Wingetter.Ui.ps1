@@ -2645,8 +2645,14 @@ function Show-WinGetInstallerGUI {
     # ========================================================
     # WINGET CHECK
     # ========================================================
+    $GetWinGetReadiness = {
+        param([object]$Status)
+        try { return Get-WinGetClientReadiness -AvailabilityStatus $Status } catch { return $null }
+    }
     $GetWinGetStatusMessage = {
         param([object]$Status)
+        $readiness = & $GetWinGetReadiness $Status
+        if ($readiness -and $readiness.Summary) { return [string]$readiness.Summary }
         if ($null -eq $Status) { return "WinGet status unavailable." }
         if ($Status.Installed) { return "WinGet $($Status.Version)" }
         if ($Status.Message) { return [string]$Status.Message }
@@ -2671,9 +2677,15 @@ function Show-WinGetInstallerGUI {
     }
     $checkWinGet = {
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
+        $readiness = & $GetWinGetReadiness $status
+        if ($readiness) {
+            $WinGetStatus.ToolTip = ($readiness.Detail -join "`n")
+            $InstallWinGetBtn.ToolTip = "Repair command: $($readiness.RepairCommand)"
+        }
         if ($status.Installed) {
             $WinGetStatus.Text = & $GetWinGetStatusMessage $status
-            $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1fb879")
+            $statusColor = if ($readiness -and ($readiness.IsStale -or $readiness.Channel -eq "Unknown")) { "#ffbf69" } else { "#1fb879" }
+            $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString($statusColor)
             $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Collapsed
         } else {
             $WinGetStatus.Text = & $GetWinGetStatusMessage $status

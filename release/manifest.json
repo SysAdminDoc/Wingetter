@@ -1,22 +1,22 @@
 {
     "schema":  "Wingetter.ReleaseArtifactManifest.v1",
     "version":  "v6.1.0",
-    "generatedAtUtc":  "2026-06-30T00:17:52Z",
+    "generatedAtUtc":  "2026-06-30T00:22:22Z",
     "build":  {
                   "source":  "Bundled launcher generated from Wingetter.ps1 plus the dot-sourced modules under src/ at v6.1.0",
                   "tool":  "tools\\\\Build-WingetterExe.ps1",
                   "ps2exeVersion":  "1.0.18",
                   "bundle":  {
                                  "path":  "release\\\\Wingetter.bundled.ps1",
-                                 "sha256":  "D852C40D836D05300F72DD878FB8BB8B96D3802BF2E11610B4BCBB5D2ED0BAD3",
-                                 "size":  500458,
+                                 "sha256":  "BDAEDC43A660E66AA129239E71D1AEA78835CEF96C5DC468B4DD0D83F7249A94",
+                                 "size":  505302,
                                  "generatedBy":  "tools\\\\Build-WingetterExe.ps1"
                              },
                   "exe":  {
                               "path":  "Wingetter.exe",
-                              "builtFromBundleSha256":  "D852C40D836D05300F72DD878FB8BB8B96D3802BF2E11610B4BCBB5D2ED0BAD3",
+                              "builtFromBundleSha256":  "BDAEDC43A660E66AA129239E71D1AEA78835CEF96C5DC468B4DD0D83F7249A94",
                               "fileDescription":  "Wingetter",
-                              "comments":  "Wingetter bundled launcher SHA256 D852C40D836D05300F72DD878FB8BB8B96D3802BF2E11610B4BCBB5D2ED0BAD3",
+                              "comments":  "Wingetter bundled launcher SHA256 BDAEDC43A660E66AA129239E71D1AEA78835CEF96C5DC468B4DD0D83F7249A94",
                               "productName":  "Wingetter",
                               "productVersion":  "6.1.0.0",
                               "fileVersion":  "6.1.0.0"
@@ -34,8 +34,8 @@
     "artifacts":  [
                       {
                           "path":  "Wingetter.exe",
-                          "sha256":  "83C9B10178A81FFB95D9D242291F604E4017441FD7900725A90494ECB2F9C37F",
-                          "size":  545792,
+                          "sha256":  "4CF0C949CF71443592694A17E84DE2EFCD0908CE2D9CE7AEBCB35AD8CAB3DC9C",
+                          "size":  550400,
                           "description":  "PS2EXE-packaged Wingetter launcher built from v6.1.0."
                       },
                       {

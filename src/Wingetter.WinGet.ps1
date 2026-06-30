@@ -297,6 +297,85 @@ function Add-WinGetCleanOutputArguments {
     return [string[]]$updated
 }
 
+function Get-WinGetClientReadiness {
+    param(
+        [object]$AvailabilityStatus,
+        [string]$LatestStableVersion = "1.28.240",
+        [string]$LatestPrereleaseVersion = "1.29.280"
+    )
+
+    $installed = ($null -ne $AvailabilityStatus -and [bool]$AvailabilityStatus.Installed)
+    $versionText = if ($installed -and $AvailabilityStatus.Version) { [string]$AvailabilityStatus.Version } else { "" }
+    $version = ConvertTo-WinGetVersion -VersionText $versionText
+    $stableVersion = ConvertTo-WinGetVersion -VersionText $LatestStableVersion
+    $prereleaseVersion = ConvertTo-WinGetVersion -VersionText $LatestPrereleaseVersion
+    $warnings = [System.Collections.ArrayList]::new()
+    $channel = "Unavailable"
+    $isStale = $false
+    $isPrerelease = $false
+
+    if ($installed) {
+        if ($null -eq $version) {
+            $channel = "Unknown"
+            [void]$warnings.Add("Could not parse WinGet version '$versionText'.")
+        } elseif ($stableVersion -and $version -lt $stableVersion) {
+            $channel = "Old"
+            $isStale = $true
+            [void]$warnings.Add("Installed WinGet $versionText is older than the known stable $LatestStableVersion.")
+        } elseif ($prereleaseVersion -and $version -ge $prereleaseVersion) {
+            $channel = "Prerelease"
+            $isPrerelease = $true
+        } else {
+            $channel = "Stable"
+        }
+    } elseif ($AvailabilityStatus -and $AvailabilityStatus.Status) {
+        $channel = [string]$AvailabilityStatus.Status
+        if ($AvailabilityStatus.Message) { [void]$warnings.Add([string]$AvailabilityStatus.Message) }
+    }
+
+    $features = [ordered]@{
+        CleanOutputNoProgress = [bool]($installed -and (Test-WinGetCleanOutputSupported -VersionText $versionText))
+        StableListSort        = [bool]($installed -and (Test-WinGetCleanOutputSupported -VersionText $versionText))
+        SourcePriority        = [bool]($installed -and (Test-WinGetVersionAtLeast -VersionText $versionText -MinimumVersion ([version]"1.29.0")))
+    }
+    $supportedFeatures = @($features.GetEnumerator() | Where-Object { $_.Value } | ForEach-Object { $_.Key })
+    $unsupportedFeatures = @($features.GetEnumerator() | Where-Object { -not $_.Value } | ForEach-Object { $_.Key })
+    $updateCommand = "winget upgrade --id Microsoft.AppInstaller --exact --source msstore --accept-package-agreements --accept-source-agreements"
+    $repairCommand = "Repair-WinGetPackageManager -Force -Latest"
+    $summary = if ($installed) {
+        "WinGet $versionText ($channel)"
+    } elseif ($AvailabilityStatus -and $AvailabilityStatus.Message) {
+        [string]$AvailabilityStatus.Message
+    } else {
+        "WinGet unavailable"
+    }
+    $detail = New-Object System.Collections.Generic.List[string]
+    $detail.Add($summary)
+    $detail.Add("Supported features: $(if ($supportedFeatures.Count -gt 0) { $supportedFeatures -join ', ' } else { 'none' })")
+    $detail.Add("Unsupported features: $(if ($unsupportedFeatures.Count -gt 0) { $unsupportedFeatures -join ', ' } else { 'none' })")
+    $detail.Add("Update command: $updateCommand")
+    $detail.Add("Repair command: $repairCommand")
+    if ($warnings.Count -gt 0) { $detail.Add("Warnings: $($warnings -join ' ')") }
+
+    [PSCustomObject][ordered]@{
+        Installed           = [bool]$installed
+        Status              = if ($AvailabilityStatus -and $AvailabilityStatus.Status) { [string]$AvailabilityStatus.Status } else { "" }
+        VersionText         = $versionText
+        ParsedVersion       = if ($version) { [string]$version } else { "" }
+        Channel             = $channel
+        IsPrerelease        = [bool]$isPrerelease
+        IsStale             = [bool]$isStale
+        Features            = [PSCustomObject]$features
+        SupportedFeatures   = [string[]]$supportedFeatures
+        UnsupportedFeatures = [string[]]$unsupportedFeatures
+        UpdateCommand       = $updateCommand
+        RepairCommand       = $repairCommand
+        Warnings            = [string[]]$warnings.ToArray([string])
+        Summary             = $summary
+        Detail              = [string[]]$detail.ToArray()
+    }
+}
+
 function Set-ProcessArguments {
     param(
         [System.Diagnostics.ProcessStartInfo]$ProcessStartInfo,

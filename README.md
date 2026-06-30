@@ -57,7 +57,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 - **Toast notifications** -- Windows notification when batch install completes
 - **Splash screen** -- loading progress indicator while icons are fetched
 - **Select All / Deselect All** per category or globally
-- **WinGet auto-detection** -- checks for winget on launch and distinguishes missing, disabled-by-policy, constrained-language, and broken App Installer registration states
+- **WinGet auto-detection** -- checks for winget on launch, distinguishes missing/disabled/constrained/broken states, and reports stable/prerelease/old client readiness with feature gates
 - **Audited WinGet repair** -- uses App Installer registration and `Microsoft.WinGet.Client` repair with JSONL bootstrap logs instead of raw package downloads, and skips repair when policy or constrained language mode blocks success
 
 ## Built-in Groups
