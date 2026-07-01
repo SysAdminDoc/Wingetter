@@ -47,13 +47,6 @@
   Acceptance: a Source Policy dialog can add/edit/remove allowed sources and package/source block rules, validates names/URLs/priority/header redaction before save, imports/exports the existing schema, shows drift results, and preserves private headers only when explicitly requested.
   Complexity: M
 
-- [ ] P2 - Add single-instance guard and activation handoff
-  Why: Package-manager GUIs should not silently fail or race shared app-state/log paths when launched twice.
-  Evidence: no `Mutex`/single-instance guard in repo scan; `src\Wingetter.Ui.ps1:985`; ChocolateyGUI issue #1099.
-  Touches: `Wingetter.ps1`, `src\Wingetter.App.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-Catalog.ps1` or a focused helper test.
-  Acceptance: first launch owns a named user-scoped mutex; a second launch sends an activation request to the existing window and exits with a clear status; if activation IPC fails, the second launch reports the lock owner and does not start package operations.
-  Complexity: M
-
 - [ ] P2 - Split install/update and offline-cache operation state
   Why: One global `OperationRunning` flag blocks and reports installs, upgrades, and offline downloads the same way, even though downloads and mutating package operations need different queue and cancellation semantics.
   Evidence: `src\Wingetter.Ui.ps1:985`; `src\Wingetter.Ui.ps1:3263-3458`; Devolutions/UniGetUI issue #5025.
