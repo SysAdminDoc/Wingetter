@@ -1117,6 +1117,8 @@ function Show-WinGetInstallerGUI {
         AllCheckboxes = @{}
         Cancelled     = $false
         OperationRunning = $false
+        PackageOperationRunning = $false
+        CacheDownloadRunning = $false
         OperationWorker = $null
         OperationTimer = $null
         OperationCancelToken = $null
@@ -3541,18 +3543,30 @@ function Show-WinGetInstallerGUI {
     }
 
     $SetOperationRunningState = {
-        param([bool]$Running)
+        param([bool]$Running, [string]$Mode = "Package")
 
-        $ui["OperationRunning"] = $Running
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $DownloadCacheBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $UpdateAllBtn, $SearchBox, $ClearSearchBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck, $InstallBtn, $SelectAllBtn, $DeselectAllBtn)) {
-            if ($null -ne $ctl) { $ctl.IsEnabled = -not $Running }
+        if ($Mode -eq "Cache") {
+            $ui["CacheDownloadRunning"] = $Running
+        } else {
+            $ui["PackageOperationRunning"] = $Running
+        }
+        $ui["OperationRunning"] = [bool]$ui["PackageOperationRunning"] -or [bool]$ui["CacheDownloadRunning"]
+
+        $anyRunning = [bool]$ui["OperationRunning"]
+        $pkgRunning = [bool]$ui["PackageOperationRunning"]
+
+        foreach ($ctl in @($InstallBtn, $DownloadCacheBtn, $UpdateAllBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
+            if ($null -ne $ctl) { $ctl.IsEnabled = -not $anyRunning }
+        }
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $SearchBox, $ClearSearchBtn, $SelectAllBtn, $DeselectAllBtn)) {
+            if ($null -ne $ctl) { $ctl.IsEnabled = -not $pkgRunning }
         }
         foreach ($cb in @($ui["AllCheckboxes"].Values)) {
-            try { $cb.IsEnabled = -not $Running } catch {}
+            try { $cb.IsEnabled = -not $pkgRunning } catch {}
         }
-        $CancelBtn.IsEnabled = $Running
+        $CancelBtn.IsEnabled = $anyRunning
 
-        if (-not $Running) {
+        if (-not $anyRunning) {
             $ExportReportBtn.IsEnabled = ($null -ne $ui["LastRunReport"])
             & $UpdateGroupActionState
             & $UpdateSelectedCount
@@ -3617,7 +3631,7 @@ function Show-WinGetInstallerGUI {
     $ApplyOfflineOperationDone = {
         param($Message)
 
-        & $SetOperationRunningState $false
+        & $SetOperationRunningState $false "Cache"
         $ProgressBar.Value = 100
         $ProgressPercent.Text = "100%"
         if ([bool]$Message.Cancelled) {
@@ -3682,6 +3696,7 @@ function Show-WinGetInstallerGUI {
 
     $DownloadCacheBtn.Add_Click({
         if ([bool]$ui["OperationRunning"]) { return }
+        $ui["OperationMode"] = "Cache"
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if (-not $status.Installed) { [System.Windows.MessageBox]::Show((& $GetWinGetRequiredMessage $status "download package installers"), "WinGet Required", "OK", "Warning"); return }
 
@@ -3714,7 +3729,7 @@ function Show-WinGetInstallerGUI {
         $LogPanelBorder.Visibility = [System.Windows.Visibility]::Visible
         $LogToggleBtn.Content = "Hide"
         $ui["Cancelled"] = $false
-        & $SetOperationRunningState $true
+        & $SetOperationRunningState $true "Cache"
         $ProgressBar.Value = 0
         $ProgressPercent.Text = "0%"
         $ProgressText.Text = "Preparing offline cache..."
@@ -3729,7 +3744,7 @@ function Show-WinGetInstallerGUI {
                 -SourcePolicy $ui["SourcePolicy"]
             & $StartOperationMessagePump $worker
         } catch {
-            & $SetOperationRunningState $false
+            & $SetOperationRunningState $false "Cache"
             $ProgressText.Text = "Could not start offline cache worker: $($_.Exception.Message)"
         }
     }.GetNewClosure())

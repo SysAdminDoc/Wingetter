@@ -11,13 +11,6 @@
   Acceptance: a Source Policy dialog can add/edit/remove allowed sources and package/source block rules, validates names/URLs/priority/header redaction before save, imports/exports the existing schema, shows drift results, and preserves private headers only when explicitly requested.
   Complexity: M
 
-- [ ] P2 - Split install/update and offline-cache operation state
-  Why: One global `OperationRunning` flag blocks and reports installs, upgrades, and offline downloads the same way, even though downloads and mutating package operations need different queue and cancellation semantics.
-  Evidence: `src\Wingetter.Ui.ps1:985`; `src\Wingetter.Ui.ps1:3263-3458`; Devolutions/UniGetUI issue #5025.
-  Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.OfflineCache.ps1`, `src\Wingetter.WinGet.ps1`, `tools\Test-UiSmoke.ps1`.
-  Acceptance: UI state tracks package operations and offline downloads separately, prevents overlapping mutating installs/upgrades, allows safe non-conflicting cache downloads, shows separate progress/cancel text, and smoke tests verify the enabled/disabled control matrix.
-  Complexity: L
-
 - [ ] P2 - Persist update-view sort and filter state
   Why: Update review is a repeated workflow, and users expect sort/order choices to survive refreshes instead of resetting during each update-mode rebuild.
   Evidence: `src\Wingetter.Ui.ps1:3553-3680`; Devolutions/UniGetUI issue #4984.
