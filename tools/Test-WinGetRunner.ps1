@@ -541,6 +541,27 @@ Google Chrome Google.Chrome 124.0   Blocking
     if ($msstoreSource.Status -ne "Offline") { Add-Failure "Source health msstore source not classified as Offline." }
     if ($healthResult.Summary -ne "1/2 source(s) healthy") { Add-Failure "Source health summary mismatch: $($healthResult.Summary)." }
 
+    $cleanShow = Get-Content -Path (Join-Path $PSScriptRoot "fixtures\winget\show-full-en.txt") -Raw
+    $cleanWarnings = Get-WingetterPackageRiskWarnings -ShowText $cleanShow
+    if (@($cleanWarnings).Count -ne 0) { Add-Failure "Clean show fixture should have no risk warnings (got $(@($cleanWarnings).Count))." }
+
+    $puaShow = Get-Content -Path (Join-Path $PSScriptRoot "fixtures\winget\show-pua-warning.txt") -Raw
+    $puaWarnings = Get-WingetterPackageRiskWarnings -ShowText $puaShow
+    $puaCodes = @($puaWarnings | ForEach-Object { $_.Code })
+    if ($puaCodes -notcontains "PUA_WARNING") { Add-Failure "PUA show fixture did not trigger PUA_WARNING." }
+    if ($puaCodes -notcontains "MISSING_HASH") { Add-Failure "PUA show fixture did not trigger MISSING_HASH." }
+    if ($puaCodes -notcontains "HTTP_INSTALLER") { Add-Failure "PUA show fixture did not trigger HTTP_INSTALLER." }
+
+    $emptyWarnings = Get-WingetterPackageRiskWarnings -ShowText ""
+    if (@($emptyWarnings).Count -ne 0) { Add-Failure "Empty show text should have no risk warnings." }
+
+    $catalogEntry = [PSCustomObject]@{
+        riskNotes = @([PSCustomObject]@{ severity = "Warning"; code = "KNOWN_ISSUE"; message = "Known telemetry concern." })
+    }
+    $catalogWarnings = Get-WingetterPackageRiskWarnings -ShowText "" -CatalogEntry $catalogEntry
+    if (@($catalogWarnings).Count -ne 1) { Add-Failure "Catalog risk note should produce 1 warning." }
+    if ($catalogWarnings[0].Code -ne "KNOWN_ISSUE") { Add-Failure "Catalog risk note code mismatch." }
+
     $noisy = "Installing Google Chrome...`n|`n/`n-`n\`nSuccessfully installed."
     $cleanedNoisy = Remove-WingetterProgressNoise -Text $noisy
     if ($cleanedNoisy -notmatch "Installing Google Chrome") { Add-Failure "Progress noise removal lost meaningful line." }

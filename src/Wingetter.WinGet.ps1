@@ -1026,6 +1026,73 @@ function Get-WinGetShowField {
     return ""
 }
 
+function Get-WingetterPackageRiskWarnings {
+    param(
+        [string]$ShowText,
+        [object]$CatalogEntry = $null
+    )
+
+    $warnings = [System.Collections.ArrayList]::new()
+    if ([string]::IsNullOrWhiteSpace($ShowText) -and $null -eq $CatalogEntry) { return [object[]]$warnings.ToArray() }
+
+    if (![string]::IsNullOrWhiteSpace($ShowText)) {
+        if ($ShowText -match '(?im)^\s*Installer SHA256:\s*$' -or $ShowText -match '(?i)no\s*hash|hash\s*missing|SHA256:\s*$') {
+            [void]$warnings.Add([PSCustomObject][ordered]@{
+                Severity = "Warning"
+                Code     = "MISSING_HASH"
+                Message  = "Installer hash is not published. The package cannot be verified at install time."
+            })
+        }
+        if ($ShowText -match '(?i)potentially\s*unwanted|PUA|unwanted\s*application|unwanted\s*software') {
+            [void]$warnings.Add([PSCustomObject][ordered]@{
+                Severity = "Critical"
+                Code     = "PUA_WARNING"
+                Message  = "This package has been flagged as a potentially unwanted application."
+            })
+        }
+        if ($ShowText -match '(?i)deprecated|end.of.life|EOL|no\s*longer\s*maintained') {
+            [void]$warnings.Add([PSCustomObject][ordered]@{
+                Severity = "Info"
+                Code     = "DEPRECATED"
+                Message  = "This package may be deprecated or no longer maintained."
+            })
+        }
+
+        $license = Get-WinGetShowField -Text $ShowText -Label "License"
+        if ([string]::IsNullOrWhiteSpace($license)) {
+            [void]$warnings.Add([PSCustomObject][ordered]@{
+                Severity = "Info"
+                Code     = "NO_LICENSE"
+                Message  = "No license information is published for this package."
+            })
+        }
+
+        $installerUrl = Get-WinGetShowField -Text $ShowText -Label "Installer Url"
+        if (![string]::IsNullOrWhiteSpace($installerUrl) -and $installerUrl -match '^http://') {
+            [void]$warnings.Add([PSCustomObject][ordered]@{
+                Severity = "Warning"
+                Code     = "HTTP_INSTALLER"
+                Message  = "Installer URL uses HTTP instead of HTTPS."
+            })
+        }
+    }
+
+    if ($null -ne $CatalogEntry) {
+        $riskNotes = if ($CatalogEntry.PSObject.Properties["riskNotes"]) { $CatalogEntry.riskNotes } else { $null }
+        if ($riskNotes) {
+            foreach ($note in @($riskNotes)) {
+                [void]$warnings.Add([PSCustomObject][ordered]@{
+                    Severity = if ($note.PSObject.Properties["severity"]) { [string]$note.severity } else { "Info" }
+                    Code     = if ($note.PSObject.Properties["code"]) { [string]$note.code } else { "CATALOG_NOTE" }
+                    Message  = if ($note.PSObject.Properties["message"]) { [string]$note.message } else { [string]$note }
+                })
+            }
+        }
+    }
+
+    return [object[]]$warnings.ToArray()
+}
+
 function Find-WinGetPackageIdColumn {
     param([string]$Line, [string]$PackageId)
     # Return the column index where $PackageId appears as a whitespace-delimited

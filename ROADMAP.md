@@ -74,13 +74,6 @@
   Acceptance: installed packages can be selected for a reviewed uninstall plan that refuses non-installed packages, shows command/source/detection details, warns on dependency and portable PATH/symlink risk, exports the preflight plan, and only runs selected safe rows after confirmation; tests cover uninstall args, blocked rows, and fixture warning parsing.
   Complexity: L
 
-- [ ] P2 - Add structured package risk warnings
-  Why: Package details show metadata warnings and SHA256 values, but WinGet is adding PUA warning semantics and users are asking package GUIs for pre-execution risk signals.
-  Evidence: `src\Wingetter.WinGet.ps1:1079-1130`; `src\Wingetter.Ui.ps1:2171-2215`; microsoft/winget-cli PR #6293; Devolutions/UniGetUI issue #4822; SLSA package-manager supply-chain guidance.
-  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`, `README.md`.
-  Acceptance: `winget show/search --details` warning text and catalog risk notes map to severity-coded warnings shown in details and preflight; hard blocks are policy-driven, soft warnings remain reviewable, raw output is preserved in logs, and tests cover PUA, missing hash, unknown risk, and benign fixtures.
-  Complexity: M
-
 ## Research-Driven Additions
 
 ### P2

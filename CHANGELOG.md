@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: `Get-WingetterPackageRiskWarnings` parses `winget show` output and catalog risk notes into structured severity-coded warnings: PUA_WARNING (Critical), MISSING_HASH/HTTP_INSTALLER (Warning), DEPRECATED/NO_LICENSE/CATALOG_NOTE (Info). Fixture tests cover PUA, missing hash, HTTP installer, catalog risk notes, and benign package output.
 - Added: `New-WingetterComplianceReport` generates a no-mutation drift report comparing desired profile packages against installed state, classifying each as Current/Missing/UpdateAvailable/Pinned/SourceBlocked with installed version, available version, source, and pin details. Fixture tests cover pinned, blocked, missing, and current states.
 - Added: `Get-WingetterRetryPackagesFromReport` extracts failed, cancelled, and not-run packages from a migration report for retry. Preserves original install options from the run plan and marks each package with its prior status. Tests cover all-success, partial-failure, and null report inputs.
 - Added: `Get-WingetterSelfUpdateStatus` non-mutating self-update check. Fetches the remote `release/manifest.json` with a timeout, compares version and bundle hash against the local manifest, checks Authenticode signature on `Wingetter.exe`, and reports Current/UpdateAvailable/HashMismatch/FetchFailed status. Included in the diagnostics bundle as `metadata/self-update-status.json`. Never replaces files.

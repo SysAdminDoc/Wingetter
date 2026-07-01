@@ -1,0 +1,10 @@
+Found Suspicious.App [Suspicious.App]
+Version: 1.0.0
+Publisher: Unknown Publisher
+Description: A potentially unwanted application detected by defender.
+Homepage: http://example.com
+License: Freeware
+Installer:
+  Installer Type: exe
+  Installer Url: http://example.com/setup.exe
+  Installer SHA256:
