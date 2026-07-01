@@ -1,20 +1,20 @@
 {
     "schema":  "Wingetter.ReleaseArtifactManifest.v1",
     "version":  "v6.1.0",
-    "generatedAtUtc":  "2026-07-01T05:44:19Z",
+    "generatedAtUtc":  "2026-07-01T05:47:09Z",
     "build":  {
                   "source":  "Bundled launcher generated from Wingetter.ps1 plus the dot-sourced modules under src/ at v6.1.0",
                   "tool":  "tools\\\\Build-WingetterExe.ps1",
                   "ps2exeVersion":  "",
                   "bundle":  {
                                  "path":  "release\\\\Wingetter.bundled.ps1",
-                                 "sha256":  "17E459341880458AB4646788F07B23041A2A8746BC6D370AF5BD0C6DF7FA716F",
-                                 "size":  576345,
+                                 "sha256":  "6C33126B80F39EADCF2C556FAB7C5F4315EB12BF3B15354D0B9429E7D8C39F35",
+                                 "size":  576758,
                                  "generatedBy":  "tools\\\\Build-WingetterExe.ps1"
                              },
                   "exe":  {
                               "path":  "Wingetter.exe",
-                              "builtFromBundleSha256":  "17E459341880458AB4646788F07B23041A2A8746BC6D370AF5BD0C6DF7FA716F",
+                              "builtFromBundleSha256":  "6C33126B80F39EADCF2C556FAB7C5F4315EB12BF3B15354D0B9429E7D8C39F35",
                               "fileDescription":  "Wingetter",
                               "comments":  "Wingetter bundled launcher SHA256 C8397B0E6D48A7B5E234DDE1822F67878027B3469AB959D76E8C38F097F37AAB",
                               "productName":  "Wingetter",

@@ -613,7 +613,7 @@ function New-WingetterRunLogDirectory {
 
 function New-WingetterRunPlan {
     param(
-        [ValidateSet("install", "upgrade")]
+        [ValidateSet("install", "upgrade", "uninstall")]
         [string]$Action,
         [object[]]$SelectedPackages,
         [hashtable]$InstalledRecords = @{},
@@ -670,7 +670,17 @@ function New-WingetterRunPlan {
             }
         }
 
-        if ($canRun -and $Action -eq "upgrade") {
+        if ($canRun -and $Action -eq "uninstall") {
+            if (!$isInstalled) {
+                $status = "NOT_INSTALLED"
+                $plannedAction = "Skip"
+                $reason = "Package is not detected as installed."
+                $canRun = $false
+            } else {
+                $plannedAction = "Uninstall"
+                $reason = "Ready to uninstall."
+            }
+        } elseif ($canRun -and $Action -eq "upgrade") {
             if (!$isInstalled) {
                 $status = "NOT_INSTALLED"
                 $plannedAction = "Skip"

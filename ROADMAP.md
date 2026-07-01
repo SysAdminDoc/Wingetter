@@ -60,13 +60,6 @@
 
 ### P2
 
-- [ ] P2 - Add reviewed uninstall workflow with safety preflight
-  Why: The WinGet source adapter already exposes uninstall, but the UI and run-plan gate only support install/update; upstream WinGet issues show uninstall can affect dependencies and portable PATH links if exposed without review.
-  Evidence: `src\Wingetter.Sources.ps1:144-162`; `src\Wingetter.WinGet.ps1:280-401`; `src\Wingetter.Ui.ps1:3458-3548`; Microsoft WinGet uninstall docs; microsoft/winget-cli issues #6116, #6215, and #6247; ChocolateyGUI issue #900.
-  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Sources.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\Test-PackageSources.ps1`, `tools\Test-UiSmoke.ps1`.
-  Acceptance: installed packages can be selected for a reviewed uninstall plan that refuses non-installed packages, shows command/source/detection details, warns on dependency and portable PATH/symlink risk, exports the preflight plan, and only runs selected safe rows after confirmation; tests cover uninstall args, blocked rows, and fixture warning parsing.
-  Complexity: L
-
 ## Research-Driven Additions
 
 ### P2

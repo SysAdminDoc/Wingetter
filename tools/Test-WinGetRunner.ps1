@@ -435,6 +435,19 @@ if ($failures.Count -eq 0) {
     if (-not $includePinnedPlan.Packages[0].CanRun -or $includePinnedPlan.Packages[0].PlannedAction -ne "Upgrade") {
         Add-Failure "Upgrade preflight plan did not allow a pinned update when include-pinned is enabled."
     }
+    $uninstallPlan = New-WingetterRunPlan -Action "uninstall" -SelectedPackages $planPackages -InstalledRecords $installedRecords -SourcePolicy $policy -PinStatusesById $pinStatuses -IncludePinned $false -ProfileName "Fixture"
+    $uninstallById = @{}
+    foreach ($item in @($uninstallPlan.Packages)) { $uninstallById[[string]$item.PackageId] = $item }
+    if (-not $uninstallById["Google.Chrome"].CanRun -or $uninstallById["Google.Chrome"].PlannedAction -ne "Uninstall") {
+        Add-Failure "Uninstall plan did not mark installed package as runnable."
+    }
+    if ($uninstallById["Example.NewApp"].CanRun -or $uninstallById["Example.NewApp"].Status -ne "NOT_INSTALLED") {
+        Add-Failure "Uninstall plan did not skip non-installed package."
+    }
+    if ($uninstallById["Internal.Tool"].CanRun -or $uninstallById["Internal.Tool"].Status -ne "BLOCKED") {
+        Add-Failure "Uninstall plan did not block disallowed source package."
+    }
+
     $planPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-plan-" + [System.Guid]::NewGuid().ToString("N") + ".json")
     try {
         Export-WingetterRunPlan -RunPlan $installPlan -FilePath $planPath | Out-Null
