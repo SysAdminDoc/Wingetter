@@ -22,13 +22,6 @@
 
 ### P2
 
-- [ ] P2 - Add catalog freshness audit against live WinGet metadata
-  Why: Static catalog validation catches local drift, but it does not prove all 765 curated IDs still resolve, still belong to the expected source, or still have trustworthy detail metadata.
-  Evidence: `tools\Test-Catalog.ps1:192-279`; `catalog/winget.json`; Microsoft `winget show` docs; `microsoft/winget-cli` v1.29.280 source behavior.
-  Touches: `tools\Test-Catalog.ps1`, `tools\Invoke-Validation.ps1`, `catalog\winget.json`, `src\Wingetter.Catalog.ps1`.
-  Acceptance: a bounded opt-in audit samples or checks catalog IDs with `winget show --id --exact --source`, reports missing/renamed/source-drift/detail-metadata failures, caches results to avoid slow default validation, and never mutates the catalog automatically.
-  Complexity: M
-
 - [ ] P2 - Add profile/run lockfile exports for reproducible rebuilds
   Why: Profiles and migration reports record IDs/source/version state, but a rebuild can still drift when upstream manifests, installer hashes, or preserved WinGet 1.29 custom arguments change.
   Evidence: `src/Wingetter.Groups.ps1:137-269`; `src/Wingetter.OfflineCache.ps1:175-361`; WinGet 1.29 preserved custom/override release notes; Ninite/Patch My PC reporting patterns.

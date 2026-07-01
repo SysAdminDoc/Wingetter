@@ -89,10 +89,38 @@ function Get-ReadmeGroupNames {
     return @($names)
 }
 
+function Get-CatalogAuditCachePath {
+    Join-Path (Join-Path $env:APPDATA "Wingetter") "catalog-audit-cache.json"
+}
+
+function Get-CatalogAuditCache {
+    $cachePath = Get-CatalogAuditCachePath
+    if (Test-Path -LiteralPath $cachePath) {
+        try {
+            $data = Get-Content -LiteralPath $cachePath -Raw | ConvertFrom-Json
+            $results = @{}
+            foreach ($prop in $data.PSObject.Properties) {
+                $results[$prop.Name] = $prop.Value
+            }
+            return $results
+        } catch {}
+    }
+    return @{}
+}
+
+function Save-CatalogAuditCache {
+    param([hashtable]$Cache)
+    $cachePath = Get-CatalogAuditCachePath
+    $parent = Split-Path -Parent $cachePath
+    if (!(Test-Path $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+    $Cache | ConvertTo-Json -Depth 6 | Set-Content -Path $cachePath -Encoding UTF8
+}
+
 function Assert-PackageAvailability {
     param(
         [object[]]$Apps,
-        [int]$SampleSize
+        [int]$SampleSize,
+        [int]$CacheMaxAgeDays = 7
     )
     $winget = Get-Command winget -ErrorAction SilentlyContinue
     if (!$winget) {
@@ -100,20 +128,58 @@ function Assert-PackageAvailability {
         return
     }
 
-    foreach ($app in ($Apps | Select-Object -First $SampleSize)) {
+    $cache = Get-CatalogAuditCache
+    $cutoff = (Get-Date).AddDays(-$CacheMaxAgeDays).ToUniversalTime().ToString("o")
+    $sampled = @($Apps | Where-Object {
+        $id = [string]$_.wingetId
+        $entry = if ($cache.ContainsKey($id)) { $cache[$id] } else { $null }
+        $null -eq $entry -or [string]$entry.CheckedAtUtc -lt $cutoff
+    } | Select-Object -First $SampleSize)
+
+    if ($sampled.Count -eq 0) {
+        Write-Host "  All sampled packages have fresh cache entries (within $CacheMaxAgeDays days)."
+        return
+    }
+
+    $missing = 0
+    $ok = 0
+    foreach ($app in $sampled) {
         $stdoutPath = [System.IO.Path]::GetTempFileName()
         $stderrPath = [System.IO.Path]::GetTempFileName()
         try {
-            $process = Start-Process -FilePath $winget.Source -ArgumentList @("show", "--id", $app.wingetId, "--exact", "--disable-interactivity") -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+            $process = Start-Process -FilePath $winget.Source -ArgumentList @("show", "--id", $app.wingetId, "--exact", "--source", "winget", "--disable-interactivity") -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+            $stdout = if (Test-Path $stdoutPath) { (Get-Content -Path $stdoutPath -Raw).Trim() } else { "" }
+            $stderr = if (Test-Path $stderrPath) { (Get-Content -Path $stderrPath -Raw).Trim() } else { "" }
+            $status = "Ok"
+            $detail = ""
+
             if ($process.ExitCode -ne 0) {
-                $stderr = if (Test-Path $stderrPath) { (Get-Content -Path $stderrPath -Raw).Trim() } else { "" }
-                if ($stderr.Length -gt 400) { $stderr = $stderr.Substring(0, 400) }
-                Add-Failure "winget show failed for '$($app.wingetId)' with exit code $($process.ExitCode). $stderr"
+                if ($stderr -match '(?i)no package found' -or $stdout -match '(?i)no package found') {
+                    $status = "Missing"
+                    $detail = "Package not found in winget source."
+                    $missing++
+                } else {
+                    $status = "Error"
+                    $detail = if ($stderr.Length -gt 300) { $stderr.Substring(0, 300) } else { $stderr }
+                }
+                Add-Failure "winget show failed for '$($app.wingetId)': $status. $detail"
+            } else {
+                $ok++
+            }
+
+            $cache[[string]$app.wingetId] = [PSCustomObject]@{
+                CheckedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
+                ExitCode     = $process.ExitCode
+                Status       = $status
+                Detail       = $detail
             }
         } finally {
             Remove-Item -Path $stdoutPath,$stderrPath -Force -ErrorAction SilentlyContinue
         }
     }
+
+    Save-CatalogAuditCache -Cache $cache
+    Write-Host "  Catalog freshness: $ok/$($sampled.Count) sampled packages resolved, $missing missing."
 }
 
 $scriptFiles = New-Object System.Collections.Generic.List[string]

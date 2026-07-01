@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: Catalog freshness audit with result caching. The `-CheckWingetAvailability` flag in `Test-Catalog.ps1` now runs `winget show --id --exact --source winget` probes, caches results per package in `%APPDATA%\Wingetter\catalog-audit-cache.json` with a configurable TTL (default 7 days), skips already-cached packages, and reports missing/error status per failed ID.
 - Added: `tools\Compare-WingetterCatalog.ps1` diff tool that compares the current catalog against a git baseline (default `HEAD`) and reports added, removed, renamed, and category-moved packages plus gallery profile impact. Removed packages referenced by gallery profiles are flagged as breaking.
 - Added: Single-instance guard with activation handoff. `Start-Wingetter` acquires a user-scoped named mutex; a second launch detects the existing instance, brings it to the foreground (restoring from minimized if needed), shows an informational message, and exits without starting package operations.
 - Added: `Remove-WingetterProgressNoise` collapses spinner (`|/-\`), progress bar (`[====]`), percentage-only, and ANSI escape lines from captured WinGet stdout/stderr while preserving meaningful installer output. `Get-TextExcerpt` now filters through it so GUI log summaries and migration report excerpts show only actionable text; raw logs remain unmodified on disk.
