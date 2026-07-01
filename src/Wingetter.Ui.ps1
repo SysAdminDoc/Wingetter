@@ -188,8 +188,11 @@ function Get-AppIcon {
     )
 
     if ($PrivateIconMode) { return $null }
-    
-    $safeName = ($AppName -replace '[^\w]', '_') + ".png"
+    [void]$AppName
+
+    $safeName = ($Url -replace '[^\w]', '_')
+    if ($safeName.Length -gt 80) { $safeName = $safeName.Substring(0, 80) }
+    $safeName = $safeName + ".png"
     $cachePath = Join-Path $Script:IconCacheDir $safeName
     
     # Return cached
@@ -4496,7 +4499,9 @@ function Show-WinGetInstallerGUI {
     $iconWork = [System.Collections.ArrayList]::new()
     for ($i = 0; $i -lt $ui["IconQueue"].Count; $i++) {
         $entry = $ui["IconQueue"][$i]
-        $safeName = ($entry.Name -replace '[^\w]', '_') + ".png"
+        $safeName = ($entry.Url -replace '[^\w]', '_')
+        if ($safeName.Length -gt 80) { $safeName = $safeName.Substring(0, 80) }
+        $safeName = $safeName + ".png"
         $cachePath = Join-Path $Script:IconCacheDir $safeName
         [void]$iconWork.Add(@{ Index = $i; Url = $entry.Url; CachePath = $cachePath; Name = $entry.Name; TtlDays = [int]$ui["Settings"].IconCacheTtlDays })
     }

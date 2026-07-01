@@ -192,10 +192,11 @@ function Test-WingetterUpdatePolicyMaintenanceWindow {
         $end = [TimeSpan]::Zero
         if (![TimeSpan]::TryParse([string]$window.StartLocalTime, [ref]$start)) { continue }
         if (![TimeSpan]::TryParse([string]$window.EndLocalTime, [ref]$end)) { continue }
-        $inside = if ($end -ge $start) {
-            ($localTime -ge $start -and $localTime -le $end)
+        if ($end -eq $start) { continue }
+        $inside = if ($end -gt $start) {
+            ($localTime -ge $start -and $localTime -lt $end)
         } else {
-            ($localTime -ge $start -or $localTime -le $end)
+            ($localTime -ge $start -or $localTime -lt $end)
         }
         if ($inside) {
             return [PSCustomObject]@{ Allowed = $true; Reason = "Within maintenance window '$($window.Name)'."; WindowName = [string]$window.Name }

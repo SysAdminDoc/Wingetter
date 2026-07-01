@@ -9,6 +9,8 @@ All notable changes to Wingetter will be documented in this file.
 - Fixed: Toast notification XML now escapes interpolated values via `SecurityElement.Escape()` so source names or statuses containing `&`, `<`, `>` cannot break the XML.
 - Fixed: `Join-ProcessArguments` now doubles trailing backslashes before the closing quote per MSVC CRT argument parsing convention. Paths like `C:\path to\` no longer produce broken arguments where the backslash escapes the closing quote.
 - Fixed: `Export-WingetterConfigurationFile` now uses `Set-WingetterFileAtomic` instead of direct `Set-Content`, consistent with all other file-writing paths.
+- Fixed: Maintenance window with equal start and end times is now skipped (zero-width window) instead of matching for one second. End boundary is now exclusive to match standard interval semantics.
+- Fixed: Icon cache filename is now derived from the URL instead of the display name, preventing cache collisions between apps whose names differ only in non-word characters.
 - Security: Icon downloads now validate that URLs use HTTPS scheme before fetching, preventing SSRF via crafted external catalog entries with `file://` or internal HTTP URLs.
 - Fixed: Markdown migration report tables now pipe-escape all fields (name, ID, status, versions, source), not just the command and reason columns.
 - Fixed: JSON import flow rejects files larger than 5 MB before parsing to prevent OOM on oversized inputs.
