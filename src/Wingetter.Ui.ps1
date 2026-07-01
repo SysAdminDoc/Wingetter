@@ -299,7 +299,7 @@ $Script:Themes = @{
         LogBg = "#f8fbff"; LogBorder = "#dbe6f0"; LogSuccess = "#198754"; LogFail = "#dc3545"; LogSkip = "#b7791f"; LogText = "#1f3447"; LogEntryBg = "#ffffff"
         InstalledDot = "#1aa56b"; InstalledBadgeBg = "#e7f8ef"; InstalledBadgeText = "#167d53"
         PinBadgeBg = "#fef3cd"; PinBadgeBorder = "#e0c97a"; PinBadgeText = "#856404"
-        UpdateBtnBg = "#dd8b21"; UpdateBtnHover = "#c77611"
+        UpdateBtnBg = "#dd8b21"; UpdateBtnHover = "#c77611"; BtnDisabledBg = "#c7d6e3"
         CollapseArrow = "#6e8296"
         EmptyStateBg = "#ffffff"; EmptyStateBorder = "#dbe6f0"; EmptyStateTitle = "#12263a"; EmptyStateText = "#60778b"
     }
@@ -330,7 +330,7 @@ $Script:Themes = @{
         LogBg = "#071019"; LogBorder = "#1d2a3a"; LogSuccess = "#2dd58f"; LogFail = "#ff6b6b"; LogSkip = "#ffbf69"; LogText = "#dbe7f2"; LogEntryBg = "#0d1825"
         InstalledDot = "#1fd389"; InstalledBadgeBg = "#103526"; InstalledBadgeText = "#78ddb1"
         PinBadgeBg = "#3a2a10"; PinBadgeBorder = "#604315"; PinBadgeText = "#ffbf69"
-        UpdateBtnBg = "#d97706"; UpdateBtnHover = "#f59e0b"
+        UpdateBtnBg = "#d97706"; UpdateBtnHover = "#f59e0b"; BtnDisabledBg = "#445265"
         CollapseArrow = "#6f879e"
         EmptyStateBg = "#0b1724"; EmptyStateBorder = "#1f3145"; EmptyStateTitle = "#f0f6fb"; EmptyStateText = "#90a4b8"
     }
@@ -1539,6 +1539,7 @@ function Show-WinGetInstallerGUI {
         <SolidColorBrush x:Key="ChkBorderHover" Color="#63b7ff"/>
         <SolidColorBrush x:Key="ChkMark" Color="#63b7ff"/>
         <SolidColorBrush x:Key="ChkText" Color="#dbe7f1"/>
+        <SolidColorBrush x:Key="BtnDisabledBg" Color="#445265"/>
         <!-- Toolbar / secondary button style -->
         <Style x:Key="ToolBtn" TargetType="Button">
             <Setter Property="Background" Value="#102133"/>
@@ -1559,13 +1560,13 @@ function Show-WinGetInstallerGUI {
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="hover" Property="Opacity" Value="0.06"/>
-                                <Setter TargetName="bd" Property="BorderBrush" Value="#63b7ff"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="hover" Property="Opacity" Value="0.12"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="#63b7ff"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
                                 <Setter TargetName="bd" Property="BorderThickness" Value="1.5"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
@@ -1590,10 +1591,10 @@ function Show-WinGetInstallerGUI {
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter TargetName="hv" Property="Opacity" Value="0.05"/>
-                    <Setter TargetName="bd" Property="BorderBrush" Value="#63b7ff"/>
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
                 </Trigger>
                 <Trigger Property="IsKeyboardFocused" Value="True">
-                    <Setter TargetName="bd" Property="BorderBrush" Value="#63b7ff"/>
+                    <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
                     <Setter TargetName="bd" Property="BorderThickness" Value="1.5"/>
                 </Trigger>
             </ControlTemplate.Triggers>
@@ -1798,10 +1799,10 @@ function Show-WinGetInstallerGUI {
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="modeBorder" Property="BorderBrush" Value="#63b7ff"/>
+                                        <Setter TargetName="modeBorder" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
                                     </Trigger>
                                     <Trigger Property="IsKeyboardFocused" Value="True">
-                                        <Setter TargetName="modeBorder" Property="BorderBrush" Value="#63b7ff"/>
+                                        <Setter TargetName="modeBorder" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
                                         <Setter TargetName="modeBorder" Property="BorderThickness" Value="1.5"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
@@ -2051,7 +2052,7 @@ function Show-WinGetInstallerGUI {
                                             <Setter TargetName="updateAllBorder" Property="Background" Value="#f59e0b"/>
                                         </Trigger>
                                         <Trigger Property="IsEnabled" Value="False">
-                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#445265"/>
+                                            <Setter TargetName="updateAllBorder" Property="Background" Value="{DynamicResource BtnDisabledBg}"/>
                                             <Setter TargetName="updateAllBorder" Property="Opacity" Value="0.7"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
@@ -2086,7 +2087,7 @@ function Show-WinGetInstallerGUI {
                                             <Setter TargetName="installGlow" Property="Opacity" Value="0.12"/>
                                         </Trigger>
                                         <Trigger Property="IsEnabled" Value="False">
-                                            <Setter TargetName="installBorder" Property="Background" Value="#445265"/>
+                                            <Setter TargetName="installBorder" Property="Background" Value="{DynamicResource BtnDisabledBg}"/>
                                             <Setter TargetName="installBorder" Property="Opacity" Value="0.72"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
@@ -2553,6 +2554,7 @@ function Show-WinGetInstallerGUI {
         $res["ChkBorderHover"]   = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["ChkBorderHover"]))
         $res["ChkMark"]          = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["ChkMark"]))
         $res["ChkText"]          = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["ChkText"]))
+        $res["BtnDisabledBg"]    = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["BtnDisabledBg"]))
 
         # Search icon
         $ui["SearchIcon"].Foreground = $bc.ConvertFromString($t["SearchIcon"])
