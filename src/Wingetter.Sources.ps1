@@ -226,6 +226,9 @@ function Get-WingetterPackageSourceAdapters {
     if ($null -eq $Script:WingetterPackageSourceAdapters) {
         $Script:WingetterPackageSourceAdapters = @{}
         Register-WingetterPackageSourceAdapter -Adapter (Get-WingetterWinGetSourceAdapter) | Out-Null
+        if (Get-Command Get-WingetterScoopSourceAdapter -ErrorAction SilentlyContinue) {
+            Register-WingetterPackageSourceAdapter -Adapter (Get-WingetterScoopSourceAdapter) | Out-Null
+        }
     }
 
     return $Script:WingetterPackageSourceAdapters

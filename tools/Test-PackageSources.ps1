@@ -17,7 +17,8 @@ foreach ($moduleName in @(
     "Wingetter.Catalog.ps1",
     "Wingetter.WinGet.ps1",
     "Wingetter.Groups.ps1",
-    "Wingetter.Sources.ps1"
+    "Wingetter.Sources.ps1",
+    "Wingetter.Scoop.ps1"
 )) {
     $modulePath = Join-Path $SourceDir $moduleName
     if (!(Test-Path $modulePath)) {
@@ -104,6 +105,28 @@ if ($failures.Count -eq 0) {
     $registeredFake = Get-WingetterPackageSourceAdapter -Name "fake"
     if ($registeredFake.DisplayName -ne "Fake Source") {
         Add-Failure "Package source adapter registration did not retain the fake adapter."
+    }
+
+    $scoopAdapter = Get-WingetterPackageSourceAdapter -Name "scoop"
+    if ($scoopAdapter.Name -ne "scoop" -or $scoopAdapter.DisplayName -ne "Scoop") {
+        Add-Failure "Scoop adapter identity was not registered correctly."
+    }
+    foreach ($operation in $requiredOperations) {
+        if (@($scoopAdapter.Operations.Keys) -notcontains $operation) {
+            Add-Failure "Scoop adapter is missing operation '$operation'."
+        }
+    }
+    if ($scoopAdapter.Capabilities["InstalledScan"] -ne $true) {
+        Add-Failure "Scoop adapter should have InstalledScan capability."
+    }
+    foreach ($readOnlyCap in @("Install", "Upgrade", "Uninstall")) {
+        if ($scoopAdapter.Capabilities[$readOnlyCap]) {
+            Add-Failure "Scoop adapter should NOT have $readOnlyCap capability (read-only)."
+        }
+    }
+    $scoopAvailability = Invoke-WingetterPackageSourceOperation -SourceAdapter $scoopAdapter -Operation "TestAvailability"
+    if ($scoopAvailability.Status -notin @("Available", "Missing")) {
+        Add-Failure "Scoop availability returned unexpected status: $($scoopAvailability.Status)"
     }
 
     $missingOperationRejected = $false
