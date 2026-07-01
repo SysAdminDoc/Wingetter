@@ -4,6 +4,9 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Fixed: XmlReader and StringReader instances for the main window, save-group dialog, and profile gallery dialog are now disposed after `XamlReader.Load()` returns, preventing native resource leaks during a session.
+- Refactored: `Get-WingetterFileSha256` in `Wingetter.Common.ps1` is now guarded by `Get-Command` so the launcher's pre-existing definition is reused instead of silently shadowed. Eliminates the fragile manual-sync requirement between the two identical copies.
+- Security: External catalog `iconDomain` values are now validated to reject URL-encoding tricks and injected query parameters (`/`, `\`, `?`, `#`, `&`, `=`, `%`). Invalid domains fall back to an empty icon URL.
 - Fixed: Offline download process streams now use try/catch around `GetAwaiter().GetResult()` after `Kill()`, preventing `IOException`/`OperationCanceledException` from aborting the download loop on cancel. Process is also properly disposed in a `finally` block.
 - Fixed: Background installed-scan runspace now loads `Wingetter.Common.ps1` so `Set-WingetterFileAtomic`, `Get-WingetterAppDataPath`, and other Common helpers are available. Previously the installed-cache file was silently never persisted from background scans.
 - Fixed: Toast notification XML now escapes interpolated values via `SecurityElement.Escape()` so source names or statuses containing `&`, `<`, `>` cannot break the XML.

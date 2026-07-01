@@ -1733,8 +1733,14 @@ function Show-WinGetInstallerGUI {
 </Window>
 "@
 
-    $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($XAML))
-    $Window = [Windows.Markup.XamlReader]::Load($reader)
+    $xamlStringReader = [System.IO.StringReader]::new($XAML)
+    $reader = [System.Xml.XmlReader]::Create($xamlStringReader)
+    try {
+        $Window = [Windows.Markup.XamlReader]::Load($reader)
+    } finally {
+        $reader.Dispose()
+        $xamlStringReader.Dispose()
+    }
 
     if (-not $SmokeTest) {
         try { Restore-WingetterWindowBounds -Window $Window } catch {}
@@ -3054,8 +3060,14 @@ function Show-WinGetInstallerGUI {
     </StackPanel>
 </Window>
 "@
-        $inputReader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($inputXaml))
-        $inputWin = [Windows.Markup.XamlReader]::Load($inputReader)
+        $inputStringReader = [System.IO.StringReader]::new($inputXaml)
+        $inputReader = [System.Xml.XmlReader]::Create($inputStringReader)
+        try {
+            $inputWin = [Windows.Markup.XamlReader]::Load($inputReader)
+        } finally {
+            $inputReader.Dispose()
+            $inputStringReader.Dispose()
+        }
         $inputWin.Owner = $ui["Window"]
         $nameBox = $inputWin.FindName("GroupNameBox")
         $okBtn = $inputWin.FindName("OkBtn")
@@ -3326,8 +3338,14 @@ function Show-WinGetInstallerGUI {
     </Grid>
 </Window>
 "@
-            $galleryReader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($galleryXaml))
-            $galleryWin = [Windows.Markup.XamlReader]::Load($galleryReader)
+            $galleryStringReader = [System.IO.StringReader]::new($galleryXaml)
+            $galleryReader = [System.Xml.XmlReader]::Create($galleryStringReader)
+            try {
+                $galleryWin = [Windows.Markup.XamlReader]::Load($galleryReader)
+            } finally {
+                $galleryReader.Dispose()
+                $galleryStringReader.Dispose()
+            }
             $galleryWin.Owner = $ui["Window"]
             $profilesList = $galleryWin.FindName("ProfilesList")
             $profileTitle = $galleryWin.FindName("ProfileTitle")

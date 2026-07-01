@@ -17,7 +17,9 @@ function ConvertFrom-WingetterCatalogJson {
         foreach ($category in @($catalog.categories)) {
             $apps = @()
             foreach ($app in @($category.apps)) {
-                $icon = if ($app.iconUrl) { [string]$app.iconUrl } else { "${f}$($app.iconDomain)" }
+                $domain = [string]$app.iconDomain
+                if (![string]::IsNullOrWhiteSpace($domain) -and $domain -match '[/\\?#&=%]') { $domain = "" }
+                $icon = if ($app.iconUrl) { [string]$app.iconUrl } elseif ($domain) { "${f}$domain" } else { "" }
                 $entry = @{
                     Name     = [string]$app.name
                     WingetId = [string]$app.wingetId
