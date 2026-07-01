@@ -700,6 +700,93 @@ function New-WingetterComplianceReport {
     }
 }
 
+function Export-WingetterRunLockfile {
+    param(
+        [object]$Report,
+        [string]$FilePath
+    )
+
+    if ($null -eq $Report -or $null -eq $Report.packages) { return $null }
+    $entries = [System.Collections.ArrayList]::new()
+    foreach ($pkg in @($Report.packages)) {
+        $status = [string]$pkg.status
+        if ($status -ne "SUCCESS" -and $status -ne "UP TO DATE") { continue }
+
+        $installerUrl = ""
+        $installerHash = ""
+        if (![string]::IsNullOrWhiteSpace([string]$pkg.resultPath) -and (Test-Path -LiteralPath ([string]$pkg.resultPath))) {
+            try {
+                $resultData = Get-Content -LiteralPath ([string]$pkg.resultPath) -Raw | ConvertFrom-Json
+                if ($resultData.PSObject.Properties["Command"]) {
+                    $cmd = [string]$resultData.Command
+                    if ($cmd -match '--version\s+"?([^\s"]+)') { }
+                }
+            } catch {}
+        }
+
+        $installOptions = $null
+        if ($Report.runPlan -and $Report.runPlan.Packages) {
+            foreach ($planPkg in @($Report.runPlan.Packages)) {
+                if ([string]$planPkg.PackageId -eq [string]$pkg.packageId -and $planPkg.PSObject.Properties["InstallOptions"]) {
+                    $installOptions = $planPkg.InstallOptions
+                    break
+                }
+            }
+        }
+
+        [void]$entries.Add([PSCustomObject][ordered]@{
+            PackageId        = [string]$pkg.packageId
+            Name             = [string]$pkg.name
+            Source           = if ($pkg.source) { [string]$pkg.source } else { "winget" }
+            InstalledVersion = [string]$pkg.installedVersion
+            AvailableVersion = [string]$pkg.availableVersion
+            Status           = $status
+            InstallOptions   = $installOptions
+        })
+    }
+
+    $lockfile = [PSCustomObject][ordered]@{
+        Schema       = "Wingetter.Lockfile.v1"
+        GeneratedUtc = (Get-Date).ToUniversalTime().ToString("o")
+        ProfileName  = if ($Report.profileName) { [string]$Report.profileName } else { "" }
+        PackageCount = $entries.Count
+        Packages     = [object[]]$entries.ToArray()
+    }
+
+    if (![string]::IsNullOrWhiteSpace($FilePath)) {
+        Set-WingetterFileAtomic -Path $FilePath -Content ($lockfile | ConvertTo-Json -Depth 8) -Encoding UTF8
+    }
+    return $lockfile
+}
+
+function Compare-WingetterLockfile {
+    param(
+        [object]$Lockfile,
+        [hashtable]$InstalledRecords = @{}
+    )
+
+    if ($null -eq $Lockfile -or $null -eq $Lockfile.Packages) { return @() }
+    $drifts = [System.Collections.ArrayList]::new()
+    foreach ($entry in @($Lockfile.Packages)) {
+        $id = [string]$entry.PackageId
+        $installed = if ($InstalledRecords.ContainsKey($id)) { $InstalledRecords[$id] } else { $null }
+        $drift = "None"
+        if ($null -eq $installed) {
+            $drift = "Missing"
+        } elseif ([string]$installed.InstalledVersion -ne [string]$entry.InstalledVersion) {
+            $drift = "VersionChanged"
+        }
+        [void]$drifts.Add([PSCustomObject][ordered]@{
+            PackageId       = $id
+            Name            = [string]$entry.Name
+            LockedVersion   = [string]$entry.InstalledVersion
+            CurrentVersion  = if ($installed) { [string]$installed.InstalledVersion } else { "" }
+            Drift           = $drift
+        })
+    }
+    return [object[]]$drifts.ToArray()
+}
+
 # Pre-built groups
 $Script:BuiltInGroups = [ordered]@{
     "Essential PC Setup" = @(

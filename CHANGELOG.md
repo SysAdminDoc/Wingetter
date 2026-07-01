@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: `Export-WingetterRunLockfile` generates a lockfile from a migration report with package ID, source, installed version, available version, and install options for all successful packages. `Compare-WingetterLockfile` checks a lockfile against current installed state and reports Missing/VersionChanged/None drift per entry.
 - Added: `Get-WingetterPackageRiskWarnings` parses `winget show` output and catalog risk notes into structured severity-coded warnings: PUA_WARNING (Critical), MISSING_HASH/HTTP_INSTALLER (Warning), DEPRECATED/NO_LICENSE/CATALOG_NOTE (Info). Fixture tests cover PUA, missing hash, HTTP installer, catalog risk notes, and benign package output.
 - Added: `New-WingetterComplianceReport` generates a no-mutation drift report comparing desired profile packages against installed state, classifying each as Current/Missing/UpdateAvailable/Pinned/SourceBlocked with installed version, available version, source, and pin details. Fixture tests cover pinned, blocked, missing, and current states.
 - Added: `Get-WingetterRetryPackagesFromReport` extracts failed, cancelled, and not-run packages from a migration report for retry. Preserves original install options from the run plan and marks each package with its prior status. Tests cover all-success, partial-failure, and null report inputs.

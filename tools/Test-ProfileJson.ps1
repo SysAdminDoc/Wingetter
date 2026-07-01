@@ -461,6 +461,35 @@ if ($compReport.Summary.Current -ne 1) { Add-Failure "Compliance report should h
 if ($compReport.Summary.Missing -ne 1) { Add-Failure "Compliance report should have 1 missing (got $($compReport.Summary.Missing))." }
 if ($compReport.Summary.SourceBlocked -ne 1) { Add-Failure "Compliance report should have 1 source-blocked (got $($compReport.Summary.SourceBlocked))." }
 
+$lockfileReport = [PSCustomObject]@{
+    schema = "Wingetter.MigrationReport.v1"
+    profileName = "LockTest"
+    packages = @(
+        [PSCustomObject]@{ name = "Chrome"; packageId = "Google.Chrome"; status = "SUCCESS"; installedVersion = "124.0"; availableVersion = "125.0"; source = "winget"; resultPath = "" },
+        [PSCustomObject]@{ name = "Firefox"; packageId = "Mozilla.Firefox"; status = "FAILED"; installedVersion = "115.0"; availableVersion = ""; source = "winget"; resultPath = "" },
+        [PSCustomObject]@{ name = "VLC"; packageId = "VideoLAN.VLC"; status = "UP TO DATE"; installedVersion = "3.0.20"; availableVersion = ""; source = "winget"; resultPath = "" }
+    )
+    runPlan = $null
+}
+$lockfile = Export-WingetterRunLockfile -Report $lockfileReport
+if ($lockfile.Schema -ne "Wingetter.Lockfile.v1") { Add-Failure "Lockfile schema mismatch." }
+if ($lockfile.PackageCount -ne 2) { Add-Failure "Lockfile should have 2 packages (SUCCESS+UP TO DATE), got $($lockfile.PackageCount)." }
+if ($lockfile.ProfileName -ne "LockTest") { Add-Failure "Lockfile profile name mismatch." }
+$lockIds = @($lockfile.Packages | ForEach-Object { $_.PackageId })
+if ($lockIds -notcontains "Google.Chrome") { Add-Failure "Lockfile missing SUCCESS package." }
+if ($lockIds -notcontains "VideoLAN.VLC") { Add-Failure "Lockfile missing UP TO DATE package." }
+if ($lockIds -contains "Mozilla.Firefox") { Add-Failure "Lockfile should not include FAILED package." }
+
+$driftInstalled = @{
+    "Google.Chrome" = [PSCustomObject]@{ PackageId = "Google.Chrome"; InstalledVersion = "125.0" }
+}
+$drifts = Compare-WingetterLockfile -Lockfile $lockfile -InstalledRecords $driftInstalled
+if (@($drifts).Count -ne 2) { Add-Failure "Drift check should return 2 entries." }
+$chromeDrift = $drifts | Where-Object { $_.PackageId -eq "Google.Chrome" }
+$vlcDrift = $drifts | Where-Object { $_.PackageId -eq "VideoLAN.VLC" }
+if ($chromeDrift.Drift -ne "VersionChanged") { Add-Failure "Chrome should show VersionChanged drift." }
+if ($vlcDrift.Drift -ne "Missing") { Add-Failure "VLC should show Missing drift." }
+
 if ($failures.Count -gt 0) {
     Write-Host "Profile JSON validation failed:" -ForegroundColor Red
     foreach ($failure in $failures) {
