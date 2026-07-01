@@ -437,6 +437,30 @@ if (@($emptyRetry).Count -ne 0) { Add-Failure "Retry from all-success report sho
 $nullRetry = Get-WingetterRetryPackagesFromReport -Report $null
 if (@($nullRetry).Count -ne 0) { Add-Failure "Retry from null report should be empty." }
 
+$complianceInstalled = @{
+    "Google.Chrome" = [PSCustomObject]@{ PackageId = "Google.Chrome"; InstalledVersion = "124.0"; AvailableVersion = "125.0"; IsUpdateAvailable = $true; Source = "winget" }
+    "Mozilla.Firefox" = [PSCustomObject]@{ PackageId = "Mozilla.Firefox"; InstalledVersion = "115.0"; AvailableVersion = ""; IsUpdateAvailable = $false; Source = "winget" }
+}
+$compliancePins = @{
+    "Google.Chrome" = [PSCustomObject]@{ PackageId = "Google.Chrome"; IsPinned = $true; PinType = "Blocking" }
+}
+$compliancePolicy = [PSCustomObject]@{
+    CorporateMode = $true; RequireAllowedSource = $true
+    AllowedSources = @([PSCustomObject]@{ Name = "winget" })
+}
+$complianceDesired = @(
+    [PSCustomObject]@{ WingetId = "Google.Chrome"; Name = "Chrome"; SourceName = "winget" },
+    [PSCustomObject]@{ WingetId = "Mozilla.Firefox"; Name = "Firefox"; SourceName = "winget" },
+    [PSCustomObject]@{ WingetId = "7zip.7zip"; Name = "7zip"; SourceName = "winget" },
+    [PSCustomObject]@{ WingetId = "Internal.App"; Name = "Internal"; SourceName = "corp" }
+)
+$compReport = New-WingetterComplianceReport -ProfileName "Test" -DesiredPackages $complianceDesired -InstalledRecords $complianceInstalled -PinStatusesById $compliancePins -SourcePolicy $compliancePolicy
+if ($compReport.Schema -ne "Wingetter.ComplianceReport.v1") { Add-Failure "Compliance report schema mismatch." }
+if ($compReport.Summary.Pinned -ne 1) { Add-Failure "Compliance report should have 1 pinned (got $($compReport.Summary.Pinned))." }
+if ($compReport.Summary.Current -ne 1) { Add-Failure "Compliance report should have 1 current (got $($compReport.Summary.Current))." }
+if ($compReport.Summary.Missing -ne 1) { Add-Failure "Compliance report should have 1 missing (got $($compReport.Summary.Missing))." }
+if ($compReport.Summary.SourceBlocked -ne 1) { Add-Failure "Compliance report should have 1 source-blocked (got $($compReport.Summary.SourceBlocked))." }
+
 if ($failures.Count -gt 0) {
     Write-Host "Profile JSON validation failed:" -ForegroundColor Red
     foreach ($failure in $failures) {

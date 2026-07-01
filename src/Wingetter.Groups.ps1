@@ -629,6 +629,77 @@ function Get-WingetterRetryPackagesFromReport {
     return [object[]]$retryable.ToArray()
 }
 
+function New-WingetterComplianceReport {
+    param(
+        [string]$ProfileName,
+        [object[]]$DesiredPackages,
+        [hashtable]$InstalledRecords = @{},
+        [hashtable]$PinStatusesById = @{},
+        [object]$SourcePolicy = $null
+    )
+
+    $results = [System.Collections.ArrayList]::new()
+    $stateCount = @{ Missing = 0; Current = 0; UpdateAvailable = 0; Pinned = 0; SourceBlocked = 0; Unresolved = 0 }
+
+    foreach ($pkg in @($DesiredPackages)) {
+        $id = if ($pkg -is [string]) { $pkg }
+              elseif ($pkg.PSObject.Properties["WingetId"]) { [string]$pkg.WingetId }
+              elseif ($pkg.PSObject.Properties["PackageIdentifier"]) { [string]$pkg.PackageIdentifier }
+              else { [string]$pkg }
+        $name = if ($pkg.PSObject.Properties["Name"]) { [string]$pkg.Name } else { $id }
+
+        $installed = if ($InstalledRecords.ContainsKey($id)) { $InstalledRecords[$id] } else { $null }
+        $pin = if ($PinStatusesById.ContainsKey($id)) { $PinStatusesById[$id] } else { $null }
+        $isPinned = ($null -ne $pin -and $pin.PSObject.Properties["IsPinned"] -and [bool]$pin.IsPinned)
+
+        $sourceBlocked = $false
+        if ($null -ne $SourcePolicy -and [bool]$SourcePolicy.CorporateMode -and [bool]$SourcePolicy.RequireAllowedSource) {
+            $sourceName = if ($null -ne $installed) { [string]$installed.Source } elseif ($pkg.PSObject.Properties["SourceName"]) { [string]$pkg.SourceName } else { "winget" }
+            $allowedNames = @($SourcePolicy.AllowedSources | ForEach-Object { [string]$_.Name })
+            if ($allowedNames.Count -gt 0 -and $allowedNames -notcontains $sourceName) { $sourceBlocked = $true }
+        }
+
+        $state = "Unresolved"
+        if ($sourceBlocked) {
+            $state = "SourceBlocked"
+        } elseif ($null -eq $installed) {
+            $state = "Missing"
+        } elseif ($installed.PSObject.Properties["IsUpdateAvailable"] -and [bool]$installed.IsUpdateAvailable) {
+            $state = if ($isPinned) { "Pinned" } else { "UpdateAvailable" }
+        } else {
+            $state = "Current"
+        }
+
+        $stateCount[$state]++
+        [void]$results.Add([PSCustomObject][ordered]@{
+            PackageId        = $id
+            Name             = $name
+            State            = $state
+            InstalledVersion = if ($installed) { [string]$installed.InstalledVersion } else { "" }
+            AvailableVersion = if ($installed) { [string]$installed.AvailableVersion } else { "" }
+            Source           = if ($installed) { [string]$installed.Source } else { "" }
+            PinType          = if ($isPinned) { [string]$pin.PinType } else { "" }
+            SourceBlocked    = [bool]$sourceBlocked
+        })
+    }
+
+    [PSCustomObject][ordered]@{
+        Schema       = "Wingetter.ComplianceReport.v1"
+        GeneratedUtc = (Get-Date).ToUniversalTime().ToString("o")
+        ProfileName  = $ProfileName
+        TotalDesired = @($DesiredPackages).Count
+        Summary      = [PSCustomObject][ordered]@{
+            Current         = [int]$stateCount["Current"]
+            Missing         = [int]$stateCount["Missing"]
+            UpdateAvailable = [int]$stateCount["UpdateAvailable"]
+            Pinned          = [int]$stateCount["Pinned"]
+            SourceBlocked   = [int]$stateCount["SourceBlocked"]
+            Unresolved      = [int]$stateCount["Unresolved"]
+        }
+        Packages     = [object[]]$results.ToArray()
+    }
+}
+
 # Pre-built groups
 $Script:BuiltInGroups = [ordered]@{
     "Essential PC Setup" = @(
