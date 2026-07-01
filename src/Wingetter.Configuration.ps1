@@ -30,9 +30,9 @@ function ConvertTo-WingetterConfigurationResourceId {
     )
 
     $safe = ([string]$PackageId -replace '[^A-Za-z0-9_]', '_').Trim("_")
-    if ([string]::IsNullOrWhiteSpace($safe)) { $safe = "package_$Index" }
-    if ($safe -notmatch '^[A-Za-z_]') { $safe = "package_$safe" }
-    return $safe
+    if ([string]::IsNullOrWhiteSpace($safe)) { $safe = "package" }
+    if ($safe -notmatch '^[A-Za-z_]') { $safe = "pkg_$safe" }
+    return "${safe}_$Index"
 }
 
 function New-WingetterConfigurationPackageEntry {
@@ -142,6 +142,6 @@ function Export-WingetterConfigurationFile {
     )
 
     $yaml = ConvertTo-WingetterConfigurationYaml -PackageEntries $PackageEntries
-    Set-WingetterFileAtomic -Path $FilePath -Content $yaml -Encoding UTF8
+    Set-WingetterFileAtomic -Path $FilePath -Content $yaml -Encoding UTF8 -NoBom
     return $FilePath
 }

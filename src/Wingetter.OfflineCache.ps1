@@ -94,10 +94,11 @@ function Invoke-WingetterOfflinePackageDownload {
     $beforeFiles = Get-WingetterOfflineCacheFiles -Directory $DownloadDirectory
     $arguments = New-WingetterOfflineDownloadArguments -PackageId $PackageId -DownloadDirectory $DownloadDirectory -SourceName $SourceName -AcceptAgreements $AcceptAgreements
     $safeId = Get-SafeFileName -Value $PackageId
-    $stamp = Get-Date -Format "yyyyMMdd-HHmmssfff"
-    $stdoutPath = Join-Path $RunLogDir "$stamp-$safeId.download.stdout.log"
-    $stderrPath = Join-Path $RunLogDir "$stamp-$safeId.download.stderr.log"
-    $resultPath = Join-Path $RunLogDir "$stamp-$safeId.download.result.json"
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    $entropy = [System.Guid]::NewGuid().ToString("N").Substring(0, 4)
+    $stdoutPath = Join-Path $RunLogDir "$stamp-$entropy-$safeId.download.stdout.log"
+    $stderrPath = Join-Path $RunLogDir "$stamp-$entropy-$safeId.download.stderr.log"
+    $resultPath = Join-Path $RunLogDir "$stamp-$entropy-$safeId.download.result.json"
 
     $stdout = ""
     $stderr = ""

@@ -4,6 +4,16 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Fixed: Run Plan dialog buttons now use proper themed background/foreground/border styling instead of default WPF chrome. Previously the computed theme colors were calculated but never applied to the button controls.
+- Fixed: DOWNLOADED log entries now render with success-green background at creation time, matching the ApplyTheme re-theme behavior. Previously they fell through to the default neutral background.
+- Fixed: Shift-click range selection in app list now wrapped in try/catch to prevent unhandled exceptions from crashing the WPF dispatcher thread.
+- Fixed: Details background worker now stores its async handle and calls Stop() before Dispose() during cleanup, preventing potential hangs and leaked async results.
+- Fixed: During cache downloads, selection-dependent toolbar buttons (Install, Export, Copy Commands) now stay enabled correctly instead of flickering between enabled/disabled states due to conflicting OperationRunning checks.
+- Fixed: `$ui["HoverBg"]` and `$ui["SelectedBg"]` initialization now matches the dark theme's actual `AppHoverBg`/`AppSelectedBg` values instead of non-theme colors.
+- Fixed: Offline cache download log filenames now include GUID entropy suffix (matching install/update log pattern) to prevent timestamp collisions.
+- Fixed: WinGet Configuration YAML export now writes UTF-8 without BOM via `Set-WingetterFileAtomic -NoBom`, preventing `winget configure` rejections on systems that don't accept BOM-prefixed YAML.
+- Fixed: Configuration resource IDs now include an index suffix (`_1`, `_2`, etc.) to prevent duplicate IDs when package names differ only in characters that get normalized to underscores (e.g., `Foo.Bar` vs `Foo-Bar`).
+- Security: External catalog `iconDomain` validation now also rejects semicolons, colons, at-signs, whitespace, angle brackets, and quotes in addition to the existing URL metacharacter checks.
 - Fixed: Log entry rows now update their background, text, and status badge colors when the user toggles dark/light mode mid-session, instead of showing stale colors from the original render.
 - Fixed: Generated PS1 install scripts now check for "already installed" text before checking exit code, correctly counting re-installs as skipped instead of newly installed.
 - Fixed: Toolbar buttons "Diag", "Policy", "Sources" now have descriptive `AutomationProperties.Name` attributes for screen readers ("Export diagnostics bundle", "Edit update policy", "Edit source policy").

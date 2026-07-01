@@ -184,7 +184,8 @@ function Set-WingetterFileAtomic {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
         [Parameter(Mandatory = $true)][string]$Content,
-        [string]$Encoding = "UTF8"
+        [string]$Encoding = "UTF8",
+        [switch]$NoBom
     )
     $directory = Split-Path -Parent $Path
     if (![string]::IsNullOrWhiteSpace($directory) -and !(Test-Path $directory)) {
@@ -193,7 +194,13 @@ function Set-WingetterFileAtomic {
     $tempName = ".$([System.IO.Path]::GetFileName($Path)).$([System.Guid]::NewGuid().ToString('N')).tmp"
     $tempPath = if ($directory) { Join-Path $directory $tempName } else { $tempName }
     try {
-        Set-Content -Path $tempPath -Value $Content -Encoding $Encoding -ErrorAction Stop
+        if ($NoBom) {
+            $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+            $resolvedTemp = if ([System.IO.Path]::IsPathRooted($tempPath)) { $tempPath } else { (Join-Path (Get-Location).Path $tempPath) }
+            [System.IO.File]::WriteAllText($resolvedTemp, $Content, $utf8NoBom)
+        } else {
+            Set-Content -Path $tempPath -Value $Content -Encoding $Encoding -ErrorAction Stop
+        }
         Move-Item -Path $tempPath -Destination $Path -Force -ErrorAction Stop
     } catch {
         if (Test-Path $tempPath) {

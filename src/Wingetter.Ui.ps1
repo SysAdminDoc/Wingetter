@@ -1126,12 +1126,21 @@ function Show-WingetterRunPlanDialog {
     $runButton.Padding = [System.Windows.Thickness]::new(16, 8, 16, 8)
     $runButton.Margin = [System.Windows.Thickness]::new(0, 0, 8, 0)
     $runButton.IsDefault = $true
+    $runButton.Background = $bc.ConvertFromString($btnRunBg)
+    $runButton.Foreground = [System.Windows.Media.Brushes]::White
+    $runButton.BorderThickness = [System.Windows.Thickness]::new(0)
+    $runButton.Cursor = [System.Windows.Input.Cursors]::Hand
     [void]$buttonBar.Children.Add($runButton)
 
     $cancelButton = New-Object System.Windows.Controls.Button
     $cancelButton.Content = "Cancel"
     $cancelButton.Padding = [System.Windows.Thickness]::new(16, 8, 16, 8)
     $cancelButton.IsCancel = $true
+    $cancelButton.Background = $bc.ConvertFromString($btnCancelBg)
+    $cancelButton.Foreground = $bc.ConvertFromString($btnCancelFg)
+    $cancelButton.BorderBrush = $bc.ConvertFromString($btnCancelBd)
+    $cancelButton.BorderThickness = [System.Windows.Thickness]::new(1)
+    $cancelButton.Cursor = [System.Windows.Input.Cursors]::Hand
     [void]$buttonBar.Children.Add($cancelButton)
 
     $scroll = New-Object System.Windows.Controls.ScrollViewer
@@ -1484,8 +1493,8 @@ function Show-WinGetInstallerGUI {
         OperationTimer = $null
         OperationCancelToken = $null
         IsDark        = $true
-        HoverBg       = "#2a2a4a"
-        SelectedBg    = "#1a3a5c"
+        HoverBg       = "#11263a"
+        SelectedBg    = "#15334b"
         Themes        = $Script:Themes
         Categories    = [System.Collections.ArrayList]::new()
         IconQueue     = [System.Collections.ArrayList]::new()
@@ -2386,7 +2395,7 @@ function Show-WinGetInstallerGUI {
             $SelectedCount.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($theme["StatusPillText"])
         }
 
-        $canUseSelectionActions = ($count -gt 0 -and -not [bool]$ui["OperationRunning"])
+        $canUseSelectionActions = ($count -gt 0 -and -not [bool]$ui["PackageOperationRunning"])
         $InstallBtn.IsEnabled = $canUseSelectionActions
         $SaveGroupBtn.IsEnabled = $canUseSelectionActions
         $ExportBtn.IsEnabled = $canUseSelectionActions
@@ -2833,7 +2842,10 @@ function Show-WinGetInstallerGUI {
         & $SetDetailText $ui["DetailPinState"] "Loading..."
 
         if ($ui["DetailsWorker"]) {
-            try { $ui["DetailsWorker"].Dispose() } catch {}
+            try {
+                if ($ui["DetailsHandle"] -and -not $ui["DetailsHandle"].IsCompleted) { $ui["DetailsWorker"].Stop() }
+                $ui["DetailsWorker"].Dispose()
+            } catch {}
         }
         if ($ui["DetailsRunspace"]) {
             try { $ui["DetailsRunspace"].Close() } catch {}
@@ -2886,7 +2898,7 @@ function Show-WinGetInstallerGUI {
         [void]$detailsPs.AddArgument((Join-Path $detailsSourceRoot "Wingetter.WinGet.ps1"))
         [void]$detailsPs.AddArgument((Join-Path $detailsSourceRoot "Wingetter.Sources.ps1"))
         [void]$detailsPs.AddArgument([string]$ui["PackageSource"].Name)
-        $detailsPs.BeginInvoke() | Out-Null
+        $ui["DetailsHandle"] = $detailsPs.BeginInvoke()
     }
     $PackageDetailsCloseBtn.Add_Click({ $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Collapsed }.GetNewClosure())
     $ApplyPinOperation = {
@@ -3123,26 +3135,30 @@ function Show-WinGetInstallerGUI {
             $localApp = $app
             $appBorder.Add_MouseLeftButtonDown({
                 param($s,$e)
-                $cb = $s.Child.Children[0]
-                $shiftHeld = [System.Windows.Input.Keyboard]::IsKeyDown([System.Windows.Input.Key]::LeftShift) -or [System.Windows.Input.Keyboard]::IsKeyDown([System.Windows.Input.Key]::RightShift)
-                if ($shiftHeld -and $ui["LastClickedIndex"] -ge 0) {
-                    $startIdx = [math]::Min($ui["LastClickedIndex"], $localAppNum)
-                    $endIdx = [math]::Max($ui["LastClickedIndex"], $localAppNum)
-                    $newState = -not $cb.IsChecked
-                    $idx = 0
-                    foreach ($cat in $ui["Categories"]) {
-                        foreach ($appEntry in $cat["Apps"]) {
-                            $idx++
-                            if ($idx -ge $startIdx -and $idx -le $endIdx) {
-                                $ui["AllCheckboxes"][$appEntry["WingetId"]].IsChecked = $newState
+                try {
+                    $cb = $s.Child.Children[0]
+                    $shiftHeld = [System.Windows.Input.Keyboard]::IsKeyDown([System.Windows.Input.Key]::LeftShift) -or [System.Windows.Input.Keyboard]::IsKeyDown([System.Windows.Input.Key]::RightShift)
+                    if ($shiftHeld -and $ui["LastClickedIndex"] -ge 0) {
+                        $startIdx = [math]::Min($ui["LastClickedIndex"], $localAppNum)
+                        $endIdx = [math]::Max($ui["LastClickedIndex"], $localAppNum)
+                        $newState = -not $cb.IsChecked
+                        $idx = 0
+                        foreach ($cat in $ui["Categories"]) {
+                            foreach ($appEntry in $cat["Apps"]) {
+                                $idx++
+                                if ($idx -ge $startIdx -and $idx -le $endIdx) {
+                                    $ui["AllCheckboxes"][$appEntry["WingetId"]].IsChecked = $newState
+                                }
                             }
                         }
+                    } else {
+                        $cb.IsChecked = -not $cb.IsChecked
                     }
-                } else {
-                    $cb.IsChecked = -not $cb.IsChecked
+                    $ui["LastClickedIndex"] = $localAppNum
+                    & $ShowPackageDetails $localApp
+                } catch {
+                    $ProgressText.Text = "Click handler failed: $($_.Exception.Message)"
                 }
-                $ui["LastClickedIndex"] = $localAppNum
-                try { & $ShowPackageDetails $localApp } catch { $ProgressText.Text = "Details load failed: $($_.Exception.Message)" }
                 $e.Handled = $true
             }.GetNewClosure())
             $appBorder.Add_MouseEnter({ param($source) $hc=$ui["HoverBg"]; if($hc){ $source.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($hc) } }.GetNewClosure())
@@ -4058,6 +4074,7 @@ function Show-WinGetInstallerGUI {
         $statusBg = if ($ui["IsDark"]) {
             switch ($Status) {
                 "SUCCESS" { "#183a2c" }
+                "DOWNLOADED" { "#183a2c" }
                 "UP TO DATE" { "#3d3119" }
                 "FAILED" { "#3d2024" }
                 "ERROR" { "#3d2024" }
@@ -4067,6 +4084,7 @@ function Show-WinGetInstallerGUI {
         } else {
             switch ($Status) {
                 "SUCCESS" { "#ecfaf2" }
+                "DOWNLOADED" { "#ecfaf2" }
                 "UP TO DATE" { "#fff8ea" }
                 "FAILED" { "#fdf0f2" }
                 "ERROR" { "#fdf0f2" }
@@ -5344,7 +5362,7 @@ function Show-WinGetInstallerGUI {
     try { if ($installedTimer) { $installedTimer.Stop() } } catch {}
     try { if ($installedPs) { if ($installedHandle -and -not $installedHandle.IsCompleted) { $installedPs.Stop() }; $installedPs.Dispose() }; if ($installedRunspace) { $installedRunspace.Close() } } catch {}
     try { if ($detailsTimer) { $detailsTimer.Stop() } } catch {}
-    try { if ($ui["DetailsWorker"]) { $ui["DetailsWorker"].Dispose() }; if ($ui["DetailsRunspace"]) { $ui["DetailsRunspace"].Close() } } catch {}
+    try { if ($ui["DetailsWorker"]) { if ($ui["DetailsHandle"] -and -not $ui["DetailsHandle"].IsCompleted) { $ui["DetailsWorker"].Stop() }; $ui["DetailsWorker"].Dispose() }; if ($ui["DetailsRunspace"]) { $ui["DetailsRunspace"].Close() } } catch {}
     try {
         if ($ui["OperationCancelToken"]) { $ui["OperationCancelToken"]["Cancelled"] = $true }
         if ($ui["OperationTimer"]) { $ui["OperationTimer"].Stop() }
