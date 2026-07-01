@@ -499,6 +499,48 @@ Google Chrome Google.Chrome 124.0   Blocking
         Add-Failure "Get-WinGetPinStatusFromText did not parse an unpinned package."
     }
 
+    $sourceListFixture = Get-Content -Path (Join-Path $PSScriptRoot "fixtures\winget\source-list-default.txt") -Raw
+    $parsedSources = ConvertFrom-WinGetSourceListText -Text $sourceListFixture
+    if (@($parsedSources).Count -ne 2) { Add-Failure "ConvertFrom-WinGetSourceListText did not parse 2 sources from fixture (got $(@($parsedSources).Count))." }
+    if ($parsedSources[0].Name -ne "winget") { Add-Failure "ConvertFrom-WinGetSourceListText first source name mismatch." }
+    if ($parsedSources[1].Name -ne "msstore") { Add-Failure "ConvertFrom-WinGetSourceListText second source name mismatch." }
+    if ($parsedSources[0].Type -ne "Microsoft.PreIndexed.Package") { Add-Failure "ConvertFrom-WinGetSourceListText first source type mismatch." }
+    $emptySources = ConvertFrom-WinGetSourceListText -Text ""
+    if (@($emptySources).Count -ne 0) { Add-Failure "ConvertFrom-WinGetSourceListText did not return empty for blank input." }
+
+    $okHealth = Get-WingetterSourceHealthState -SourceName "winget" -StdOut "Updating all sources...Done." -ExitCode 0
+    if ($okHealth.Status -ne "Ok") { Add-Failure "Source health Ok classification failed (got $($okHealth.Status))." }
+    $corruptHealth = Get-WingetterSourceHealthState -SourceName "winget" -StdErr "The source data is corrupted or invalid index." -ExitCode 1
+    if ($corruptHealth.Status -ne "Corrupt") { Add-Failure "Source health Corrupt classification failed (got $($corruptHealth.Status))." }
+    $authHealth = Get-WingetterSourceHealthState -SourceName "corp" -StdErr "HTTP 401 authentication required." -ExitCode 1
+    if ($authHealth.Status -ne "AuthRequired") { Add-Failure "Source health AuthRequired classification failed (got $($authHealth.Status))." }
+    $offlineHealth = Get-WingetterSourceHealthState -SourceName "winget" -StdErr "A connection attempt failed because the connected party did not respond." -ExitCode 1
+    if ($offlineHealth.Status -ne "Offline") { Add-Failure "Source health Offline classification failed (got $($offlineHealth.Status))." }
+    $timeoutHealth = Get-WingetterSourceHealthState -SourceName "winget" -TimedOut $true -ExitCode -1
+    if ($timeoutHealth.Status -ne "Offline") { Add-Failure "Source health timeout classification failed (got $($timeoutHealth.Status))." }
+    $unknownHealth = Get-WingetterSourceHealthState -SourceName "winget" -StdErr "Something unusual happened." -ExitCode 42
+    if ($unknownHealth.Status -ne "Unknown") { Add-Failure "Source health Unknown classification failed (got $($unknownHealth.Status))." }
+    foreach ($h in @($okHealth, $corruptHealth, $authHealth, $offlineHealth, $timeoutHealth, $unknownHealth)) {
+        if ([string]::IsNullOrWhiteSpace($h.Message)) { Add-Failure "Source health state '$($h.Status)' has empty Message." }
+    }
+    foreach ($h in @($corruptHealth, $authHealth, $offlineHealth, $timeoutHealth, $unknownHealth)) {
+        if ([string]::IsNullOrWhiteSpace($h.Guidance)) { Add-Failure "Source health state '$($h.Status)' has empty Guidance." }
+    }
+
+    $fakeListCapture = [PSCustomObject]@{ StdOut = $sourceListFixture; StdErr = ""; ExitCode = 0; TimedOut = $false }
+    $fakeUpdateCaptures = @{
+        "winget"  = [PSCustomObject]@{ StdOut = "Updating all sources...Done."; StdErr = ""; ExitCode = 0; TimedOut = $false }
+        "msstore" = [PSCustomObject]@{ StdOut = ""; StdErr = "A connection attempt failed."; ExitCode = 1; TimedOut = $false }
+    }
+    $healthResult = Get-WingetterSourceHealth -SkipLiveProbe -SourceListCapture $fakeListCapture -SourceUpdateCaptures $fakeUpdateCaptures
+    if ($healthResult.Schema -ne "Wingetter.SourceHealth.v1") { Add-Failure "Source health result schema mismatch." }
+    if (@($healthResult.Sources).Count -ne 2) { Add-Failure "Source health result did not return 2 sources." }
+    $wingetSource = $healthResult.Sources | Where-Object { $_.Source -eq "winget" }
+    $msstoreSource = $healthResult.Sources | Where-Object { $_.Source -eq "msstore" }
+    if ($wingetSource.Status -ne "Ok") { Add-Failure "Source health winget source not classified as Ok." }
+    if ($msstoreSource.Status -ne "Offline") { Add-Failure "Source health msstore source not classified as Offline." }
+    if ($healthResult.Summary -ne "1/2 source(s) healthy") { Add-Failure "Source health summary mismatch: $($healthResult.Summary)." }
+
     $bootstrapLogPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-bootstrap-test-" + [System.Guid]::NewGuid().ToString("N") + ".jsonl")
     try {
         Write-WinGetBootstrapLog -Path $bootstrapLogPath -Step "test" -Status "ok" -Message "bootstrap log smoke" -Data @{ ManualDownloads = "none" }

@@ -297,6 +297,156 @@ function Add-WinGetCleanOutputArguments {
     return [string[]]$updated
 }
 
+function ConvertFrom-WinGetSourceListText {
+    param([string]$Text)
+
+    $sources = [System.Collections.ArrayList]::new()
+    if ([string]::IsNullOrWhiteSpace($Text)) { return [object[]]$sources.ToArray() }
+    $lines = @($Text -split '(?:\r\n|\n|\r)')
+    $headerIndex = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^\s*Name\s+Argument') {
+            $headerIndex = $i
+            break
+        }
+    }
+    if ($headerIndex -lt 0) { return [object[]]$sources.ToArray() }
+    $header = $lines[$headerIndex]
+    $argCol = $header.IndexOf("Argument")
+    $typeCol = $header.IndexOf("Type")
+    if ($argCol -lt 1) { return [object[]]$sources.ToArray() }
+    $dataStart = $headerIndex + 1
+    if ($dataStart -lt $lines.Count -and $lines[$dataStart] -match '^[-\s]+$') { $dataStart++ }
+    for ($i = $dataStart; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        if ($line.Length -le $argCol) { continue }
+        $name = $line.Substring(0, [Math]::Min($argCol, $line.Length)).Trim()
+        $argument = ""
+        $type = ""
+        if ($typeCol -gt $argCol -and $line.Length -gt $typeCol) {
+            $argument = $line.Substring($argCol, $typeCol - $argCol).Trim()
+            $type = $line.Substring($typeCol).Trim()
+        } else {
+            $argument = $line.Substring($argCol).Trim()
+        }
+        if ([string]::IsNullOrWhiteSpace($name)) { continue }
+        [void]$sources.Add([PSCustomObject][ordered]@{
+            Name     = $name
+            Argument = $argument
+            Type     = $type
+        })
+    }
+    return [object[]]$sources.ToArray()
+}
+
+function Get-WingetterSourceHealthState {
+    param(
+        [string]$SourceName,
+        [string]$StdOut = "",
+        [string]$StdErr = "",
+        [int]$ExitCode = 0,
+        [bool]$TimedOut = $false
+    )
+
+    $combined = "$StdOut`n$StdErr"
+    if ($TimedOut) {
+        return [PSCustomObject][ordered]@{
+            Status   = "Offline"
+            Message  = "Source update timed out."
+            Guidance = "Check network connectivity. If the source URL is unreachable, run: winget source reset --name $SourceName --force"
+        }
+    }
+    if ($ExitCode -eq 0 -and $combined -notmatch '(?i)fail|error|corrupt') {
+        return [PSCustomObject][ordered]@{
+            Status   = "Ok"
+            Message  = "Source is healthy."
+            Guidance = ""
+        }
+    }
+    if ($combined -match '(?i)corrupt|invalid\s*index|damaged|malformed') {
+        return [PSCustomObject][ordered]@{
+            Status   = "Corrupt"
+            Message  = "Source index appears corrupted."
+            Guidance = "Run: winget source reset --name $SourceName --force"
+        }
+    }
+    if ($combined -match '(?i)authenticat|401|403|certificate.*error|credentials|access\s*denied') {
+        return [PSCustomObject][ordered]@{
+            Status   = "AuthRequired"
+            Message  = "Source requires authentication or the token has expired."
+            Guidance = "Re-add the source with a valid --header token: winget source remove --name $SourceName && winget source add --name $SourceName --arg <URL> --header <token>"
+        }
+    }
+    if ($combined -match '(?i)connection|network|offline|unreachable|resolve|timeout|timed\s*out|WININET|could\s*not\s*connect') {
+        return [PSCustomObject][ordered]@{
+            Status   = "Offline"
+            Message  = "Source is unreachable."
+            Guidance = "Check network connectivity. For persistent failures: winget source reset --name $SourceName --force"
+        }
+    }
+    [PSCustomObject][ordered]@{
+        Status   = "Unknown"
+        Message  = "Source update returned exit code $ExitCode."
+        Guidance = "Inspect winget output. General reset: winget source reset --name $SourceName --force"
+    }
+}
+
+function Get-WingetterSourceHealth {
+    param(
+        [int]$TimeoutSeconds = 10,
+        [switch]$SkipLiveProbe,
+        [object]$SourceListCapture = $null,
+        [hashtable]$SourceUpdateCaptures = @{}
+    )
+
+    if ($null -eq $SourceListCapture -and -not $SkipLiveProbe) {
+        $SourceListCapture = Invoke-WinGetCapture -Arguments @("source", "list", "--disable-interactivity") -TimeoutSeconds $TimeoutSeconds
+    }
+    $parsedSources = if ($SourceListCapture) { ConvertFrom-WinGetSourceListText -Text $SourceListCapture.StdOut } else { @() }
+    $results = [System.Collections.ArrayList]::new()
+
+    foreach ($source in @($parsedSources)) {
+        $capture = $null
+        if ($SourceUpdateCaptures.ContainsKey($source.Name)) {
+            $capture = $SourceUpdateCaptures[$source.Name]
+        } elseif (-not $SkipLiveProbe) {
+            $capture = Invoke-WinGetCapture -Arguments @("source", "update", "--name", $source.Name, "--disable-interactivity") -TimeoutSeconds $TimeoutSeconds
+        }
+
+        if ($null -ne $capture) {
+            $health = Get-WingetterSourceHealthState -SourceName $source.Name -StdOut $capture.StdOut -StdErr $capture.StdErr -ExitCode $capture.ExitCode -TimedOut $capture.TimedOut
+        } else {
+            $health = [PSCustomObject][ordered]@{
+                Status   = "Unchecked"
+                Message  = "Live probe was skipped."
+                Guidance = "Run: winget source update --name $($source.Name)"
+            }
+        }
+        [void]$results.Add([PSCustomObject][ordered]@{
+            Source   = [string]$source.Name
+            Url      = [string]$source.Argument
+            Type     = [string]$source.Type
+            Status   = [string]$health.Status
+            Message  = [string]$health.Message
+            Guidance = [string]$health.Guidance
+        })
+    }
+
+    $okCount = @($results | Where-Object { $_.Status -eq "Ok" }).Count
+    $totalCount = $results.Count
+    $summary = if ($totalCount -eq 0) { "No sources found" }
+               elseif ($okCount -eq $totalCount) { "All $totalCount source(s) healthy" }
+               else { "$okCount/$totalCount source(s) healthy" }
+
+    [PSCustomObject][ordered]@{
+        Schema  = "Wingetter.SourceHealth.v1"
+        ProbeAt = (Get-Date).ToUniversalTime().ToString("o")
+        Sources = [object[]]$results.ToArray()
+        Summary = [string]$summary
+    }
+}
+
 function Get-WinGetClientReadiness {
     param(
         [object]$AvailabilityStatus,

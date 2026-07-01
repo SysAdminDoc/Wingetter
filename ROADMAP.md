@@ -118,15 +118,6 @@
 
 ## Research-Driven Additions
 
-### P1
-
-- [ ] P1 - Add WinGet source-health diagnostics and recovery guidance
-  Why: Client readiness is now classified, but stale/offline/corrupt WinGet sources still appear as package failures unless source health is probed separately.
-  Evidence: `src\Wingetter.WinGet.ps1:5-114`; `src\Wingetter.Diagnostics.ps1:309-424`; Microsoft WinGet troubleshooting docs; microsoft/winget-cli issues #6015 and #6329.
-  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Sources.ps1`, `src\Wingetter.Diagnostics.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\Test-SourcePolicy.ps1`, `tools\Test-Diagnostics.ps1`.
-  Acceptance: startup/status and diagnostics run bounded `winget source list/update` probes, classify ok/stale/offline/corrupt/auth-required/package-offline states, show non-mutating repair/reset guidance, include redacted source-health JSON in diagnostics, and cover fixture outputs/exit codes in tests.
-  Complexity: M
-
 ### P2
 
 - [ ] P2 - Add Wingetter self-update and provenance review

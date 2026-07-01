@@ -383,6 +383,15 @@ function Export-WingetterDiagnosticsBundle {
             }
         }
 
+        try {
+            if (Get-Command Get-WingetterSourceHealth -ErrorAction SilentlyContinue) {
+                $sourceHealth = Get-WingetterSourceHealth -TimeoutSeconds 10 -SkipLiveProbe:$SkipLiveWinGet
+                $files.Add((Write-WingetterDiagnosticsJsonFile -Root $stageRoot -RelativePath "source-health/source-health.json" -InputObject $sourceHealth -SensitiveValues $sensitiveValues -Depth 8))
+            }
+        } catch {
+            $warnings.Add("Could not probe source health: $($_.Exception.Message)")
+        }
+
         $manifest = [PSCustomObject][ordered]@{
             Schema              = "Wingetter.DiagnosticsBundle.v1"
             GeneratedAtUtc      = (Get-Date).ToUniversalTime().ToString("o")
