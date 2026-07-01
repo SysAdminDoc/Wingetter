@@ -1712,6 +1712,13 @@ function Show-WinGetInstallerGUI {
     $reader = [System.Xml.XmlReader]::Create([System.IO.StringReader]::new($XAML))
     $Window = [Windows.Markup.XamlReader]::Load($reader)
 
+    if (-not $SmokeTest) {
+        try { Restore-WingetterWindowBounds -Window $Window } catch {}
+        $Window.Add_Closing({
+            try { Save-WingetterWindowBounds -Window $Window } catch {}
+        })
+    }
+
 # codex-branding:start
                 try {
                     $brandingIconPath = Join-Path (Get-WingetterRootPath) 'icon.ico'

@@ -36,13 +36,6 @@
   Acceptance: after reviewed install/update/offline-cache runs, Wingetter can export a lockfile with package ID, source, resolved version, installer URL/hash when available, selected safe options, timestamp, and warnings; import shows drift before selecting packages.
   Complexity: L
 
-- [ ] P2 - Persist window bounds with DPI and monitor safety checks
-  Why: The main window currently starts centered at fixed 1450x920 dimensions, and package-manager users report off-screen or unstable window placement after UI changes and display scaling differences.
-  Evidence: `src/Wingetter.Ui.ps1:780-781`; UniGetUI issue #4799.
-  Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.Common.ps1`, `tools\Test-UiSmoke.ps1`.
-  Acceptance: Wingetter saves main-window size/position/state under `%APPDATA%\Wingetter`, restores only when the bounds intersect a current monitor working area, clamps to minimum dimensions, and smoke tests cover invalid/off-screen saved bounds.
-  Complexity: S
-
 - [ ] P2 - Normalize noisy installer progress in operation logs
   Why: WinGet 1.29 `--no-progress` reduces CLI noise, but older WinGet builds and individual installers can still emit spinner/progress streams that make GUI logs hard to follow.
   Evidence: `src/Wingetter.WinGet.ps1:171-188`; `src/Wingetter.Ui.ps1:325-526`; UniGetUI issue #5004.

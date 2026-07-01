@@ -45,7 +45,75 @@ function New-WingetterDefaultSettings {
         Schema          = "Wingetter.Settings.v1"
         PrivateIconMode = $false
         IconCacheTtlDays = 30
+        WindowLeft      = $null
+        WindowTop       = $null
+        WindowWidth     = $null
+        WindowHeight    = $null
+        WindowState     = $null
         UpdatedAtUtc    = (Get-Date).ToUniversalTime().ToString("o")
+    }
+}
+
+function Save-WingetterWindowBounds {
+    param(
+        [System.Windows.Window]$Window,
+        [string]$Path = (Get-WingetterSettingsPath)
+    )
+
+    if ($null -eq $Window) { return }
+    $state = [string]$Window.WindowState
+    $bounds = if ($Window.WindowState -eq [System.Windows.WindowState]::Normal) {
+        @{ Left = $Window.Left; Top = $Window.Top; Width = $Window.Width; Height = $Window.Height }
+    } elseif ($null -ne $Window.RestoreBounds -and $Window.RestoreBounds.Width -gt 0) {
+        @{ Left = $Window.RestoreBounds.Left; Top = $Window.RestoreBounds.Top; Width = $Window.RestoreBounds.Width; Height = $Window.RestoreBounds.Height }
+    } else {
+        return
+    }
+    $settings = Get-WingetterSettings -Path $Path
+    $settings.WindowLeft = [math]::Round($bounds.Left)
+    $settings.WindowTop = [math]::Round($bounds.Top)
+    $settings.WindowWidth = [math]::Round($bounds.Width)
+    $settings.WindowHeight = [math]::Round($bounds.Height)
+    $settings.WindowState = $state
+    Save-WingetterSettings -Settings $settings -Path $Path
+}
+
+function Restore-WingetterWindowBounds {
+    param(
+        [System.Windows.Window]$Window,
+        [string]$Path = (Get-WingetterSettingsPath)
+    )
+
+    if ($null -eq $Window) { return }
+    $settings = Get-WingetterSettings -Path $Path
+    if ($null -eq $settings.WindowWidth -or $null -eq $settings.WindowHeight) { return }
+    $w = [int]$settings.WindowWidth
+    $h = [int]$settings.WindowHeight
+    $minW = if ($Window.MinWidth -gt 0) { [int]$Window.MinWidth } else { 800 }
+    $minH = if ($Window.MinHeight -gt 0) { [int]$Window.MinHeight } else { 500 }
+    if ($w -lt $minW -or $h -lt $minH -or $w -gt 8000 -or $h -gt 5000) { return }
+    $left = if ($null -ne $settings.WindowLeft) { [int]$settings.WindowLeft } else { 0 }
+    $top = if ($null -ne $settings.WindowTop) { [int]$settings.WindowTop } else { 0 }
+    $intersects = $false
+    foreach ($screen in [System.Windows.Forms.Screen]::AllScreens) {
+        $work = $screen.WorkingArea
+        $overlapL = [math]::Max($left, $work.Left)
+        $overlapT = [math]::Max($top, $work.Top)
+        $overlapR = [math]::Min($left + $w, $work.Right)
+        $overlapB = [math]::Min($top + $h, $work.Bottom)
+        if (($overlapR - $overlapL) -gt 50 -and ($overlapB - $overlapT) -gt 50) {
+            $intersects = $true
+            break
+        }
+    }
+    if (-not $intersects) { return }
+    $Window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::Manual
+    $Window.Left = $left
+    $Window.Top = $top
+    $Window.Width = $w
+    $Window.Height = $h
+    if ($settings.WindowState -eq "Maximized") {
+        $Window.WindowState = [System.Windows.WindowState]::Maximized
     }
 }
 

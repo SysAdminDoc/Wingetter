@@ -541,6 +541,34 @@ Google Chrome Google.Chrome 124.0   Blocking
     if ($msstoreSource.Status -ne "Offline") { Add-Failure "Source health msstore source not classified as Offline." }
     if ($healthResult.Summary -ne "1/2 source(s) healthy") { Add-Failure "Source health summary mismatch: $($healthResult.Summary)." }
 
+    $boundsDir = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-bounds-test-" + [System.Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $boundsDir -Force | Out-Null
+    try {
+        $boundsPath = Join-Path $boundsDir "settings.json"
+        $defaults = New-WingetterDefaultSettings
+        if ($null -ne $defaults.WindowWidth) { Add-Failure "Default settings should have null WindowWidth." }
+        if ($null -ne $defaults.WindowLeft) { Add-Failure "Default settings should have null WindowLeft." }
+
+        $boundsSettings = New-WingetterDefaultSettings
+        $boundsSettings.WindowLeft = -5000
+        $boundsSettings.WindowTop = -5000
+        $boundsSettings.WindowWidth = 1450
+        $boundsSettings.WindowHeight = 920
+        Save-WingetterSettings -Settings $boundsSettings -Path $boundsPath | Out-Null
+        $reloaded = Get-WingetterSettings -Path $boundsPath
+        if ($reloaded.WindowLeft -ne -5000) { Add-Failure "WindowLeft round-trip failed." }
+        if ($reloaded.WindowWidth -ne 1450) { Add-Failure "WindowWidth round-trip failed." }
+
+        $tooSmall = New-WingetterDefaultSettings
+        $tooSmall.WindowWidth = 100
+        $tooSmall.WindowHeight = 100
+        Save-WingetterSettings -Settings $tooSmall -Path $boundsPath | Out-Null
+        $reloadedSmall = Get-WingetterSettings -Path $boundsPath
+        if ($reloadedSmall.WindowWidth -ne 100) { Add-Failure "Small bounds round-trip failed." }
+    } finally {
+        Remove-Item -Path $boundsDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
     $bootstrapLogPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-bootstrap-test-" + [System.Guid]::NewGuid().ToString("N") + ".jsonl")
     try {
         Write-WinGetBootstrapLog -Path $bootstrapLogPath -Step "test" -Status "ok" -Message "bootstrap log smoke" -Data @{ ManualDownloads = "none" }
