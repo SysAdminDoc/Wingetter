@@ -608,8 +608,9 @@ function New-WingetterRunLogDirectory {
     param([string]$Action)
     $root = Join-Path $env:APPDATA "Wingetter\logs"
     if (!(Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
-    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $path = Join-Path $root "$stamp-$Action"
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
+    $entropy = [System.Guid]::NewGuid().ToString("N").Substring(0, 4)
+    $path = Join-Path $root "$stamp-$entropy-$Action"
     New-Item -ItemType Directory -Path $path -Force | Out-Null
     return $path
 }

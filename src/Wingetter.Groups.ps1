@@ -723,18 +723,6 @@ function Export-WingetterRunLockfile {
         $status = [string]$pkg.status
         if ($status -ne "SUCCESS" -and $status -ne "UP TO DATE") { continue }
 
-        $installerUrl = ""
-        $installerHash = ""
-        if (![string]::IsNullOrWhiteSpace([string]$pkg.resultPath) -and (Test-Path -LiteralPath ([string]$pkg.resultPath))) {
-            try {
-                $resultData = Get-Content -LiteralPath ([string]$pkg.resultPath) -Raw | ConvertFrom-Json
-                if ($resultData.PSObject.Properties["Command"]) {
-                    $cmd = [string]$resultData.Command
-                    if ($cmd -match '--version\s+"?([^\s"]+)') { }
-                }
-            } catch {}
-        }
-
         $installOptions = $null
         if ($Report.runPlan -and $Report.runPlan.Packages) {
             foreach ($planPkg in @($Report.runPlan.Packages)) {

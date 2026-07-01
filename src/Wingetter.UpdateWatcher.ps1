@@ -447,11 +447,13 @@ function Invoke-WingetterUpdateCheck {
     )
 
     if ($PackageIds.Count -eq 0 -and $Script:SoftwareDatabase) {
+        $collected = [System.Collections.ArrayList]::new()
         foreach ($category in $Script:SoftwareDatabase.Keys) {
             foreach ($app in @($Script:SoftwareDatabase[$category])) {
-                $PackageIds += [string]$app.WingetId
+                [void]$collected.Add([string]$app.WingetId)
             }
         }
+        $PackageIds = [string[]]$collected.ToArray([string])
     }
 
     if ($SkipMeteredNetwork -and (Test-WingetterMeteredNetwork)) {

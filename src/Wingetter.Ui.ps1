@@ -2768,22 +2768,26 @@ function Show-WinGetInstallerGUI {
     $ApplyPinOperation = {
         param([string]$Operation)
         if ($null -eq $ui["SelectedPackage"]) { return }
-        $package = $ui["SelectedPackage"]
-        $ui["DetailPinState"].Text = "Updating pin..."
-        foreach ($btn in @($ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
-            if ($btn) { $btn.IsEnabled = $false }
-        }
-        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        try {
+            $package = $ui["SelectedPackage"]
+            $ui["DetailPinState"].Text = "Updating pin..."
+            foreach ($btn in @($ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+                if ($btn) { $btn.IsEnabled = $false }
+            }
+            [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
 
-        $result = Invoke-WingetterPackageSourcePinOperation -SourceAdapter $ui["PackageSource"] -PackageId $package.WingetId -Operation $Operation
-        $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $ui["PackageSource"] -PackageId $package.WingetId
-        & $SetPinVisual $package.WingetId $pinStatus
-        & $RefreshPinControls $pinStatus
-        if ($result.Success) {
-            $ui["PackageDetailsSubtitle"].Text = "$($package.WingetId) - pin command completed"
-        } else {
-            $ui["DetailWarnings"].Text = "Pin command failed: $($result.Output)"
-            $ui["PackageDetailsSubtitle"].Text = "$($package.WingetId) - pin command failed"
+            $result = Invoke-WingetterPackageSourcePinOperation -SourceAdapter $ui["PackageSource"] -PackageId $package.WingetId -Operation $Operation
+            $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $ui["PackageSource"] -PackageId $package.WingetId
+            & $SetPinVisual $package.WingetId $pinStatus
+            & $RefreshPinControls $pinStatus
+            if ($result.Success) {
+                $ui["PackageDetailsSubtitle"].Text = "$($package.WingetId) - pin command completed"
+            } else {
+                $ui["DetailWarnings"].Text = "Pin command failed: $($result.Output)"
+                $ui["PackageDetailsSubtitle"].Text = "$($package.WingetId) - pin command failed"
+            }
+        } catch {
+            $ui["DetailWarnings"].Text = "Pin operation failed: $($_.Exception.Message)"
         }
     }
     $ui["PinPackageBtn"].Add_Click({ & $ApplyPinOperation "Pin" }.GetNewClosure())
@@ -3013,7 +3017,7 @@ function Show-WinGetInstallerGUI {
                     $cb.IsChecked = -not $cb.IsChecked
                 }
                 $ui["LastClickedIndex"] = $localAppNum
-                & $ShowPackageDetails $localApp
+                try { & $ShowPackageDetails $localApp } catch { $ProgressText.Text = "Details load failed: $($_.Exception.Message)" }
                 $e.Handled = $true
             }.GetNewClosure())
             $appBorder.Add_MouseEnter({ param($source) $hc=$ui["HoverBg"]; if($hc){ $source.Background=[System.Windows.Media.BrushConverter]::new().ConvertFromString($hc) } }.GetNewClosure())
@@ -3314,41 +3318,53 @@ function Show-WinGetInstallerGUI {
     }.GetNewClosure())
 
     $InstallWinGetBtn.Add_Click({
-        $ProgressText.Text = "Repairing WinGet/App Installer..."
-        $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
-        if (-not (& $GetWinGetCanRepair $status)) {
-            $ProgressText.Text = "WinGet repair blocked: $($status.Message)"
+        try {
+            $ProgressText.Text = "Repairing WinGet/App Installer..."
+            $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
+            if (-not (& $GetWinGetCanRepair $status)) {
+                $ProgressText.Text = "WinGet repair blocked: $($status.Message)"
+                & $checkWinGet
+                return
+            }
+            $installed = Install-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
             & $checkWinGet
-            return
+            $logSuffix = if ($Script:LastBootstrapLogPath) { " Log: $Script:LastBootstrapLogPath" } else { "" }
+            $afterStatus = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
+            $ProgressText.Text = if ($installed) { "WinGet is ready.$logSuffix" } else { "WinGet repair needs manual follow-up: $(& $GetWinGetStatusMessage $afterStatus)$logSuffix" }
+        } catch {
+            $ProgressText.Text = "WinGet repair failed: $($_.Exception.Message)"
         }
-        $installed = Install-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
-        & $checkWinGet
-        $logSuffix = if ($Script:LastBootstrapLogPath) { " Log: $Script:LastBootstrapLogPath" } else { "" }
-        $afterStatus = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
-        $ProgressText.Text = if ($installed) { "WinGet is ready.$logSuffix" } else { "WinGet repair needs manual follow-up: $(& $GetWinGetStatusMessage $afterStatus)$logSuffix" }
     }.GetNewClosure())
 
     $PrivateIconModeCheck.Add_Click({
-        $enabled = [bool]$PrivateIconModeCheck.IsChecked
-        $ui["Settings"] = Set-WingetterPrivateIconMode -Enabled $enabled
-        $ui["PrivateIconMode"] = [bool]$ui["Settings"].PrivateIconMode
-        if ($enabled) {
-            foreach ($entry in @($ui["IconQueue"])) {
-                try {
-                    $entry.Image.Source = New-LetterIcon -Letter ([string]$entry.Name)[0] -ColorHex (Get-LetterColor ([string]$entry.Name))
-                } catch {}
+        try {
+            $enabled = [bool]$PrivateIconModeCheck.IsChecked
+            $ui["Settings"] = Set-WingetterPrivateIconMode -Enabled $enabled
+            $ui["PrivateIconMode"] = [bool]$ui["Settings"].PrivateIconMode
+            if ($enabled) {
+                foreach ($entry in @($ui["IconQueue"])) {
+                    try {
+                        $entry.Image.Source = New-LetterIcon -Letter ([string]$entry.Name)[0] -ColorHex (Get-LetterColor ([string]$entry.Name))
+                    } catch {}
+                }
+                $ProgressText.Text = "Private icon mode enabled. Remote favicon fetches are disabled."
+            } else {
+                $ProgressText.Text = "Private icon mode disabled. Remote icons will refresh on next launch."
             }
-            $ProgressText.Text = "Private icon mode enabled. Remote favicon fetches are disabled."
-        } else {
-            $ProgressText.Text = "Private icon mode disabled. Remote icons will refresh on next launch."
+        } catch {
+            $ProgressText.Text = "Settings save failed: $($_.Exception.Message)"
         }
     }.GetNewClosure())
 
     $CorporateModeCheck.Add_Click({
-        $ui["SourcePolicy"] = Set-WingetterSourcePolicyCorporateMode -Policy $ui["SourcePolicy"] -Enabled ([bool]$CorporateModeCheck.IsChecked)
-        $ui["SourcePolicy"] = Save-WingetterSourcePolicy -Policy $ui["SourcePolicy"]
-        $allowedSources = @((Get-WingetterSourcePolicyDefinitions -Policy $ui["SourcePolicy"]) | ForEach-Object { $_.Name }) -join ", "
-        $ProgressText.Text = if ($ui["SourcePolicy"].CorporateMode) { "Corporate source policy enabled: $allowedSources." } else { "Corporate source policy disabled." }
+        try {
+            $ui["SourcePolicy"] = Set-WingetterSourcePolicyCorporateMode -Policy $ui["SourcePolicy"] -Enabled ([bool]$CorporateModeCheck.IsChecked)
+            $ui["SourcePolicy"] = Save-WingetterSourcePolicy -Policy $ui["SourcePolicy"]
+            $allowedSources = @((Get-WingetterSourcePolicyDefinitions -Policy $ui["SourcePolicy"]) | ForEach-Object { $_.Name }) -join ", "
+            $ProgressText.Text = if ($ui["SourcePolicy"].CorporateMode) { "Corporate source policy enabled: $allowedSources." } else { "Corporate source policy disabled." }
+        } catch {
+            $ProgressText.Text = "Source policy save failed: $($_.Exception.Message)"
+        }
     }.GetNewClosure())
 
     # ========================================================
@@ -3406,26 +3422,31 @@ function Show-WinGetInstallerGUI {
     }
 
     $LoadGroupBtn.Add_Click({
-        $selected = $GroupCombo.SelectedItem
-        if ($null -eq $selected -or $null -eq $selected.Tag) {
-            $ProgressText.Text = "Choose a starter group or saved group first."
-            return
-        }
-        $gName = $selected.Tag["Name"]
-        $gType = $selected.Tag["Type"]
+        try {
+            $selected = $GroupCombo.SelectedItem
+            if ($null -eq $selected -or $null -eq $selected.Tag) {
+                $ProgressText.Text = "Choose a starter group or saved group first."
+                return
+            }
+            $gName = $selected.Tag["Name"]
+            $gType = $selected.Tag["Type"]
 
-        if ($gType -eq "builtin") {
-            $entries = ConvertTo-WingetterGroupPackageEntries -PackageIds ([string[]]$ui["BuiltInGroups"][$gName])
-        } else {
-            $saved = Get-SavedGroups
-            $entries = Get-WingetterGroupRecordPackageEntries -GroupRecord $saved.$gName
-        }
+            if ($gType -eq "builtin") {
+                $entries = ConvertTo-WingetterGroupPackageEntries -PackageIds ([string[]]$ui["BuiltInGroups"][$gName])
+            } else {
+                $saved = Get-SavedGroups
+                $entries = Get-WingetterGroupRecordPackageEntries -GroupRecord $saved.$gName
+            }
 
-        $loaded = & $ApplyPackageList $entries
-        $ProgressText.Text = "Applied '$gName' and selected $loaded of $(@($entries).Count) apps."
+            $loaded = & $ApplyPackageList $entries
+            $ProgressText.Text = "Applied '$gName' and selected $loaded of $(@($entries).Count) apps."
+        } catch {
+            $ProgressText.Text = "Group load failed: $($_.Exception.Message)"
+        }
     }.GetNewClosure())
 
     $SaveGroupBtn.Add_Click({
+        try {
         $sel = & $GetSelectedIds
         if ($sel.Count -eq 0) {
             [System.Windows.MessageBox]::Show("Select at least one app before saving a group.", "No Apps Selected", "OK", "Information")
@@ -3477,27 +3498,34 @@ function Show-WinGetInstallerGUI {
                 $ProgressText.Text = "Saved '$gName' with $($sel.Count) selected apps."
             }
         }
+        } catch {
+            $ProgressText.Text = "Group save failed: $($_.Exception.Message)"
+        }
     }.GetNewClosure())
 
     $DeleteGroupBtn.Add_Click({
-        $selected = $GroupCombo.SelectedItem
-        if ($null -eq $selected -or $null -eq $selected.Tag) {
-            $ProgressText.Text = "Choose a saved group to delete."
-            return
+        try {
+            $selected = $GroupCombo.SelectedItem
+            if ($null -eq $selected -or $null -eq $selected.Tag) {
+                $ProgressText.Text = "Choose a saved group to delete."
+                return
+            }
+            if ($selected.Tag["Type"] -eq "builtin") {
+                $ProgressText.Text = "Built-in groups can't be deleted."
+                return
+            }
+            $gName = $selected.Tag["Name"]
+            $confirm = [System.Windows.MessageBox]::Show("Delete the saved group '$gName'? This can't be undone.", "Delete Saved Group", "YesNo", "Warning")
+            if ($confirm -ne "Yes") {
+                $ProgressText.Text = "Delete cancelled."
+                return
+            }
+            Remove-GroupFromFile -Name $gName
+            & $RefreshGroupCombo
+            $ProgressText.Text = "Deleted '$gName'."
+        } catch {
+            $ProgressText.Text = "Group delete failed: $($_.Exception.Message)"
         }
-        if ($selected.Tag["Type"] -eq "builtin") {
-            $ProgressText.Text = "Built-in groups can't be deleted."
-            return
-        }
-        $gName = $selected.Tag["Name"]
-        $confirm = [System.Windows.MessageBox]::Show("Delete the saved group '$gName'? This can't be undone.", "Delete Saved Group", "YesNo", "Warning")
-        if ($confirm -ne "Yes") {
-            $ProgressText.Text = "Delete cancelled."
-            return
-        }
-        Remove-GroupFromFile -Name $gName
-        & $RefreshGroupCombo
-        $ProgressText.Text = "Deleted '$gName'."
     }.GetNewClosure())
 
     # ========================================================
@@ -4086,7 +4114,8 @@ function Show-WinGetInstallerGUI {
                 $ui["Cancelled"] = [bool]$done.Cancelled
 
                 if ($done.Error) {
-                    & $SetOperationRunningState $false
+                    $errorMode = if ([string]$done.Mode -eq "OfflineDownload") { "Cache" } else { "Package" }
+                    & $SetOperationRunningState $false $errorMode
                     $ProgressText.Text = "Operation failed: $($done.Error)"
                     return
                 }
@@ -4103,7 +4132,6 @@ function Show-WinGetInstallerGUI {
 
     $DownloadCacheBtn.Add_Click({
         if ([bool]$ui["OperationRunning"]) { return }
-        $ui["OperationMode"] = "Cache"
         $status = Test-WingetterPackageSource -SourceAdapter $ui["PackageSource"]
         if (-not $status.Installed) { [System.Windows.MessageBox]::Show((& $GetWinGetRequiredMessage $status "download package installers"), "WinGet Required", "OK", "Warning"); return }
 
