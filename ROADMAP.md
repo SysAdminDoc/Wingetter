@@ -11,13 +11,6 @@
   Acceptance: a Source Policy dialog can add/edit/remove allowed sources and package/source block rules, validates names/URLs/priority/header redaction before save, imports/exports the existing schema, shows drift results, and preserves private headers only when explicitly requested.
   Complexity: M
 
-- [ ] P2 - Persist update-view sort and filter state
-  Why: Update review is a repeated workflow, and users expect sort/order choices to survive refreshes instead of resetting during each update-mode rebuild.
-  Evidence: `src\Wingetter.Ui.ps1:3553-3680`; Devolutions/UniGetUI issue #4984.
-  Touches: `src\Wingetter.Ui.ps1`, `src\Wingetter.Common.ps1`, `tools\Test-UiSmoke.ps1`.
-  Acceptance: update mode exposes explicit sort/filter controls for name, category, source, installed version, available version, and blocked/deferred status; choices persist under `%APPDATA%\Wingetter`; invalid saved state falls back safely.
-  Complexity: M
-
 - [ ] P2 - Add scheduled update-policy editor UI
   Why: update-policy JSON supports deferrals and maintenance windows, but users cannot safely review or edit it from the WPF app.
   Evidence: `README.md:174`; `src\Wingetter.UpdateWatcher.ps1:120-153`; Winget-AutoUpdate policy/GUI docs; Patch My PC scheduler features.

@@ -1506,7 +1506,10 @@ function Show-WinGetInstallerGUI {
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="GalleryBtn" Style="{StaticResource ToolBtn}" Content="Profile Gallery" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Browse hashed public profiles and review every package before import"/>
                         <Button x:Name="CopyCommandBtn" Style="{StaticResource ToolBtn}" Content="Copy Commands" FontSize="11.5" Cursor="Hand"/>
-                        <Border x:Name="Divider2" Visibility="Collapsed" Width="0"/>
+                        <StackPanel x:Name="UpdateSortPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="8,0,0,0">
+                            <TextBlock Text="Sort:" Foreground="#94a7bc" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox x:Name="UpdateSortCombo" Width="140" FontSize="11.5" VerticalAlignment="Center" AutomationProperties.Name="Sort update list"/>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -1801,7 +1804,8 @@ function Show-WinGetInstallerGUI {
     $SidebarBorder    = $Window.FindName("SidebarBorder")
     $SidebarPanel     = $Window.FindName("SidebarPanel")
     $Divider1         = $Window.FindName("Divider1")
-    $Divider2         = $Window.FindName("Divider2")
+    $UpdateSortPanel  = $Window.FindName("UpdateSortPanel")
+    $UpdateSortCombo  = $Window.FindName("UpdateSortCombo")
     $LogPanelBorder   = $Window.FindName("LogPanelBorder")
     $LogEntriesPanel  = $Window.FindName("LogEntriesPanel")
     $LogScrollViewer  = $Window.FindName("LogScrollViewer")
@@ -1914,6 +1918,11 @@ function Show-WinGetInstallerGUI {
     $ui["SourcePolicy"]        = Get-WingetterSourcePolicy
     $ui["Settings"]            = Get-WingetterSettings
     $ui["PrivateIconMode"]     = [bool]$ui["Settings"].PrivateIconMode
+    $sortOptions = @("Name", "Category", "Installed Version")
+    foreach ($opt in $sortOptions) { [void]$UpdateSortCombo.Items.Add($opt) }
+    $savedSort = [string]$ui["Settings"].UpdateSortBy
+    $sortIdx = [array]::IndexOf($sortOptions, $savedSort)
+    $UpdateSortCombo.SelectedIndex = if ($sortIdx -ge 0) { $sortIdx } else { 0 }
     $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
     $PrivateIconModeCheck.IsChecked = [bool]$ui["PrivateIconMode"]
 
@@ -2056,6 +2065,13 @@ function Show-WinGetInstallerGUI {
             if ($cat["AppsStack"]) {
                 $orderedEntries = if ($searchText -ne "") {
                     @($cat["Apps"] | Sort-Object @{ Expression = { -[int]$_["SearchScore"] } }, @{ Expression = { [int]$_["OriginalIndex"] } })
+                } elseif ($inUpdateMode -and $UpdateSortCombo.SelectedItem -eq "Installed Version") {
+                    @($cat["Apps"] | Sort-Object @{ Expression = {
+                        $wid = [string]$_["WingetId"]
+                        if ($ui["InstalledIds"].ContainsKey($wid)) { [string]$ui["InstalledIds"][$wid].InstalledVersion } else { "" }
+                    } })
+                } elseif ($inUpdateMode -and $UpdateSortCombo.SelectedItem -eq "Name") {
+                    @($cat["Apps"] | Sort-Object @{ Expression = { [string]$_["Name"] } })
                 } else {
                     @($cat["Apps"] | Sort-Object @{ Expression = { [int]$_["OriginalIndex"] } })
                 }
@@ -3846,6 +3862,15 @@ function Show-WinGetInstallerGUI {
     # ========================================================
     # UPDATE VIEW - show only installed apps in single column
     # ========================================================
+    $UpdateSortCombo.Add_SelectionChanged({
+        if ($ui["IsUpdateMode"]) { & $ApplyFilter }
+        try {
+            $settings = Get-WingetterSettings
+            $settings.UpdateSortBy = [string]$UpdateSortCombo.SelectedItem
+            Save-WingetterSettings -Settings $settings | Out-Null
+        } catch {}
+    }.GetNewClosure())
+
     $EnterUpdateView = {
         $ui["IsUpdateMode"] = $true
         $bc = [System.Windows.Media.BrushConverter]::new()
@@ -3866,7 +3891,7 @@ function Show-WinGetInstallerGUI {
         $GalleryBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $CopyCommandBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $Divider1.Visibility = [System.Windows.Visibility]::Collapsed
-        $Divider2.Visibility = [System.Windows.Visibility]::Collapsed
+        $UpdateSortPanel.Visibility = [System.Windows.Visibility]::Visible
 
         # Change CategoriesPanel to single column vertical layout
         $CategoriesPanel.Orientation = [System.Windows.Controls.Orientation]::Vertical
@@ -3948,7 +3973,7 @@ function Show-WinGetInstallerGUI {
         $GalleryBtn.Visibility = [System.Windows.Visibility]::Visible
         $CopyCommandBtn.Visibility = [System.Windows.Visibility]::Visible
         $Divider1.Visibility = [System.Windows.Visibility]::Visible
-        $Divider2.Visibility = [System.Windows.Visibility]::Visible
+        $UpdateSortPanel.Visibility = [System.Windows.Visibility]::Collapsed
 
         # Restore horizontal wrap layout
         $CategoriesPanel.Orientation = [System.Windows.Controls.Orientation]::Horizontal

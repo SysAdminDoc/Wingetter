@@ -50,6 +50,7 @@ function New-WingetterDefaultSettings {
         WindowWidth     = $null
         WindowHeight    = $null
         WindowState     = $null
+        UpdateSortBy    = "Name"
         UpdatedAtUtc    = (Get-Date).ToUniversalTime().ToString("o")
     }
 }
