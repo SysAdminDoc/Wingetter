@@ -39,12 +39,12 @@ function Get-GalleryPackageIds {
     param([object]$Gallery)
     $ids = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-    foreach ($profile in @($Gallery.Profiles)) {
-        $profilePath = Join-Path $repoRoot $profile.ProfilePath
-        if (Test-Path -LiteralPath $profilePath) {
+    foreach ($galleryProfile in @($Gallery.Profiles)) {
+        $galleryProfilePath = Join-Path $repoRoot $galleryProfile.ProfilePath
+        if (Test-Path -LiteralPath $galleryProfilePath) {
             try {
-                $profileData = Get-Content -LiteralPath $profilePath -Raw | ConvertFrom-Json
-                $packages = if ($profileData.PSObject.Properties["Packages"]) { $profileData.Packages } elseif ($profileData.PSObject.Properties["PackageIds"]) { $profileData.PackageIds } else { @() }
+                $galleryProfileData = Get-Content -LiteralPath $galleryProfilePath -Raw | ConvertFrom-Json
+                $packages = if ($galleryProfileData.PSObject.Properties["Packages"]) { $galleryProfileData.Packages } elseif ($galleryProfileData.PSObject.Properties["PackageIds"]) { $galleryProfileData.PackageIds } else { @() }
                 foreach ($pkg in @($packages)) {
                     $id = if ($pkg -is [string]) { $pkg } elseif ($pkg.PSObject.Properties["PackageIdentifier"]) { [string]$pkg.PackageIdentifier } else { "" }
                     if (![string]::IsNullOrWhiteSpace($id)) { [void]$ids.Add($id) }
@@ -85,12 +85,12 @@ $renamed = [System.Collections.ArrayList]::new()
 
 foreach ($id in @($currentIndex.Keys)) {
     if (-not $baselineIndex.Contains($id)) {
-        $profileRefs = $galleryIds.Contains($id)
+        $galleryProfileRefs = $galleryIds.Contains($id)
         [void]$added.Add([PSCustomObject][ordered]@{
             PackageId       = $id
             Name            = $currentIndex[$id].Name
             Category        = $currentIndex[$id].Category
-            ProfileReferenced = $profileRefs
+            ProfileReferenced = $galleryProfileRefs
         })
     } else {
         $cur = $currentIndex[$id]
@@ -115,12 +115,12 @@ foreach ($id in @($currentIndex.Keys)) {
 
 foreach ($id in @($baselineIndex.Keys)) {
     if (-not $currentIndex.Contains($id)) {
-        $profileRefs = $galleryIds.Contains($id)
+        $galleryProfileRefs = $galleryIds.Contains($id)
         [void]$removed.Add([PSCustomObject][ordered]@{
             PackageId       = $id
             Name            = $baselineIndex[$id].Name
             Category        = $baselineIndex[$id].Category
-            ProfileReferenced = $profileRefs
+            ProfileReferenced = $galleryProfileRefs
         })
     }
 }
