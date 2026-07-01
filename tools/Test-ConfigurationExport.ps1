@@ -91,6 +91,28 @@ if ($failures.Count -eq 0) {
         Add-Failure "Test-WingetterConfigurationPackageId accepted an empty identifier."
     }
 
+    $v3Yaml = ConvertTo-WingetterConfigurationYaml -PackageEntries $entries -ResourceFormat "PackageList"
+    foreach ($expected in @(
+        "resource: Microsoft.WinGet.DSC/WinGetPackageList",
+        "id: wingetter_packages",
+        "packages:",
+        "- id: 'Google.Chrome'"
+    )) {
+        if ($v3Yaml -notlike "*$expected*") {
+            Add-Failure "V3 PackageList YAML did not include '$expected'."
+        }
+    }
+    if ($v3Yaml -match 'resource:\s*Microsoft\.WinGet\.DSC/WinGetPackage\s') {
+        Add-Failure "V3 PackageList YAML should not contain per-package WinGetPackage resources."
+    }
+    $perPkgYaml = ConvertTo-WingetterConfigurationYaml -PackageEntries $entries -ResourceFormat "PerPackage"
+    if ($perPkgYaml -notlike "*resource: Microsoft.WinGet.DSC/WinGetPackage*") {
+        Add-Failure "Explicit PerPackage format did not use WinGetPackage resources."
+    }
+    if ($perPkgYaml -like "*WinGetPackageList*") {
+        Add-Failure "Explicit PerPackage format should not contain WinGetPackageList."
+    }
+
     $tempPath = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-config-" + [System.Guid]::NewGuid().ToString("N") + ".winget")
     try {
         Export-WingetterConfigurationFile -PackageEntries $entries -FilePath $tempPath | Out-Null

@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: WinGet DSC v3 `PackageList` export support. `ConvertTo-WingetterConfigurationYaml` accepts a `-ResourceFormat` parameter (`Auto`, `PerPackage`, `PackageList`). Auto-detection probes for `Microsoft.WinGet.DSC` v3+ and falls back to per-package `WinGetPackage` resources when unavailable. The `PackageList` format emits a single resource with a packages array instead of one resource per package.
 - Added: Source Policy editor dialog accessible via the toolbar "Sources" button. Edits corporate mode toggle, allowed sources (Name,Type,URL,TrustLevel per line), and private REST sources (Name,URL per line). Validates source names and field counts before saving. The dialog respects the current theme and refreshes the corporate mode checkbox on save.
 - Added: Update Policy editor dialog accessible via the toolbar "Update Policy" button. Edits global not-before UTC, max deferrals, and maintenance windows (Name,Days,Start,End format). Validates datetime format and time ranges before saving. The dialog respects the current theme and preserves existing per-package policies.
 - Added: Update view now has a sort control (Name, Category, Installed Version) that persists the selected sort order in `settings.json` under `UpdateSortBy`. The sort is applied when entering update mode and when changed, and falls back to "Name" for invalid saved values.
