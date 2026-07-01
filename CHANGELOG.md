@@ -15,6 +15,8 @@ All notable changes to Wingetter will be documented in this file.
 - Fixed: Configuration resource IDs now include an index suffix (`_1`, `_2`, etc.) to prevent duplicate IDs when package names differ only in characters that get normalized to underscores (e.g., `Foo.Bar` vs `Foo-Bar`).
 - Fixed: Compliance report now correctly classifies packages with blank/malformed IDs as "Unresolved" instead of always falling through to "Missing" or "Current".
 - Fixed: Diagnostics redaction now checks `$env:APPDATA` before `$env:USERPROFILE` so APPDATA paths get the correct `<appdata>` label instead of the less-specific `<user-profile>` label.
+- Fixed: WinGet status dot colors now use theme tokens (`AccentGreen`, `LogSkip`, `LogFail`) instead of hardcoded hex values, adapting to light/dark mode.
+- Fixed: "Review Updates" button and "Install Selected" button now use DynamicResource bindings (`UpdateBtnBg`/`UpdateBtnHover`, `AccentGreenBg`) so their colors update when the theme toggles, instead of staying fixed amber/green in both modes.
 - Removed: Dead `Color` field from background worker log messages — these hex values were computed but discarded by `$AddLogEntry`.
 - Security: External catalog `iconDomain` validation now also rejects semicolons, colons, at-signs, whitespace, angle brackets, and quotes in addition to the existing URL metacharacter checks.
 - Fixed: Log entry rows now update their background, text, and status badge colors when the user toggles dark/light mode mid-session, instead of showing stale colors from the original render.

@@ -1549,6 +1549,10 @@ function Show-WinGetInstallerGUI {
         <SolidColorBrush x:Key="ChkMark" Color="#63b7ff"/>
         <SolidColorBrush x:Key="ChkText" Color="#dbe7f1"/>
         <SolidColorBrush x:Key="BtnDisabledBg" Color="#445265"/>
+        <SolidColorBrush x:Key="UpdateBtnBg" Color="#d97706"/>
+        <SolidColorBrush x:Key="UpdateBtnHover" Color="#f59e0b"/>
+        <SolidColorBrush x:Key="AccentGreenBg" Color="#1fb879"/>
+        <SolidColorBrush x:Key="AccentGreenHover" Color="#34d399"/>
         <!-- Toolbar / secondary button style -->
         <Style x:Key="ToolBtn" TargetType="Button">
             <Setter Property="Background" Value="#102133"/>
@@ -2050,15 +2054,15 @@ function Show-WinGetInstallerGUI {
                         <Button x:Name="UpdateAllBtn" Content="Review Updates" FontSize="11.5" FontWeight="SemiBold" Padding="14,8" Margin="0,0,8,0" Cursor="Hand" Foreground="White" ToolTip="Show installed apps from this catalog so you can choose what to update.">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
-                                    <Border x:Name="updateAllBorder" CornerRadius="10" Padding="{TemplateBinding Padding}" Background="#d97706">
+                                    <Border x:Name="updateAllBorder" CornerRadius="10" Padding="{TemplateBinding Padding}" Background="{DynamicResource UpdateBtnBg}">
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#f59e0b"/>
+                                            <Setter TargetName="updateAllBorder" Property="Background" Value="{DynamicResource UpdateBtnHover}"/>
                                         </Trigger>
                                         <Trigger Property="IsKeyboardFocused" Value="True">
-                                            <Setter TargetName="updateAllBorder" Property="Background" Value="#f59e0b"/>
+                                            <Setter TargetName="updateAllBorder" Property="Background" Value="{DynamicResource UpdateBtnHover}"/>
                                         </Trigger>
                                         <Trigger Property="IsEnabled" Value="False">
                                             <Setter TargetName="updateAllBorder" Property="Background" Value="{DynamicResource BtnDisabledBg}"/>
@@ -2074,13 +2078,7 @@ function Show-WinGetInstallerGUI {
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Grid>
-                                        <Border x:Name="installBorder" CornerRadius="12" Padding="{TemplateBinding Padding}">
-                                            <Border.Background>
-                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                    <GradientStop Color="#1fb879" Offset="0"/>
-                                                    <GradientStop Color="#34d399" Offset="1"/>
-                                                </LinearGradientBrush>
-                                            </Border.Background>
+                                        <Border x:Name="installBorder" CornerRadius="12" Padding="{TemplateBinding Padding}" Background="{DynamicResource AccentGreenBg}">
                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Border>
                                         <Border x:Name="installGlow" CornerRadius="12" Background="White" Opacity="0" IsHitTestVisible="False"/>
@@ -2567,6 +2565,10 @@ function Show-WinGetInstallerGUI {
         $res["ChkMark"]          = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["ChkMark"]))
         $res["ChkText"]          = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["ChkText"]))
         $res["BtnDisabledBg"]    = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["BtnDisabledBg"]))
+        $res["UpdateBtnBg"]      = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["UpdateBtnBg"]))
+        $res["UpdateBtnHover"]   = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["UpdateBtnHover"]))
+        $res["AccentGreenBg"]    = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["AccentGreen"]))
+        $res["AccentGreenHover"] = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["AccentGreenHover"]))
 
         # Search icon
         $ui["SearchIcon"].Foreground = $bc.ConvertFromString($t["SearchIcon"])
@@ -3378,19 +3380,22 @@ function Show-WinGetInstallerGUI {
         }
         if ($status.Installed) {
             $WinGetStatus.Text = & $GetWinGetStatusMessage $status
-            $statusColor = if ($readiness -and ($readiness.IsStale -or $readiness.Channel -eq "Unknown")) { "#ffbf69" } else { "#1fb879" }
+            $dotTheme = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+            $statusColor = if ($readiness -and ($readiness.IsStale -or $readiness.Channel -eq "Unknown")) { $dotTheme["LogSkip"] } else { $dotTheme["AccentGreen"] }
             $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString($statusColor)
             $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Collapsed
         } else {
             $WinGetStatus.Text = & $GetWinGetStatusMessage $status
-            $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#dc3545")
+            $dotTheme = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+            $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString($dotTheme["LogFail"])
             $canRepair = & $GetWinGetCanRepair $status
             $InstallWinGetBtn.Visibility = if ($canRepair) { [System.Windows.Visibility]::Visible } else { [System.Windows.Visibility]::Collapsed }
         }
     }
     if ($SmokeTest) {
         $WinGetStatus.Text = "WinGet smoke"
-        $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#1fb879")
+        $smokeTheme = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+        $WinGetDot.Fill = [System.Windows.Media.BrushConverter]::new().ConvertFromString($smokeTheme["AccentGreen"])
         $InstallWinGetBtn.Visibility = [System.Windows.Visibility]::Collapsed
     } else {
         & $checkWinGet
