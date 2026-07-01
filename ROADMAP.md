@@ -92,13 +92,6 @@
 
 ### P2
 
-- [ ] P2 - Add Wingetter self-update and provenance review
-  Why: Launcher and release hashes are verified locally, but users cannot compare the running app or checked-in EXE to the current GitHub release/raw manifest from inside Wingetter.
-  Evidence: `Wingetter.ps1:33-60`; `release\manifest.json`; README Quick Launch section; UniGetUI README; Patch My PC Home Updater; SLSA provenance guidance.
-  Touches: `Wingetter.ps1`, `src\Wingetter.App.ps1`, `src\Wingetter.Diagnostics.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ReleaseArtifact.ps1`, `tools\Test-LauncherManifest.ps1`.
-  Acceptance: a non-mutating "Check Wingetter update" path fetches the release/raw manifest with a timeout, compares version/module/bundle hashes and Authenticode status, reports current/stale/tampered/unsigned states, writes diagnostics evidence, and never replaces files without explicit user action.
-  Complexity: M
-
 - [ ] P2 - Add scheduled update-policy editor UI
   Why: update-policy JSON supports deferrals and maintenance windows, but users cannot safely review or edit it from the WPF app.
   Evidence: `README.md:174`; `src\Wingetter.UpdateWatcher.ps1:120-153`; Winget-AutoUpdate policy/GUI docs; Patch My PC scheduler features.

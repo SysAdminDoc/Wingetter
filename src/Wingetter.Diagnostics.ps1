@@ -392,6 +392,19 @@ function Export-WingetterDiagnosticsBundle {
             $warnings.Add("Could not probe source health: $($_.Exception.Message)")
         }
 
+        try {
+            if (Get-Command Get-WingetterSelfUpdateStatus -ErrorAction SilentlyContinue) {
+                $updateStatus = if ($SkipLiveWinGet) {
+                    Get-WingetterSelfUpdateStatus -TimeoutSeconds 1 -ManifestUrl "http://localhost:0/skip"
+                } else {
+                    Get-WingetterSelfUpdateStatus -TimeoutSeconds 10
+                }
+                $files.Add((Write-WingetterDiagnosticsJsonFile -Root $stageRoot -RelativePath "metadata/self-update-status.json" -InputObject $updateStatus -SensitiveValues $sensitiveValues -Depth 8))
+            }
+        } catch {
+            $warnings.Add("Could not check self-update status: $($_.Exception.Message)")
+        }
+
         $manifest = [PSCustomObject][ordered]@{
             Schema              = "Wingetter.DiagnosticsBundle.v1"
             GeneratedAtUtc      = (Get-Date).ToUniversalTime().ToString("o")

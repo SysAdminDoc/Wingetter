@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: `Get-WingetterSelfUpdateStatus` non-mutating self-update check. Fetches the remote `release/manifest.json` with a timeout, compares version and bundle hash against the local manifest, checks Authenticode signature on `Wingetter.exe`, and reports Current/UpdateAvailable/HashMismatch/FetchFailed status. Included in the diagnostics bundle as `metadata/self-update-status.json`. Never replaces files.
 - Added: Catalog freshness audit with result caching. The `-CheckWingetAvailability` flag in `Test-Catalog.ps1` now runs `winget show --id --exact --source winget` probes, caches results per package in `%APPDATA%\Wingetter\catalog-audit-cache.json` with a configurable TTL (default 7 days), skips already-cached packages, and reports missing/error status per failed ID.
 - Added: `tools\Compare-WingetterCatalog.ps1` diff tool that compares the current catalog against a git baseline (default `HEAD`) and reports added, removed, renamed, and category-moved packages plus gallery profile impact. Removed packages referenced by gallery profiles are flagged as breaking.
 - Added: Single-instance guard with activation handoff. `Start-Wingetter` acquires a user-scoped named mutex; a second launch detects the existing instance, brings it to the foreground (restoring from minimized if needed), shows an informational message, and exits without starting package operations.
