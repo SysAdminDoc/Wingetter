@@ -120,9 +120,3 @@
   Acceptance: after install/update completes, "Retry failed" builds a new preflight plan from last-run failed/cancelled/unresolved package IDs plus safe options/source, excludes successes/current rows, preserves original report links, and tests cover empty/no-failure and partial-failure runs.
   Complexity: M
 
-- [ ] P2 - Add catalog curation diff and impact report
-  Why: catalog validation proves current structure, but maintainers need a local review of package/category/source/profile impact before curated catalog changes land.
-  Evidence: `catalog\winget.json`; `profiles\gallery.json`; `tools\Test-Catalog.ps1`; winstall package-list/search patterns.
-  Touches: `tools\Test-Catalog.ps1`, `tools\Export-WingetterCatalog.ps1`, `catalog\winget.json`, `profiles\gallery.json`.
-  Acceptance: a local tool compares current catalog/groups/profiles with `HEAD` or a supplied baseline and reports added, removed, renamed, category-moved, source/trust-changed, profile-referenced, README-count-drift, and validation-blocking deltas without mutating catalog data.
-  Complexity: S
