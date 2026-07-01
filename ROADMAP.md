@@ -99,10 +99,4 @@
   Acceptance: a settings dialog edits global not-before, max deferrals, local maintenance windows, and per-package policy rows; validates UTC/local conversions and invalid windows; saves the existing schema; scheduled-task registration can consume the selected policy path; UI smoke covers invalid and saved policies.
   Complexity: M
 
-- [ ] P2 - Add failed-run retry from the last migration report
-  Why: migration reports capture per-package outcomes, but the UI cannot reselect only failed, cancelled, or unresolved rows for a fresh reviewed run.
-  Evidence: `src\Wingetter.Groups.ps1:478-660`; `src\Wingetter.Ui.ps1:3515-3548`; Ninite Pro retry/current reporting; PDQ retry queue documentation.
-  Touches: `src\Wingetter.Groups.ps1`, `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ProfileJson.ps1`, `tools\Test-UiSmoke.ps1`.
-  Acceptance: after install/update completes, "Retry failed" builds a new preflight plan from last-run failed/cancelled/unresolved package IDs plus safe options/source, excludes successes/current rows, preserves original report links, and tests cover empty/no-failure and partial-failure runs.
-  Complexity: M
 

@@ -599,6 +599,36 @@ function Export-WingetterMigrationReport {
     }
 }
 
+function Get-WingetterRetryPackagesFromReport {
+    param([object]$Report)
+
+    if ($null -eq $Report -or $null -eq $Report.packages) { return @() }
+    $retryStatuses = @("FAILED", "CANCELLED", "NOT RUN")
+    $retryable = [System.Collections.ArrayList]::new()
+    foreach ($pkg in @($Report.packages)) {
+        $status = [string]$pkg.status
+        if ($retryStatuses -contains $status) {
+            $installOptions = $null
+            if ($Report.runPlan -and $Report.runPlan.Packages) {
+                foreach ($planPkg in @($Report.runPlan.Packages)) {
+                    if ([string]$planPkg.PackageId -eq [string]$pkg.packageId -and $planPkg.PSObject.Properties["InstallOptions"]) {
+                        $installOptions = $planPkg.InstallOptions
+                        break
+                    }
+                }
+            }
+            [void]$retryable.Add([PSCustomObject]@{
+                Name           = [string]$pkg.name
+                WingetId       = [string]$pkg.packageId
+                SourceName     = if ($pkg.source) { [string]$pkg.source } else { "winget" }
+                PriorStatus    = $status
+                InstallOptions = $installOptions
+            })
+        }
+    }
+    return [object[]]$retryable.ToArray()
+}
+
 # Pre-built groups
 $Script:BuiltInGroups = [ordered]@{
     "Essential PC Setup" = @(

@@ -413,6 +413,30 @@ if ($failures.Count -eq 0) {
     }
 }
 
+$fixtureReport = [PSCustomObject]@{
+    schema = "Wingetter.MigrationReport.v1"
+    packages = @(
+        [PSCustomObject]@{ name = "Chrome"; packageId = "Google.Chrome"; status = "SUCCESS"; source = "winget" },
+        [PSCustomObject]@{ name = "Firefox"; packageId = "Mozilla.Firefox"; status = "FAILED"; source = "winget" },
+        [PSCustomObject]@{ name = "7zip"; packageId = "7zip.7zip"; status = "CANCELLED"; source = "winget" },
+        [PSCustomObject]@{ name = "VLC"; packageId = "VideoLAN.VLC"; status = "UP TO DATE"; source = "winget" },
+        [PSCustomObject]@{ name = "Git"; packageId = "Git.Git"; status = "NOT RUN"; source = "winget" }
+    )
+    runPlan = $null
+}
+$retryPkgs = Get-WingetterRetryPackagesFromReport -Report $fixtureReport
+if (@($retryPkgs).Count -ne 3) { Add-Failure "Retry packages should be 3 (FAILED/CANCELLED/NOT RUN), got $(@($retryPkgs).Count)." }
+$retryIds = @($retryPkgs | ForEach-Object { $_.WingetId })
+if ($retryIds -notcontains "Mozilla.Firefox") { Add-Failure "Retry packages missing FAILED package." }
+if ($retryIds -notcontains "7zip.7zip") { Add-Failure "Retry packages missing CANCELLED package." }
+if ($retryIds -notcontains "Git.Git") { Add-Failure "Retry packages missing NOT RUN package." }
+if ($retryIds -contains "Google.Chrome") { Add-Failure "Retry packages should not include SUCCESS." }
+if ($retryIds -contains "VideoLAN.VLC") { Add-Failure "Retry packages should not include UP TO DATE." }
+$emptyRetry = Get-WingetterRetryPackagesFromReport -Report ([PSCustomObject]@{ packages = @([PSCustomObject]@{ name = "X"; packageId = "X.X"; status = "SUCCESS"; source = "winget" }) })
+if (@($emptyRetry).Count -ne 0) { Add-Failure "Retry from all-success report should be empty." }
+$nullRetry = Get-WingetterRetryPackagesFromReport -Report $null
+if (@($nullRetry).Count -ne 0) { Add-Failure "Retry from null report should be empty." }
+
 if ($failures.Count -gt 0) {
     Write-Host "Profile JSON validation failed:" -ForegroundColor Red
     foreach ($failure in $failures) {
