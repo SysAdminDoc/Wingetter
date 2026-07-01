@@ -151,7 +151,12 @@ function Test-WingetterIconCacheFresh {
 function Save-WingetterIconDownload {
     param([string]$Url, [string]$Path, [int]$TimeoutMs = 2500)
 
-    $request = [System.Net.WebRequest]::Create($Url)
+    if ([string]::IsNullOrWhiteSpace($Url)) { throw "Icon URL is empty." }
+    $uri = $null
+    if (-not [System.Uri]::TryCreate($Url, [System.UriKind]::Absolute, [ref]$uri)) { throw "Invalid icon URL." }
+    if ($uri.Scheme -ne "https") { throw "Icon URL must use HTTPS." }
+
+    $request = [System.Net.WebRequest]::Create($uri)
     $request.Timeout = $TimeoutMs
     $request.ReadWriteTimeout = $TimeoutMs
     $request.UserAgent = "Wingetter"
@@ -1470,7 +1475,7 @@ function Show-WinGetInstallerGUI {
                             <TextBlock x:Name="SearchIcon" Grid.Column="0" Text="⌕" FontSize="17" Foreground="#7a90a6" VerticalAlignment="Center" Margin="1,0,8,0" IsHitTestVisible="False"/>
                             <TextBlock x:Name="SearchPlaceholder" Grid.Column="1" Text="Search apps or Winget IDs" Foreground="#70859b" FontSize="13" VerticalAlignment="Center" IsHitTestVisible="False"/>
                             <TextBox x:Name="SearchBox" Grid.Column="1" Background="Transparent" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Foreground="#eff6fb" Padding="0,8,0,8" AutomationProperties.Name="Search apps by name, package ID, category, group, source, or state"/>
-                            <Button x:Name="ClearSearchBtn" Grid.Column="2" Style="{StaticResource ToolBtn}" Content="Clear" Padding="10,5" Margin="8,0,0,0" FontSize="11" Cursor="Hand" Visibility="Collapsed"/>
+                            <Button x:Name="ClearSearchBtn" Grid.Column="2" Style="{StaticResource ToolBtn}" Content="Clear" Padding="10,5" Margin="8,0,0,0" FontSize="11" Cursor="Hand" Visibility="Collapsed" AutomationProperties.Name="Clear search filter"/>
                         </Grid>
                     </Border>
                     <Border x:Name="VisibleCountBorder" Grid.Column="1" Background="#102133" BorderBrush="#223247" BorderThickness="1" CornerRadius="12" Padding="12,9" VerticalAlignment="Center" Margin="0,0,12,0">
@@ -2264,6 +2269,7 @@ function Show-WinGetInstallerGUI {
     # ========================================================
     $splash = Show-Splash
     $splash.Window.Show()
+    try {
     Update-Splash $splash "Building interface..." 50
 
     $toBrush = { param([string]$hex) [System.Windows.Media.BrushConverter]::new().ConvertFromString($hex) }
@@ -2324,7 +2330,7 @@ function Show-WinGetInstallerGUI {
         $ui["DetailWarnings"].Text = ""
         & $RefreshPinControls $null
         & $SetDetailText $ui["DetailPinState"] "Loading..."
-        [System.Windows.Forms.Application]::DoEvents()
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
 
         $details = Get-WingetterPackageSourceDetails -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId -SourceName $sourceName
         $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId
@@ -2366,7 +2372,7 @@ function Show-WinGetInstallerGUI {
         foreach ($btn in @($ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
             if ($btn) { $btn.IsEnabled = $false }
         }
-        [System.Windows.Forms.Application]::DoEvents()
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
 
         $result = Invoke-WingetterPackageSourcePinOperation -SourceAdapter $ui["PackageSource"] -PackageId $package.WingetId -Operation $Operation
         $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $ui["PackageSource"] -PackageId $package.WingetId
@@ -3389,6 +3395,8 @@ function Show-WinGetInstallerGUI {
         $dlg.Filter = "JSON Config (*.json;*.wingetter.json)|*.json;*.wingetter.json|All Files (*.*)|*.*"
         if ($dlg.ShowDialog() -eq $true) {
             try {
+                $importFileInfo = Get-Item -LiteralPath $dlg.FileName -ErrorAction Stop
+                if ($importFileInfo.Length -gt 5MB) { throw "JSON file is larger than 5 MB. This is likely not a valid package profile." }
                 $content = Get-Content $dlg.FileName -Raw | ConvertFrom-Json
                 $fallbackName = [System.IO.Path]::GetFileNameWithoutExtension($dlg.FileName)
                 $import = Import-WingetterPackageSourceProfile -SourceAdapter $ui["PackageSource"] -Content $content -FallbackGroupName $fallbackName
@@ -4332,7 +4340,9 @@ function Show-WinGetInstallerGUI {
     }
 
     Update-Splash $splash "Ready!" 100
-    $splash.Window.Close()
+    } finally {
+        try { $splash.Window.Close() } catch {}
+    }
 
     $installedTimer = $null
     $installedHandle = $null

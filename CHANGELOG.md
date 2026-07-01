@@ -9,6 +9,13 @@ All notable changes to Wingetter will be documented in this file.
 - Fixed: Toast notification XML now escapes interpolated values via `SecurityElement.Escape()` so source names or statuses containing `&`, `<`, `>` cannot break the XML.
 - Fixed: `Join-ProcessArguments` now doubles trailing backslashes before the closing quote per MSVC CRT argument parsing convention. Paths like `C:\path to\` no longer produce broken arguments where the backslash escapes the closing quote.
 - Fixed: `Export-WingetterConfigurationFile` now uses `Set-WingetterFileAtomic` instead of direct `Set-Content`, consistent with all other file-writing paths.
+- Security: Icon downloads now validate that URLs use HTTPS scheme before fetching, preventing SSRF via crafted external catalog entries with `file://` or internal HTTP URLs.
+- Fixed: Markdown migration report tables now pipe-escape all fields (name, ID, status, versions, source), not just the command and reason columns.
+- Fixed: JSON import flow rejects files larger than 5 MB before parsing to prevent OOM on oversized inputs.
+- Fixed: Splash window is now closed in a `finally` block so it cannot remain orphaned on screen if an exception occurs during initialization.
+- Fixed: Replaced `System.Windows.Forms.Application.DoEvents()` with `Dispatcher.Invoke` to prevent reentrancy during package detail loading and pin operations.
+- Fixed: `ClearSearchBtn` now has `AutomationProperties.Name="Clear search filter"` for screen reader users.
+- Fixed: Launcher now cleans up stale `%TEMP%\Wingetter\src-*` download directories, keeping only the 3 most recent.
 - Fixed: Plan review, profile gallery, and save group dialogs now respect the current theme (dark/light) instead of using hardcoded dark-mode colors. All three dialogs derive their background, text, border, input, and button colors from the active theme state.
 - Fixed: `Export-GroupAsPS1` now escapes the group name via `ConvertTo-WingetterPowerShellSingleQuotedString` in the generated script, preventing syntax errors when group names contain backticks, dollar signs, or quotes.
 - Added: Uninstall preflight plan support in `New-WingetterRunPlan`. The `uninstall` action validates that packages are installed before marking them runnable, refuses non-installed packages (NOT_INSTALLED skip), applies source-policy blocking, and generates a reviewed plan with the same schema as install/upgrade plans.

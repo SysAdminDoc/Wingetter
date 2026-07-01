@@ -570,8 +570,12 @@ function ConvertTo-WingetterMigrationMarkdown {
         [void]$sb.AppendLine("| Package | ID | Plan | Status | Reason |")
         [void]$sb.AppendLine("|---|---|---|---|---|")
         foreach ($package in @($Report.runPlan.Packages)) {
+            $pName = ([string]$package.Name) -replace '\|', '\|'
+            $pkgId = ([string]$package.PackageId) -replace '\|', '\|'
+            $pAction = ([string]$package.PlannedAction) -replace '\|', '\|'
+            $pStatus = ([string]$package.Status) -replace '\|', '\|'
             $reason = ([string]$package.Reason) -replace '\|', '\|'
-            [void]$sb.AppendLine("| $($package.Name) | $($package.PackageId) | $($package.PlannedAction) | $($package.Status) | $reason |")
+            [void]$sb.AppendLine("| $pName | $pkgId | $pAction | $pStatus | $reason |")
         }
     }
     [void]$sb.AppendLine("")
@@ -580,8 +584,14 @@ function ConvertTo-WingetterMigrationMarkdown {
     [void]$sb.AppendLine("| Package | ID | Status | Installed | Available | Source | Command |")
     [void]$sb.AppendLine("|---|---|---|---|---|---|---|")
     foreach ($package in @($Report.packages)) {
+        $rName = ([string]$package.name) -replace '\|', '\|'
+        $rId = ([string]$package.packageId) -replace '\|', '\|'
+        $rStatus = ([string]$package.status) -replace '\|', '\|'
+        $rInstalled = ([string]$package.installedVersion) -replace '\|', '\|'
+        $rAvailable = ([string]$package.availableVersion) -replace '\|', '\|'
+        $rSource = ([string]$package.source) -replace '\|', '\|'
         $command = ([string]$package.command) -replace '\|', '\|'
-        [void]$sb.AppendLine("| $($package.name) | $($package.packageId) | $($package.status) | $($package.installedVersion) | $($package.availableVersion) | $($package.source) | `$command` |")
+        [void]$sb.AppendLine("| $rName | $rId | $rStatus | $rInstalled | $rAvailable | $rSource | ``$command`` |")
     }
     return $sb.ToString()
 }

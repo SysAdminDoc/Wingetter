@@ -45,14 +45,14 @@ $Script:WingetterModuleHashes = @{
     'Wingetter.Common.ps1' = '3757DD0C192332B49E13C101588952AAB5C80E785334AFB0532BD229688F99B8'
     'Wingetter.Catalog.ps1' = '03B4E753D4709DC12934407B4D91801BA759BCE63D5EFD7AB1F1914283C53488'
     'Wingetter.WinGet.ps1' = '7BD01218AAC80153163620FE8AE8C3F6A7C2007AEDF1804843D707B94943B5AB'
-    'Wingetter.Groups.ps1' = '88985E510696610A57341AC583DC4B165B657DDFC22A602A990FDA57EA1C489C'
+    'Wingetter.Groups.ps1' = 'FD7A073720BC274329AF8426E2C3426B285CE2002E352984889F96F805ABD908'
     'Wingetter.ProfileGallery.ps1' = '34043F5BF1EFC70E0C0D7B611F5E30A0D9A547057D43B2C44BCDCC7C5C664D9D'
     'Wingetter.Sources.ps1' = 'E22BA29A96E8D0089F57BB6B6A11F6DEB08F3390EF71682D44D2477F27C48EC9'
     'Wingetter.OfflineCache.ps1' = 'A54EB903297BE8054D2E500E8DE0125DF6D5FB02F752EDAD019625A326E4BADD'
     'Wingetter.Configuration.ps1' = '27C13CA232E92DAC5AFD733E6154CF6A8E9EDDC552258F84F1835A0E2942DF20'
     'Wingetter.UpdateWatcher.ps1' = 'B93EAF688B65EFA24B2FB59A26628C95B9245EA0F66F3D6FADEAB139DD8040A1'
     'Wingetter.Diagnostics.ps1' = 'BB8102B3F1F780728A5CF8A7E28D115FA6988BD2474AF673BEFCC156A0E23E43'
-    'Wingetter.Ui.ps1' = '62F4E53C74D0C118440F4D6704961A1A349C253B2F15EAC83722226402CEA46F'
+    'Wingetter.Ui.ps1' = '4BD33455B715490A06D381344B3E2F7C7F0BB3B25276E4E923AABCC04A2BA6F1'
     'Wingetter.App.ps1' = 'E74AE740AFD1B9DCEC8E5CCF9CA1E6290D78F9FC86A75BC06E0DCDF7F9A2B952'
 }
 # END WingetterModuleHashes
@@ -126,6 +126,17 @@ function Get-WingetterModuleDirectory {
     $sessionId = [System.Guid]::NewGuid().ToString("N").Substring(0, 8)
     $downloadRoot = Join-Path $env:TEMP ("Wingetter\src-" + $sessionId)
     New-Item -ItemType Directory -Path $downloadRoot -Force | Out-Null
+
+    $parentDir = Join-Path $env:TEMP "Wingetter"
+    try {
+        $staleDirs = @(Get-ChildItem -Path $parentDir -Directory -Filter "src-*" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -ne "src-$sessionId" } |
+            Sort-Object LastWriteTimeUtc -Descending |
+            Select-Object -Skip 3)
+        foreach ($stale in $staleDirs) {
+            try { Remove-Item -Path $stale.FullName -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+        }
+    } catch {}
 
     foreach ($file in $Script:WingetterModuleFiles) {
         # Download to a temp file first, sanity-check the contents, then
