@@ -272,9 +272,6 @@ if ($failures.Count -eq 0) {
         }
     }
 
-    # Atomic file write: write to a path, kill the temp file mid-flight is not
-    # representative without race injection, so just verify that the helper
-    # writes the destination and leaves no .tmp siblings on success.
     $atomicDir = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-atomic-test-" + [System.Guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $atomicDir -Force | Out-Null
     try {
@@ -283,8 +280,40 @@ if ($failures.Count -eq 0) {
         if (-not (Test-Path $atomicTarget)) { Add-Failure "Set-WingetterFileAtomic did not write the target file." }
         $stragglers = @(Get-ChildItem -Path $atomicDir -Filter ".*.tmp" -Force -ErrorAction SilentlyContinue)
         if ($stragglers.Count -gt 0) { Add-Failure "Set-WingetterFileAtomic left $($stragglers.Count) temp file(s) behind." }
+
+        Set-WingetterFileAtomic -Path $atomicTarget -Content '{"version":2}' -Encoding UTF8
+        $overwritten = Get-Content -Path $atomicTarget -Raw
+        if ($overwritten -notmatch '"version"') { Add-Failure "Set-WingetterFileAtomic did not overwrite existing file." }
+
+        $subDir = Join-Path $atomicDir "nested\deep"
+        $nestedTarget = Join-Path $subDir "auto.json"
+        Set-WingetterFileAtomic -Path $nestedTarget -Content '{"nested":true}' -Encoding UTF8
+        if (-not (Test-Path $nestedTarget)) { Add-Failure "Set-WingetterFileAtomic did not auto-create nested directories." }
     } finally {
         Remove-Item -Path $atomicDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    $corruptDir = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-corrupt-test-" + [System.Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Path $corruptDir -Force | Out-Null
+    try {
+        $corruptTarget = Join-Path $corruptDir "settings.json"
+        Set-Content -Path $corruptTarget -Value "NOT-VALID-JSON{{{{" -Encoding UTF8
+        $settings = Get-WingetterSettings -Path $corruptTarget
+        if ($null -eq $settings) { Add-Failure "Get-WingetterSettings returned null on corrupt input." }
+        if ($settings.Schema -ne "Wingetter.Settings.v1") { Add-Failure "Get-WingetterSettings did not return default schema on corrupt input." }
+        $corruptBackup = "$corruptTarget.corrupt"
+        if (-not (Test-Path $corruptBackup)) { Add-Failure "Move-WingetterCorruptFileAside did not create .corrupt backup." }
+        if (Test-Path $corruptTarget) { Add-Failure "Move-WingetterCorruptFileAside did not remove the original corrupt file." }
+
+        $settingsPath = Join-Path $corruptDir "roundtrip.json"
+        $saved = Save-WingetterSettings -Settings ([PSCustomObject]@{ PrivateIconMode = $true }) -Path $settingsPath
+        if (-not (Test-Path $settingsPath)) { Add-Failure "Save-WingetterSettings did not write via atomic path." }
+        $reloaded = Get-WingetterSettings -Path $settingsPath
+        if (-not $reloaded.PrivateIconMode) { Add-Failure "Save-WingetterSettings round-trip lost PrivateIconMode value." }
+        $tmpLeftover = @(Get-ChildItem -Path $corruptDir -Filter ".*.tmp" -Force -ErrorAction SilentlyContinue)
+        if ($tmpLeftover.Count -gt 0) { Add-Failure "Save-WingetterSettings left $($tmpLeftover.Count) temp file(s) behind." }
+    } finally {
+        Remove-Item -Path $corruptDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     $upgradeArgs = New-WinGetPackageOperationArguments -Action "upgrade" -PackageId "Google.Chrome" -Silent $true -AcceptAgreements $true -IncludePinned $true

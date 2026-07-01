@@ -120,13 +120,6 @@
 
 ### P1
 
-- [ ] P1 - Make mutable app-state writes atomic and recoverable
-  Why: Wingetter already has partial atomic writes, but settings and several update/report paths still use direct writes that can corrupt user state after a crash or interruption.
-  Evidence: `src\Wingetter.Common.ps1:80-104`; `src\Wingetter.WinGet.ps1:936-958`; `src\Wingetter.UpdateWatcher.ps1:145-149`; NIST SSDF; SLSA package-management trust guidance.
-  Touches: `src\Wingetter.Common.ps1`, `src\Wingetter.WinGet.ps1`, `src\Wingetter.Groups.ps1`, `src\Wingetter.Sources.ps1`, `src\Wingetter.UpdateWatcher.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\Test-UpdateWatcher.ps1`, `tools\Test-SourcePolicy.ps1`.
-  Acceptance: atomic write and corrupt-JSON recovery helpers live in `Common`; settings, groups, source policy, update policy, installed cache, update-check results, and user-facing JSON exports use same-directory temp plus replace; corrupt settings/policy/result files are moved aside; tests simulate interrupted and corrupt writes.
-  Complexity: M
-
 - [ ] P1 - Add WinGet source-health diagnostics and recovery guidance
   Why: Client readiness is now classified, but stale/offline/corrupt WinGet sources still appear as package failures unless source health is probed separately.
   Evidence: `src\Wingetter.WinGet.ps1:5-114`; `src\Wingetter.Diagnostics.ps1:309-424`; Microsoft WinGet troubleshooting docs; microsoft/winget-cli issues #6015 and #6329.

@@ -598,11 +598,8 @@ function Export-WingetterRunPlan {
         [string]$FilePath
     )
 
-    $parent = Split-Path -Parent $FilePath
-    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path -LiteralPath $parent)) {
-        New-Item -ItemType Directory -Path $parent -Force | Out-Null
-    }
-    $RunPlan | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+    $json = $RunPlan | ConvertTo-Json -Depth 8
+    Set-WingetterFileAtomic -Path $FilePath -Content $json -Encoding UTF8
     return $FilePath
 }
 
@@ -931,33 +928,6 @@ function New-WinGetListArguments {
         $arguments += "--ascending"
     }
     return Add-WinGetCleanOutputArguments -Arguments $arguments -WinGetVersion $WinGetVersion
-}
-
-function Set-WingetterFileAtomic {
-    # Write $Content to $Path via a sibling temp file + Move-Item -Force. Avoids
-    # leaving a partially-written file behind when two writers race (concurrent
-    # installed-app scans, scheduled task firing alongside the UI, etc.) or
-    # when the process is interrupted between the open and the close.
-    param(
-        [Parameter(Mandatory = $true)][string]$Path,
-        [Parameter(Mandatory = $true)][string]$Content,
-        [string]$Encoding = "UTF8"
-    )
-    $directory = Split-Path -Parent $Path
-    if (![string]::IsNullOrWhiteSpace($directory) -and !(Test-Path $directory)) {
-        New-Item -ItemType Directory -Path $directory -Force | Out-Null
-    }
-    $tempName = ".$([System.IO.Path]::GetFileName($Path)).$([System.Guid]::NewGuid().ToString('N')).tmp"
-    $tempPath = if ($directory) { Join-Path $directory $tempName } else { $tempName }
-    try {
-        Set-Content -Path $tempPath -Value $Content -Encoding $Encoding -ErrorAction Stop
-        Move-Item -Path $tempPath -Destination $Path -Force -ErrorAction Stop
-    } catch {
-        if (Test-Path $tempPath) {
-            try { Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue } catch {}
-        }
-        throw
-    }
 }
 
 function ConvertFrom-WinGetPackageObject {

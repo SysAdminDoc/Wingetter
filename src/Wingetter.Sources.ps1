@@ -577,16 +577,7 @@ function Save-WingetterSourcePolicy {
 
     $normalized = ConvertTo-WingetterSourcePolicy -Policy $Policy
     $normalized.UpdatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-    $parent = Split-Path -Parent $Path
-    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path $parent)) {
-        New-Item -ItemType Directory -Path $parent -Force | Out-Null
-    }
-    $json = $normalized | ConvertTo-Json -Depth 8
-    if (Get-Command Set-WingetterFileAtomic -ErrorAction SilentlyContinue) {
-        Set-WingetterFileAtomic -Path $Path -Content $json -Encoding UTF8
-    } else {
-        Set-Content -Path $Path -Value $json -Encoding UTF8
-    }
+    Set-WingetterFileAtomic -Path $Path -Content ($normalized | ConvertTo-Json -Depth 8) -Encoding UTF8
     return $normalized
 }
 
@@ -979,10 +970,6 @@ function Export-WingetterSourcePolicy {
         SourceAddCommands    = @($commands)
     }
 
-    $parent = Split-Path -Parent $FilePath
-    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path $parent)) {
-        New-Item -ItemType Directory -Path $parent -Force | Out-Null
-    }
-    $export | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+    Set-WingetterFileAtomic -Path $FilePath -Content ($export | ConvertTo-Json -Depth 8) -Encoding UTF8
     return [PSCustomObject]$export
 }

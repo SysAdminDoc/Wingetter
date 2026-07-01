@@ -353,11 +353,7 @@ function Export-WingetterOfflineCacheManifest {
         [string]$ManifestPath
     )
 
-    $parent = Split-Path -Parent $ManifestPath
-    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path $parent)) {
-        New-Item -ItemType Directory -Path $parent -Force | Out-Null
-    }
-    $Manifest | ConvertTo-Json -Depth 10 | Set-Content -Path $ManifestPath -Encoding UTF8
+    Set-WingetterFileAtomic -Path $ManifestPath -Content ($Manifest | ConvertTo-Json -Depth 10) -Encoding UTF8
     $scriptPath = Join-Path (Split-Path -Parent $ManifestPath) "install-offline.ps1"
     Export-WingetterOfflineReplayScript -ManifestPath $ManifestPath -ScriptPath $scriptPath | Out-Null
     return [PSCustomObject]@{

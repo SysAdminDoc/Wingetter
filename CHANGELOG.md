@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Changed: `Set-WingetterFileAtomic` moved from `Wingetter.WinGet.ps1` to `Wingetter.Common.ps1` so all modules use it directly without `Get-Command` fallback guards. Settings, groups, source policy, update policy, update-check results, run-plan exports, migration reports, group exports, offline-cache manifests, and source-policy exports now all write via temp-file-plus-rename, preventing partial files from concurrent writes or interrupted saves.
 - Added: Scheduled update policy controls. Update checks now load `%APPDATA%\Wingetter\update-policy.json`, support global and per-package `NotBeforeUtc` deferrals, max-deferral limits, maintenance windows, deferred/outside-window counts, and scheduled-task propagation through `-UpdatePolicyPath`.
 - Added: Redacted diagnostics bundle export. The GUI **Diagnostics** action and `tools\Export-DiagnosticsBundle.ps1` write a ZIP with catalog/version metadata, recent logs, update-check summaries, migration report evidence, `winget --info`, source and pin captures, and source policy data with private headers redacted.
 - Added: Private icon mode. A persisted `settings.json` flag disables remote favicon fetches, keeps deterministic letter icons, and the non-private icon loader now uses cache TTL checks plus short network timeouts.

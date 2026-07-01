@@ -138,16 +138,7 @@ function Save-WingetterUpdatePolicy {
 
     $normalized = ConvertTo-WingetterUpdatePolicy -Policy $Policy
     $normalized.UpdatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-    $parent = Split-Path -Parent $Path
-    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path -LiteralPath $parent)) {
-        New-Item -ItemType Directory -Path $parent -Force | Out-Null
-    }
-    $json = $normalized | ConvertTo-Json -Depth 8
-    if (Get-Command Set-WingetterFileAtomic -ErrorAction SilentlyContinue) {
-        Set-WingetterFileAtomic -Path $Path -Content $json -Encoding UTF8
-    } else {
-        Set-Content -Path $Path -Value $json -Encoding UTF8
-    }
+    Set-WingetterFileAtomic -Path $Path -Content ($normalized | ConvertTo-Json -Depth 8) -Encoding UTF8
     return $normalized
 }
 
@@ -405,7 +396,7 @@ function Save-WingetterUpdateCheckResult {
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
     $entropy = [System.Guid]::NewGuid().ToString("N").Substring(0, 4)
     $path = Join-Path $LogRoot "$stamp-$entropy-update-check.json"
-    $Result | ConvertTo-Json -Depth 8 | Set-Content -Path $path -Encoding UTF8
+    Set-WingetterFileAtomic -Path $path -Content ($Result | ConvertTo-Json -Depth 8) -Encoding UTF8
     return $path
 }
 

@@ -20,11 +20,7 @@ function Get-SavedGroups {
 function Save-WingetterGroupsFile {
     param([hashtable]$Groups)
     $json = $Groups | ConvertTo-Json -Depth 8
-    if (Get-Command Set-WingetterFileAtomic -ErrorAction SilentlyContinue) {
-        Set-WingetterFileAtomic -Path $Script:GroupsFile -Content $json -Encoding UTF8
-    } else {
-        Set-Content -Path $Script:GroupsFile -Value $json -Encoding UTF8
-    }
+    Set-WingetterFileAtomic -Path $Script:GroupsFile -Content $json -Encoding UTF8
 }
 
 function Save-GroupToFile {
@@ -159,7 +155,7 @@ function Export-GroupAsPS1 {
     [void]$sb.AppendLine('Write-Host "====================================" -ForegroundColor Cyan')
     [void]$sb.AppendLine('Read-Host "Press Enter to exit"')
 
-    $sb.ToString() | Set-Content -Path $FilePath -Encoding UTF8
+    Set-WingetterFileAtomic -Path $FilePath -Content $sb.ToString() -Encoding UTF8
 }
 
 function Export-GroupAsJSON {
@@ -180,7 +176,7 @@ function Export-GroupAsJSON {
         PackageIds = $ids
         Packages   = [object[]]$entries
     }
-    $obj | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+    Set-WingetterFileAtomic -Path $FilePath -Content ($obj | ConvertTo-Json -Depth 8) -Encoding UTF8
 }
 
 function Export-GroupAsWinGetJSON {
@@ -222,7 +218,7 @@ function Export-GroupAsWinGetJSON {
     }
     if ($wingetVersion) { $obj["WinGetVersion"] = [string]$wingetVersion }
 
-    $obj | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+    Set-WingetterFileAtomic -Path $FilePath -Content ($obj | ConvertTo-Json -Depth 8) -Encoding UTF8
 }
 
 function Get-JsonPropertyValue {
@@ -597,9 +593,9 @@ function Export-WingetterMigrationReport {
 
     $extension = [System.IO.Path]::GetExtension($FilePath)
     if ($extension -eq ".md") {
-        ConvertTo-WingetterMigrationMarkdown -Report $Report | Set-Content -Path $FilePath -Encoding UTF8
+        Set-WingetterFileAtomic -Path $FilePath -Content (ConvertTo-WingetterMigrationMarkdown -Report $Report) -Encoding UTF8
     } else {
-        $Report | ConvertTo-Json -Depth 8 | Set-Content -Path $FilePath -Encoding UTF8
+        Set-WingetterFileAtomic -Path $FilePath -Content ($Report | ConvertTo-Json -Depth 8) -Encoding UTF8
     }
 }
 

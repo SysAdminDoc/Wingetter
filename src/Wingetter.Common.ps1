@@ -94,13 +94,8 @@ function Save-WingetterSettings {
     $settingsToSave.PrivateIconMode = [bool]$settingsToSave.PrivateIconMode
     $settingsToSave.UpdatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
 
-    $parent = Split-Path -Parent $Path
-    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path -LiteralPath $parent)) {
-        New-Item -ItemType Directory -Path $parent -Force | Out-Null
-    }
-    $targetPath = if ([System.IO.Path]::IsPathRooted($Path)) { $Path } else { (Join-Path (Get-Location).Path $Path) }
-    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-    [System.IO.File]::WriteAllText($targetPath, (($settingsToSave | ConvertTo-Json -Depth 6) + [Environment]::NewLine), $utf8NoBom)
+    $json = ($settingsToSave | ConvertTo-Json -Depth 6) + [Environment]::NewLine
+    Set-WingetterFileAtomic -Path $Path -Content $json -Encoding UTF8
     return $settingsToSave
 }
 
@@ -113,6 +108,29 @@ function Set-WingetterPrivateIconMode {
     $settings = Get-WingetterSettings -Path $Path
     $settings.PrivateIconMode = [bool]$Enabled
     Save-WingetterSettings -Settings $settings -Path $Path
+}
+
+function Set-WingetterFileAtomic {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Content,
+        [string]$Encoding = "UTF8"
+    )
+    $directory = Split-Path -Parent $Path
+    if (![string]::IsNullOrWhiteSpace($directory) -and !(Test-Path $directory)) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+    $tempName = ".$([System.IO.Path]::GetFileName($Path)).$([System.Guid]::NewGuid().ToString('N')).tmp"
+    $tempPath = if ($directory) { Join-Path $directory $tempName } else { $tempName }
+    try {
+        Set-Content -Path $tempPath -Value $Content -Encoding $Encoding -ErrorAction Stop
+        Move-Item -Path $tempPath -Destination $Path -Force -ErrorAction Stop
+    } catch {
+        if (Test-Path $tempPath) {
+            try { Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue } catch {}
+        }
+        throw
+    }
 }
 
 function Get-WingetterFileSha256 {
