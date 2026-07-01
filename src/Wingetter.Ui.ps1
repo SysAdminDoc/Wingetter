@@ -1337,14 +1337,7 @@ function Show-WinGetInstallerGUI {
                     <ControlTemplate TargetType="ProgressBar">
                         <Grid>
                             <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="4"/>
-                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="4">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop Color="#1fb879" Offset="0"/>
-                                        <GradientStop Color="#34d399" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                            </Border>
+                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" CornerRadius="4" Background="{TemplateBinding Foreground}"/>
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -1651,7 +1644,14 @@ function Show-WinGetInstallerGUI {
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock x:Name="ProgressText" Text="Choose apps to install or load a saved group to get started." Foreground="#94a7bc" FontSize="12.5"/>
-                        <ProgressBar x:Name="ProgressBar" Height="8" Value="0" Maximum="100" Background="#132132" Foreground="#1fb879" BorderThickness="0" Margin="0,8,0,0"/>
+                        <ProgressBar x:Name="ProgressBar" Height="8" Value="0" Maximum="100" Background="#132132" BorderThickness="0" Margin="0,8,0,0">
+                            <ProgressBar.Foreground>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#1fb879" Offset="0"/>
+                                    <GradientStop Color="#34d399" Offset="1"/>
+                                </LinearGradientBrush>
+                            </ProgressBar.Foreground>
+                        </ProgressBar>
                     </StackPanel>
                     <TextBlock x:Name="ProgressPercent" Grid.Column="1" Text="" Foreground="#c8d8e8" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="20,0,0,0"/>
                 </Grid>
@@ -2121,6 +2121,17 @@ function Show-WinGetInstallerGUI {
         $ui["FooterBorder"].BorderBrush       = $bc.ConvertFromString($t["FooterBorder"])
         $ui["ProgressTextCtl"].Foreground     = $bc.ConvertFromString($t["FooterText"])
         $ui["ProgressBarCtl"].Background      = $bc.ConvertFromString($t["ProgressBg"])
+        $progressGrad = New-Object System.Windows.Media.LinearGradientBrush
+        $progressGrad.StartPoint = [System.Windows.Point]::new(0, 0)
+        $progressGrad.EndPoint = [System.Windows.Point]::new(1, 0)
+        if ($ui["IsDark"]) {
+            $progressGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#1fb879"), 0)))
+            $progressGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#34d399"), 1)))
+        } else {
+            $progressGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#198754"), 0)))
+            $progressGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#20a76e"), 1)))
+        }
+        $ui["ProgressBarCtl"].Foreground      = $progressGrad
         $ui["ProgressPctCtl"].Foreground      = $bc.ConvertFromString($t["ProgressText"])
 
         # Search bar

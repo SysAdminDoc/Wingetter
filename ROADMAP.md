@@ -55,10 +55,3 @@
   Acceptance: configuration export has a feature-detected compatibility layer for native DSC v3 resources while defaulting to the current schema until stable; fixture tests cover current schema and simulated v3 resource availability without requiring prerelease WinGet on normal validation.
   Complexity: M
 
-## Audit-Driven Additions
-
-### P3
-
-- [ ] P3 - Theme the ProgressBar gradient fill colors for light mode
-  Why: The ProgressBar XAML gradient stops at lines 1335-1338 and the ToolBtn hover border at line 1191 are hardcoded to dark-theme colors and not updated by ApplyTheme.
-  Where: `src\Wingetter.Ui.ps1`
