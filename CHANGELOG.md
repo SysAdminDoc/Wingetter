@@ -13,6 +13,9 @@ All notable changes to Wingetter will be documented in this file.
 - Fixed: Offline cache download log filenames now include GUID entropy suffix (matching install/update log pattern) to prevent timestamp collisions.
 - Fixed: WinGet Configuration YAML export now writes UTF-8 without BOM via `Set-WingetterFileAtomic -NoBom`, preventing `winget configure` rejections on systems that don't accept BOM-prefixed YAML.
 - Fixed: Configuration resource IDs now include an index suffix (`_1`, `_2`, etc.) to prevent duplicate IDs when package names differ only in characters that get normalized to underscores (e.g., `Foo.Bar` vs `Foo-Bar`).
+- Fixed: Compliance report now correctly classifies packages with blank/malformed IDs as "Unresolved" instead of always falling through to "Missing" or "Current".
+- Fixed: Diagnostics redaction now checks `$env:APPDATA` before `$env:USERPROFILE` so APPDATA paths get the correct `<appdata>` label instead of the less-specific `<user-profile>` label.
+- Removed: Dead `Color` field from background worker log messages — these hex values were computed but discarded by `$AddLogEntry`.
 - Security: External catalog `iconDomain` validation now also rejects semicolons, colons, at-signs, whitespace, angle brackets, and quotes in addition to the existing URL metacharacter checks.
 - Fixed: Log entry rows now update their background, text, and status badge colors when the user toggles dark/light mode mid-session, instead of showing stale colors from the original render.
 - Fixed: Generated PS1 install scripts now check for "already installed" text before checking exit code, correctly counting re-installs as skipped instead of newly installed.

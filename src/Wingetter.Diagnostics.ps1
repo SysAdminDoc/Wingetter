@@ -46,8 +46,8 @@ function Redact-WingetterDiagnosticText {
     foreach ($value in @($SensitiveValues)) {
         if ([string]::IsNullOrWhiteSpace($value) -or [string]$value.Length -lt 3) { continue }
         $replacement = switch -Regex ($value) {
-            ([regex]::Escape($env:USERPROFILE)) { "<user-profile>"; break }
             ([regex]::Escape($env:APPDATA)) { "<appdata>"; break }
+            ([regex]::Escape($env:USERPROFILE)) { "<user-profile>"; break }
             ([regex]::Escape($env:USERNAME)) { "<user>"; break }
             ([regex]::Escape($env:COMPUTERNAME)) { "<computer>"; break }
             default { "<redacted>" }

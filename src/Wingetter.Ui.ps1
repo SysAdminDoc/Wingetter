@@ -438,7 +438,7 @@ function Start-WingetterOperationWorker {
 
                 foreach ($app in @($selectedPackages)) {
                     if ([bool]$cancelToken["Cancelled"]) {
-                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED"; Color = "#f39c12" }
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED" }
                         break
                     }
 
@@ -461,12 +461,12 @@ function Start-WingetterOperationWorker {
 
                     [void]$downloadResults.Add($result)
                     switch ([string]$result.Status) {
-                        "SUCCESS" { Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "DOWNLOADED"; Color = "#2ecc71" } }
+                        "SUCCESS" { Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "DOWNLOADED" } }
                         "CANCELLED" {
                             $cancelToken["Cancelled"] = $true
-                            Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED"; Color = "#f39c12" }
+                            Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED" }
                         }
-                        default { Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "FAILED"; Color = "#e74c3c" } }
+                        default { Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "FAILED" } }
                     }
                     if ([bool]$cancelToken["Cancelled"]) { break }
                 }
@@ -505,7 +505,7 @@ function Start-WingetterOperationWorker {
                         Percent = if ($total -gt 0) { [math]::Round(($current / $total) * 100) } else { 0 }
                         Text    = "Stopped before completing the full list."
                     }
-                    Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED"; Color = "#f39c12" }
+                    Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED" }
                     break
                 }
 
@@ -535,19 +535,19 @@ function Start-WingetterOperationWorker {
                 switch ([string]$result.Status) {
                     "SUCCESS" {
                         $ok++
-                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "SUCCESS"; Color = "#2ecc71" }
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "SUCCESS" }
                     }
                     "UP TO DATE" {
                         $skip++
-                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "UP TO DATE"; Color = "#f39c12" }
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "UP TO DATE" }
                     }
                     "CANCELLED" {
                         $cancelToken["Cancelled"] = $true
-                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED"; Color = "#f39c12" }
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "CANCELLED" }
                     }
                     default {
                         $fail++
-                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "FAILED"; Color = "#e74c3c" }
+                        Send-WingetterOperationMessage @{ Type = "Log"; AppName = [string]$app.Name; Status = "FAILED" }
                     }
                 }
                 if ([bool]$cancelToken["Cancelled"]) { break }

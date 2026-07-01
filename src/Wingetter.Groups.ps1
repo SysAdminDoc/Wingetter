@@ -670,15 +670,16 @@ function New-WingetterComplianceReport {
             if ($allowedNames.Count -gt 0 -and $allowedNames -notcontains $sourceName) { $sourceBlocked = $true }
         }
 
-        $state = "Unresolved"
-        if ($sourceBlocked) {
-            $state = "SourceBlocked"
+        $state = if ([string]::IsNullOrWhiteSpace($id)) {
+            "Unresolved"
+        } elseif ($sourceBlocked) {
+            "SourceBlocked"
         } elseif ($null -eq $installed) {
-            $state = "Missing"
+            "Missing"
         } elseif ($installed.PSObject.Properties["IsUpdateAvailable"] -and [bool]$installed.IsUpdateAvailable) {
-            $state = if ($isPinned) { "Pinned" } else { "UpdateAvailable" }
+            if ($isPinned) { "Pinned" } else { "UpdateAvailable" }
         } else {
-            $state = "Current"
+            "Current"
         }
 
         $stateCount[$state]++
