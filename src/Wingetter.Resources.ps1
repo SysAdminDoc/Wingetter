@@ -3,7 +3,7 @@
 # ============================================================================
 
 $Script:WingetterStrings = @{
-    WindowTitle          = "Wingetter v6.1.0 - Curated Windows App Installs and Updates"
+    WindowTitle          = "Wingetter v$Script:WingetterVersion - Curated Windows App Installs and Updates"
     SplashTitle          = "Wingetter"
     SplashLoading        = "Loading Wingetter..."
     SplashBuilding       = "Building interface..."

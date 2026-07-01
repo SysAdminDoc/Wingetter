@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Refactored: Version string is now defined once in `$Script:WingetterVersion` (Common.ps1) and referenced by Resources.ps1, splash screen, header badge, and window title. Version bumps now require changing only one line.
 - Fixed: `Save-WingetterSettings` no longer re-reads settings from disk before writing, eliminating the read-modify-write race condition where two rapid saves could lose one change. Settings values (including null) are now written directly from the caller's object.
 - Fixed: XAML ControlTemplate trigger colors (hover/focus borders, disabled button backgrounds) now use DynamicResource bindings to the theme system instead of hardcoded dark-mode hex values. Light mode hover borders now use the correct blue, and disabled Install/Update buttons use theme-appropriate muted backgrounds.
 - Changed: Clicking a package row now loads details asynchronously in a background runspace instead of blocking the UI thread for 2-10+ seconds. The detail panel shows "loading..." placeholders immediately and fills in metadata when the background fetch completes. Rapid clicks on different packages correctly discard stale results via fetch-ID tracking.

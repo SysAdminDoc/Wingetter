@@ -61,7 +61,7 @@ function Show-Splash {
 
     # Version
     $ver = New-Object System.Windows.Controls.TextBlock
-    $ver.Text = "v6.1.0"; $ver.FontSize = 12
+    $ver.Text = "v$Script:WingetterVersion"; $ver.FontSize = 12
     $ver.Foreground = $bc.ConvertFromString("#7a90a6")
     $ver.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
     $ver.Margin = [System.Windows.Thickness]::new(0, 0, 0, 24)
@@ -2111,6 +2111,8 @@ function Show-WinGetInstallerGUI {
         $xamlStringReader.Dispose()
     }
 
+    $Window.Title = Get-WingetterString "WindowTitle"
+
     if (-not $SmokeTest) {
         try { Restore-WingetterWindowBounds -Window $Window } catch {}
         $Window.Add_Closing({
@@ -2196,6 +2198,7 @@ function Show-WinGetInstallerGUI {
     $ui["HeaderTitle"]     = $Window.FindName("HeaderTitle")
     $ui["HeaderSubtitle"]  = $Window.FindName("HeaderSubtitle")
     $ui["HeaderVersion"]   = $Window.FindName("HeaderVersion")
+    $ui["HeaderVersion"].Text = "v$Script:WingetterVersion"
     $ui["VersionPill"]     = $Window.FindName("VersionPill")
     $ui["SearchIcon"]      = $Window.FindName("SearchIcon")
     $ui["ToolbarBorder"]   = $Window.FindName("ToolbarBorder")

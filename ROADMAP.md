@@ -4,10 +4,6 @@
 
 ### P2
 
-- [ ] P2 - Version string hardcoded in 4+ locations must be kept in sync manually
-  Why: v6.1.0 appears in Wingetter.ps1, XAML title, splash, Resources.ps1, header version text. A version bump that misses one creates user-visible inconsistency.
-  Where: `Wingetter.ps1`, `src\Wingetter.Ui.ps1`, `src\Wingetter.Resources.ps1`
-
 ### P3
 
 - [ ] P3 - Log entries rendered with stale theme after toggle
