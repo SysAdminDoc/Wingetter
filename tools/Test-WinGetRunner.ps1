@@ -361,6 +361,15 @@ if ($failures.Count -eq 0) {
     if ($optionCommand -notlike '*--location "C:\Program Files\Example Tool"*') {
         Add-Failure "Install command preview did not quote a location containing spaces: $optionCommand"
     }
+    $trailingBackslash = Join-ProcessArguments -Arguments @("--location", "C:\path to\")
+    if ($trailingBackslash -ne '--location "C:\path to\\"') {
+        Add-Failure "Join-ProcessArguments did not double trailing backslash: got '$trailingBackslash'"
+    }
+    $noTrailing = Join-ProcessArguments -Arguments @("--id", "Google.Chrome")
+    if ($noTrailing -ne "--id Google.Chrome") {
+        Add-Failure "Join-ProcessArguments mangled simple arguments: got '$noTrailing'"
+    }
+
     $unsafeOptionsRejected = $false
     try {
         New-WinGetPackageOperationArguments -Action "install" -PackageId "Bad.Tool" -Silent $false -AcceptAgreements $false -IncludePinned $false -InstallOptions ([PSCustomObject]@{ Override = "/danger" }) | Out-Null

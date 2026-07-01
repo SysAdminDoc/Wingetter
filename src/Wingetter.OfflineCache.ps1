@@ -128,12 +128,16 @@ function Invoke-WingetterOfflinePackageDownload {
         }
 
         try { $proc.WaitForExit() } catch {}
-        $stdout = $stdoutTask.GetAwaiter().GetResult()
-        $stderr = $stderrTask.GetAwaiter().GetResult()
+        try { $stdout = $stdoutTask.GetAwaiter().GetResult() } catch { $stdout = "" }
+        try { $stderr = $stderrTask.GetAwaiter().GetResult() } catch { $stderr = "" }
         $exitCode = if ($cancelled) { -1 } else { $proc.ExitCode }
     } catch {
         $stderr = $_.Exception.Message
         $exitCode = -1
+    } finally {
+        if ($null -ne $proc) {
+            try { $proc.Dispose() } catch {}
+        }
     }
 
     Set-Content -Path $stdoutPath -Value $stdout -Encoding UTF8

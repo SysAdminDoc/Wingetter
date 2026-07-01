@@ -232,7 +232,10 @@ function Join-ProcessArguments {
     @($Arguments | ForEach-Object {
         $arg = [string]$_
         if ($arg -match '[\s"]') {
-            '"' + ($arg -replace '\\(?=")', '\\' -replace '"', '\"') + '"'
+            $escaped = $arg -replace '"', '\"'
+            $escaped = [regex]::Replace($escaped, '(\\+)(?=")', { param($m) $m.Groups[1].Value + $m.Groups[1].Value })
+            $escaped = [regex]::Replace($escaped, '(\\+)$', { param($m) $m.Groups[1].Value + $m.Groups[1].Value })
+            '"' + $escaped + '"'
         } else {
             $arg
         }

@@ -86,8 +86,9 @@ function Export-GroupAsPS1 {
     [void]$sb.AppendLine("    Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
     [void]$sb.AppendLine("#>")
     [void]$sb.AppendLine("")
+    $safeGroupName = ConvertTo-WingetterPowerShellSingleQuotedString -Value $GroupName
     [void]$sb.AppendLine('Write-Host "====================================" -ForegroundColor Cyan')
-    [void]$sb.AppendLine("Write-Host `" WinGet Package Group: $GroupName`" -ForegroundColor Cyan")
+    [void]$sb.AppendLine("Write-Host (' WinGet Package Group: ' + $safeGroupName) -ForegroundColor Cyan")
     [void]$sb.AppendLine("Write-Host `" $($entries.Count) packages to install`" -ForegroundColor Cyan")
     [void]$sb.AppendLine('Write-Host "====================================" -ForegroundColor Cyan')
     [void]$sb.AppendLine('Write-Host ""')

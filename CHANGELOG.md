@@ -4,6 +4,12 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Fixed: Offline download process streams now use try/catch around `GetAwaiter().GetResult()` after `Kill()`, preventing `IOException`/`OperationCanceledException` from aborting the download loop on cancel. Process is also properly disposed in a `finally` block.
+- Fixed: Background installed-scan runspace now loads `Wingetter.Common.ps1` so `Set-WingetterFileAtomic`, `Get-WingetterAppDataPath`, and other Common helpers are available. Previously the installed-cache file was silently never persisted from background scans.
+- Fixed: Toast notification XML now escapes interpolated values via `SecurityElement.Escape()` so source names or statuses containing `&`, `<`, `>` cannot break the XML.
+- Fixed: `Join-ProcessArguments` now doubles trailing backslashes before the closing quote per MSVC CRT argument parsing convention. Paths like `C:\path to\` no longer produce broken arguments where the backslash escapes the closing quote.
+- Fixed: `Export-WingetterConfigurationFile` now uses `Set-WingetterFileAtomic` instead of direct `Set-Content`, consistent with all other file-writing paths.
+- Fixed: `Export-GroupAsPS1` now escapes the group name via `ConvertTo-WingetterPowerShellSingleQuotedString` in the generated script, preventing syntax errors when group names contain backticks, dollar signs, or quotes.
 - Added: Uninstall preflight plan support in `New-WingetterRunPlan`. The `uninstall` action validates that packages are installed before marking them runnable, refuses non-installed packages (NOT_INSTALLED skip), applies source-policy blocking, and generates a reviewed plan with the same schema as install/upgrade plans.
 - Added: `Export-WingetterRunLockfile` generates a lockfile from a migration report with package ID, source, installed version, available version, and install options for all successful packages. `Compare-WingetterLockfile` checks a lockfile against current installed state and reports Missing/VersionChanged/None drift per entry.
 - Added: `Get-WingetterPackageRiskWarnings` parses `winget show` output and catalog risk notes into structured severity-coded warnings: PUA_WARNING (Critical), MISSING_HASH/HTTP_INSTALLER (Warning), DEPRECATED/NO_LICENSE/CATALOG_NOTE (Info). Fixture tests cover PUA, missing hash, HTTP installer, catalog risk notes, and benign package output.

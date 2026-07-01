@@ -3540,7 +3540,8 @@ function Show-WinGetInstallerGUI {
                 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
                 [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
                 $toastXml = [Windows.Data.Xml.Dom.XmlDocument]::new()
-                $toastXml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>Wingetter Complete</text><text>$($Message.Ok) $doneVerb, $($Message.Skip) skipped, $($Message.Fail) failed (of $($Message.Total))</text></binding></visual></toast>")
+                $toastBody = [System.Security.SecurityElement]::Escape("$($Message.Ok) $doneVerb, $($Message.Skip) skipped, $($Message.Fail) failed (of $($Message.Total))")
+                $toastXml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>Wingetter Complete</text><text>$toastBody</text></binding></visual></toast>")
                 $toast = [Windows.UI.Notifications.ToastNotification]::new($toastXml)
                 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Wingetter").Show($toast)
             } catch {}
@@ -4372,12 +4373,14 @@ function Show-WinGetInstallerGUI {
         foreach ($app in $Script:SoftwareDatabase[$cat]) { $catalogPackageIds += [string]$app.WingetId }
     }
     $sourceRootPath = Get-WingetterUiModuleDirectory
+    $commonModulePath = Join-Path $sourceRootPath "Wingetter.Common.ps1"
     $winGetModulePath = Join-Path $sourceRootPath "Wingetter.WinGet.ps1"
     $sourcesModulePath = Join-Path $sourceRootPath "Wingetter.Sources.ps1"
     $packageSourceName = [string]$ui["PackageSource"].Name
     [void]$installedPs.AddScript({
-        param($queue, $packageIds, $winGetModulePath, $sourcesModulePath, $packageSourceName)
+        param($queue, $packageIds, $commonModulePath, $winGetModulePath, $sourcesModulePath, $packageSourceName)
         try {
+            . $commonModulePath
             . $winGetModulePath
             . $sourcesModulePath
             $scan = Get-WingetterPackageSourceInstalledCatalogPackages -SourceName $packageSourceName -PackageIds $packageIds
@@ -4403,6 +4406,7 @@ function Show-WinGetInstallerGUI {
     })
     [void]$installedPs.AddArgument($installedQueue)
     [void]$installedPs.AddArgument($catalogPackageIds)
+    [void]$installedPs.AddArgument($commonModulePath)
     [void]$installedPs.AddArgument($winGetModulePath)
     [void]$installedPs.AddArgument($sourcesModulePath)
     [void]$installedPs.AddArgument($packageSourceName)

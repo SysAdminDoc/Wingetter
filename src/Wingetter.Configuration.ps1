@@ -99,10 +99,6 @@ function Export-WingetterConfigurationFile {
     )
 
     $yaml = ConvertTo-WingetterConfigurationYaml -PackageEntries $PackageEntries
-    $parent = Split-Path -Parent $FilePath
-    if (![string]::IsNullOrWhiteSpace($parent) -and !(Test-Path $parent)) {
-        New-Item -ItemType Directory -Path $parent -Force | Out-Null
-    }
-    Set-Content -Path $FilePath -Value $yaml -Encoding UTF8
+    Set-WingetterFileAtomic -Path $FilePath -Content $yaml -Encoding UTF8
     return $FilePath
 }

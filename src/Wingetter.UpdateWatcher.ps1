@@ -425,7 +425,8 @@ function Show-WingetterUpdateCheckToast {
             "$($Result.Counts.Available) available, $($Result.Counts.Deferred) deferred, $($Result.Counts.Pinned) pinned, $($Result.Counts.SourceBlocked) source-blocked"
         }
         $toastXml = [Windows.Data.Xml.Dom.XmlDocument]::new()
-        $toastXml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>Wingetter Update Check</text><text>$summary</text></binding></visual></toast>")
+        $safeSummary = [System.Security.SecurityElement]::Escape($summary)
+        $toastXml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>Wingetter Update Check</text><text>$safeSummary</text></binding></visual></toast>")
         $toast = [Windows.UI.Notifications.ToastNotification]::new($toastXml)
         [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Wingetter").Show($toast)
     } catch {}
