@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Changed: Clicking a package row now loads details asynchronously in a background runspace instead of blocking the UI thread for 2-10+ seconds. The detail panel shows "loading..." placeholders immediately and fills in metadata when the background fetch completes. Rapid clicks on different packages correctly discard stale results via fetch-ID tracking.
 - Fixed: Offline download error now correctly clears `CacheDownloadRunning` instead of `PackageOperationRunning`, preventing the UI from becoming permanently locked after a failed cache download.
 - Fixed: All UI event handlers that call external functions (WinGet repair, settings save, group load/save/delete, package details, pin operations, corporate mode toggle) are now wrapped in try/catch to prevent unhandled exceptions from killing the WPF dispatcher thread.
 - Fixed: Run log directory names now include millisecond precision and GUID entropy, consistent with other timestamped paths, preventing directory collision on rapid successive runs.

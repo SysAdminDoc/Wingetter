@@ -2729,28 +2729,22 @@ function Show-WinGetInstallerGUI {
             $ui["DetailPinState"].Text = if ($PinStatus) { $PinStatus.Summary } else { "-" }
         }
     }
-    $ShowPackageDetails = {
-        param([object]$App)
+    $ui["DetailsFetchId"] = 0
+    $ui["DetailsQueue"] = [System.Collections.Concurrent.ConcurrentQueue[object]]::new()
+    $ui["DetailsWorker"] = $null
+    $ui["DetailsRunspace"] = $null
 
-        $ui["SelectedPackage"] = $App
-        $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Visible
-        $ui["PackageDetailsTitle"].Text = $App.Name
-        $sourceName = Get-WingetterPackageCatalogSourceName -App $App -DefaultSource $ui["PackageSource"].Name
-        $policyCheck = Test-WingetterPackageAllowedBySourcePolicy -Policy $ui["SourcePolicy"] -PackageId $App.WingetId -SourceName $sourceName
-        $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - loading source and installer metadata..."
-        & $SetDetailText $ui["DetailSource"] "-"
-        & $SetDetailText $ui["DetailPublisher"] "-"
-        & $SetDetailText $ui["DetailInstalledVersion"] "-"
-        & $SetDetailText $ui["DetailInstallerType"] "-"
-        & $SetDetailText $ui["DetailInstallerUrl"] "-"
-        & $SetDetailText $ui["DetailSha256"] "-"
-        $ui["DetailWarnings"].Text = ""
-        & $RefreshPinControls $null
-        & $SetDetailText $ui["DetailPinState"] "Loading..."
-        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+    $ApplyDetailsResult = {
+        param([object]$Result)
+        if ($Result.FetchId -ne $ui["DetailsFetchId"]) { return }
+        $App = $ui["SelectedPackage"]
+        if ($null -eq $App -or [string]$App.WingetId -ne [string]$Result.PackageId) { return }
 
-        $details = Get-WingetterPackageSourceDetails -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId -SourceName $sourceName
-        $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $ui["PackageSource"] -PackageId $App.WingetId
+        $details = $Result.Details
+        $pinStatus = $Result.PinStatus
+        $sourceName = $Result.SourceName
+        $policyCheck = $Result.PolicyCheck
+
         & $SetDetailText $ui["DetailSource"] (Get-WingetterPackageSourceTrustSummary -Policy $ui["SourcePolicy"] -SourceName $(if ($details.Source) { $details.Source } else { $sourceName }))
         & $SetDetailText $ui["DetailPublisher"] $details.Publisher
         $installedRecord = if ($ui["InstalledIds"].ContainsKey($App.WingetId)) { $ui["InstalledIds"][$App.WingetId] } else { $null }
@@ -2770,7 +2764,7 @@ function Show-WinGetInstallerGUI {
         & $SetDetailText $ui["DetailInstallerUrl"] $(if ($details.InstallerUrl) { "URL: $($details.InstallerUrl)" } elseif ($details.Homepage) { "Homepage: $($details.Homepage)" } else { "" })
         & $SetDetailText $ui["DetailSha256"] $details.InstallerSha256
         $warnings = @($details.Warnings)
-        if (!$policyCheck.Allowed) { $warnings += $policyCheck.Reason }
+        if ($policyCheck -and !$policyCheck.Allowed) { $warnings += $policyCheck.Reason }
         if ($warnings.Count -gt 0) {
             $ui["DetailWarnings"].Text = "Warnings: $($warnings -join ' ')"
         } else {
@@ -2778,7 +2772,89 @@ function Show-WinGetInstallerGUI {
         }
         & $SetPinVisual $App.WingetId $pinStatus
         & $RefreshPinControls $pinStatus
-        $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - metadata from winget show"
+        if ($Result.Error) {
+            $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - $($Result.Error)"
+        } else {
+            $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - metadata from winget show"
+        }
+    }
+
+    $ShowPackageDetails = {
+        param([object]$App)
+
+        $ui["SelectedPackage"] = $App
+        $ui["DetailsFetchId"]++
+        $fetchId = $ui["DetailsFetchId"]
+        $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Visible
+        $ui["PackageDetailsTitle"].Text = $App.Name
+        $sourceName = Get-WingetterPackageCatalogSourceName -App $App -DefaultSource $ui["PackageSource"].Name
+        $policyCheck = Test-WingetterPackageAllowedBySourcePolicy -Policy $ui["SourcePolicy"] -PackageId $App.WingetId -SourceName $sourceName
+        $ui["PackageDetailsSubtitle"].Text = "$($App.WingetId) - loading source and installer metadata..."
+        & $SetDetailText $ui["DetailSource"] "-"
+        & $SetDetailText $ui["DetailPublisher"] "-"
+        & $SetDetailText $ui["DetailInstalledVersion"] "-"
+        & $SetDetailText $ui["DetailInstallerType"] "-"
+        & $SetDetailText $ui["DetailInstallerUrl"] "-"
+        & $SetDetailText $ui["DetailSha256"] "-"
+        $ui["DetailWarnings"].Text = ""
+        & $RefreshPinControls $null
+        & $SetDetailText $ui["DetailPinState"] "Loading..."
+
+        if ($ui["DetailsWorker"]) {
+            try { $ui["DetailsWorker"].Dispose() } catch {}
+        }
+        if ($ui["DetailsRunspace"]) {
+            try { $ui["DetailsRunspace"].Close() } catch {}
+        }
+        $detailsQueue = $ui["DetailsQueue"]
+        $detailsSourceRoot = Get-WingetterUiModuleDirectory
+        $detailsRunspace = [runspacefactory]::CreateRunspace()
+        $detailsRunspace.Open()
+        $ui["DetailsRunspace"] = $detailsRunspace
+        $detailsPs = [PowerShell]::Create()
+        $detailsPs.Runspace = $detailsRunspace
+        $ui["DetailsWorker"] = $detailsPs
+
+        [void]$detailsPs.AddScript({
+            param($queue, $fetchId, $packageId, $sourceName, $policyCheck, $commonPath, $winGetPath, $sourcesPath, $packageSourceName)
+            try {
+                . $commonPath
+                . $winGetPath
+                . $sourcesPath
+                $adapter = Get-WingetterPackageSourceAdapter -Name $packageSourceName
+                $details = Get-WingetterPackageSourceDetails -SourceAdapter $adapter -PackageId $packageId -SourceName $sourceName
+                $pinStatus = Get-WingetterPackageSourcePinStatus -SourceAdapter $adapter -PackageId $packageId
+                $queue.Enqueue([PSCustomObject]@{
+                    FetchId     = $fetchId
+                    PackageId   = $packageId
+                    SourceName  = $sourceName
+                    PolicyCheck = $policyCheck
+                    Details     = $details
+                    PinStatus   = $pinStatus
+                    Error       = ""
+                })
+            } catch {
+                $queue.Enqueue([PSCustomObject]@{
+                    FetchId     = $fetchId
+                    PackageId   = $packageId
+                    SourceName  = $sourceName
+                    PolicyCheck = $policyCheck
+                    Details     = [PSCustomObject]@{ Source = ""; Publisher = ""; InstalledVersion = ""; LatestVersion = ""; InstallerType = ""; InstallerUrl = ""; InstallerSha256 = ""; Homepage = ""; Warnings = @() }
+                    PinStatus   = [PSCustomObject]@{ PackageId = $packageId; IsPinned = $false; PinType = "None"; Summary = "Error" }
+                    Error       = $_.Exception.Message
+                })
+            }
+        })
+        [void]$detailsPs.AddArgument($detailsQueue)
+        [void]$detailsPs.AddArgument($fetchId)
+        [void]$detailsPs.AddArgument([string]$App.WingetId)
+        [void]$detailsPs.AddArgument($sourceName)
+        [void]$detailsPs.AddArgument($policyCheck)
+        [void]$detailsPs.AddArgument((Join-Path $detailsSourceRoot "Wingetter.Common.ps1"))
+        [void]$detailsPs.AddArgument((Join-Path $detailsSourceRoot "Wingetter.WinGet.ps1"))
+        [void]$detailsPs.AddArgument((Join-Path $detailsSourceRoot "Wingetter.Sources.ps1"))
+        [void]$detailsPs.AddArgument([string]$ui["PackageSource"].Name)
+        $detailsPs.BeginInvoke() | Out-Null
     }
     $PackageDetailsCloseBtn.Add_Click({ $ui["PackageDetailsBorder"].Visibility = [System.Windows.Visibility]::Collapsed }.GetNewClosure())
     $ApplyPinOperation = {
@@ -4969,6 +5045,16 @@ function Show-WinGetInstallerGUI {
         }
     }
 
+    $detailsTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $detailsTimer.Interval = [TimeSpan]::FromMilliseconds(100)
+    $detailsTimer.Add_Tick({
+        $detailItem = $null
+        while ($ui["DetailsQueue"].TryDequeue([ref]$detailItem)) {
+            try { & $ApplyDetailsResult $detailItem } catch {}
+        }
+    }.GetNewClosure())
+    $detailsTimer.Start()
+
     $installedTimer = New-Object System.Windows.Threading.DispatcherTimer
     $installedTimer.Interval = [TimeSpan]::FromMilliseconds(200)
     $installedTimer.Add_Tick({
@@ -5224,6 +5310,8 @@ function Show-WinGetInstallerGUI {
     try { foreach ($j in @($iconJobs)) { try { if ($j.Handle -and -not $j.Handle.IsCompleted) { $j.PS.Stop() }; $j.PS.Dispose() } catch {} }; if ($iconPool) { $iconPool.Close() } } catch {}
     try { if ($installedTimer) { $installedTimer.Stop() } } catch {}
     try { if ($installedPs) { if ($installedHandle -and -not $installedHandle.IsCompleted) { $installedPs.Stop() }; $installedPs.Dispose() }; if ($installedRunspace) { $installedRunspace.Close() } } catch {}
+    try { if ($detailsTimer) { $detailsTimer.Stop() } } catch {}
+    try { if ($ui["DetailsWorker"]) { $ui["DetailsWorker"].Dispose() }; if ($ui["DetailsRunspace"]) { $ui["DetailsRunspace"].Close() } } catch {}
     try {
         if ($ui["OperationCancelToken"]) { $ui["OperationCancelToken"]["Cancelled"] = $true }
         if ($ui["OperationTimer"]) { $ui["OperationTimer"].Stop() }
