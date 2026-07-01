@@ -4334,11 +4334,10 @@ function Show-WinGetInstallerGUI {
             $catIdx2++
         }
 
-        # Update button states - repurpose UpdateAllBtn as "Back to Browse"
-        $UpdateAllBtn.Content = "Back to Browse"
+        $UpdateAllBtn.Content = Get-WingetterString "BackToBrowse"
         $UpdateAllBtn.ToolTip = "Return to the full install catalog."
         $ProgressText.Text = "$installedCount installed apps are ready to review. Uncheck anything you want to skip."
-        $ToolbarHintText.Text = "Review mode shows only apps already detected on this PC."
+        $ToolbarHintText.Text = Get-WingetterString "UpdateReviewHint"
 
         $SelectAllBtn.Content = "Select Visible"
         $DeselectAllBtn.Content = "Clear Visible"
@@ -4415,10 +4414,10 @@ function Show-WinGetInstallerGUI {
 
         $UpdateAllBtn.Content = "Review Updates"
         $UpdateAllBtn.ToolTip = "Show installed apps from this catalog so you can choose what to update."
-        $SelectAllBtn.Content = "Select Visible"
-        $DeselectAllBtn.Content = "Clear Visible"
-        $ToolbarHintText.Text = "Tip: Shift+Click selects a range."
-        $ProgressText.Text = "Choose apps to install or load a saved group to get started."
+        $SelectAllBtn.Content = Get-WingetterString "SelectVisible"
+        $DeselectAllBtn.Content = Get-WingetterString "ClearVisible"
+        $ToolbarHintText.Text = Get-WingetterString "TipShiftClick"
+        $ProgressText.Text = Get-WingetterString "ProgressDefault"
         $ProgressBar.Value = 0; $ProgressPercent.Text = ""
         & $UpdateSelectedCount
         & $ApplyFilter
