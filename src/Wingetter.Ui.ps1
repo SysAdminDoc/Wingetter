@@ -1771,7 +1771,7 @@ function Show-WinGetInstallerGUI {
                                 </LinearGradientBrush>
                             </TextBlock.Foreground>
                         </TextBlock>
-                        <Border Margin="10,0,0,2" Padding="8,3" CornerRadius="8" Background="#102133" BorderBrush="#24374a" BorderThickness="1">
+                        <Border x:Name="VersionPill" Margin="10,0,0,2" Padding="8,3" CornerRadius="8" Background="#102133" BorderBrush="#24374a" BorderThickness="1">
                             <TextBlock x:Name="HeaderVersion" Text="v6.1.0" FontSize="11" FontWeight="SemiBold" Foreground="#7a90a6"/>
                         </Border>
                     </StackPanel>
@@ -2195,6 +2195,7 @@ function Show-WinGetInstallerGUI {
     $ui["HeaderTitle"]     = $Window.FindName("HeaderTitle")
     $ui["HeaderSubtitle"]  = $Window.FindName("HeaderSubtitle")
     $ui["HeaderVersion"]   = $Window.FindName("HeaderVersion")
+    $ui["VersionPill"]     = $Window.FindName("VersionPill")
     $ui["SearchIcon"]      = $Window.FindName("SearchIcon")
     $ui["ToolbarBorder"]   = $Window.FindName("ToolbarBorder")
     $ui["StatusPill"]      = $Window.FindName("StatusPill")
@@ -2556,7 +2557,9 @@ function Show-WinGetInstallerGUI {
         # Search icon
         $ui["SearchIcon"].Foreground = $bc.ConvertFromString($t["SearchIcon"])
 
-        # Version text
+        # Version pill
+        $ui["VersionPill"].Background = $bc.ConvertFromString($t["StatusPillBg"])
+        $ui["VersionPill"].BorderBrush = $bc.ConvertFromString($t["StatusPillBorder"])
         $ui["HeaderVersion"].Foreground = $bc.ConvertFromString($t["VersionText"])
 
         $el = $ui["Elements"]
@@ -3942,7 +3945,8 @@ function Show-WinGetInstallerGUI {
 
     # Helper: add log entry to log panel
     $AddLogEntry = {
-        param([string]$AppName, [string]$Status, [string]$Color)
+        param([string]$AppName, [string]$Status, [string]$Color = "")
+        [void]$Color
         $statusBg = if ($ui["IsDark"]) {
             switch ($Status) {
                 "SUCCESS" { "#183a2c" }
@@ -3977,13 +3981,20 @@ function Show-WinGetInstallerGUI {
         $nameText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($theme["LogText"])
         [System.Windows.Controls.Grid]::SetColumn($nameText, 0)
         $statusBadge = New-Object System.Windows.Controls.Border
-        $statusBadge.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString((if ($ui["IsDark"]) { "#132132" } else { "#ffffff" }))
+        $statusBadge.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString($theme["LogEntryBg"])
         $statusBadge.CornerRadius = [System.Windows.CornerRadius]::new(8)
         $statusBadge.Padding = [System.Windows.Thickness]::new(8, 3, 8, 3)
         [System.Windows.Controls.Grid]::SetColumn($statusBadge, 1)
+        $statusColor = switch ($Status) {
+            "SUCCESS" { $theme["LogSuccess"] }
+            "DOWNLOADED" { $theme["LogSuccess"] }
+            "FAILED" { $theme["LogFail"] }
+            "ERROR" { $theme["LogFail"] }
+            default { $theme["LogSkip"] }
+        }
         $statusText = New-Object System.Windows.Controls.TextBlock
         $statusText.Text = $Status; $statusText.FontSize = 10; $statusText.FontWeight = [System.Windows.FontWeights]::SemiBold
-        $statusText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($Color)
+        $statusText.Foreground = [System.Windows.Media.BrushConverter]::new().ConvertFromString($statusColor)
         $statusBadge.Child = $statusText
         [void]$entryGrid.Children.Add($nameText); [void]$entryGrid.Children.Add($statusBadge)
         $entry.Child = $entryGrid
