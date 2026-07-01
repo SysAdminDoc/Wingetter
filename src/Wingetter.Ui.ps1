@@ -298,6 +298,7 @@ $Script:Themes = @{
         SidebarBorder = "#dbe6f0"; SidebarCountText = "#7a8ea0"; SidebarSubtitle = "#7a8ea0"
         LogBg = "#f8fbff"; LogBorder = "#dbe6f0"; LogSuccess = "#198754"; LogFail = "#dc3545"; LogSkip = "#b7791f"; LogText = "#1f3447"; LogEntryBg = "#ffffff"
         InstalledDot = "#1aa56b"; InstalledBadgeBg = "#e7f8ef"; InstalledBadgeText = "#167d53"
+        PinBadgeBg = "#fef3cd"; PinBadgeBorder = "#e0c97a"; PinBadgeText = "#856404"
         UpdateBtnBg = "#dd8b21"; UpdateBtnHover = "#c77611"
         CollapseArrow = "#6e8296"
         EmptyStateBg = "#ffffff"; EmptyStateBorder = "#dbe6f0"; EmptyStateTitle = "#12263a"; EmptyStateText = "#60778b"
@@ -328,6 +329,7 @@ $Script:Themes = @{
         SidebarBorder = "#1d2a3a"; SidebarCountText = "#6e859a"; SidebarSubtitle = "#8196aa"
         LogBg = "#071019"; LogBorder = "#1d2a3a"; LogSuccess = "#2dd58f"; LogFail = "#ff6b6b"; LogSkip = "#ffbf69"; LogText = "#dbe7f2"; LogEntryBg = "#0d1825"
         InstalledDot = "#1fd389"; InstalledBadgeBg = "#103526"; InstalledBadgeText = "#78ddb1"
+        PinBadgeBg = "#3a2a10"; PinBadgeBorder = "#604315"; PinBadgeText = "#ffbf69"
         UpdateBtnBg = "#d97706"; UpdateBtnHover = "#f59e0b"
         CollapseArrow = "#6f879e"
         EmptyStateBg = "#0b1724"; EmptyStateBorder = "#1f3145"; EmptyStateTitle = "#f0f6fb"; EmptyStateText = "#90a4b8"
@@ -1868,7 +1870,7 @@ function Show-WinGetInstallerGUI {
                         <Button x:Name="GalleryBtn" Style="{StaticResource ToolBtn}" Content="Profile Gallery" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Browse hashed public profiles and review every package before import"/>
                         <Button x:Name="CopyCommandBtn" Style="{StaticResource ToolBtn}" Content="Copy Commands" FontSize="11.5" Cursor="Hand"/>
                         <StackPanel x:Name="UpdateSortPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="8,0,0,0">
-                            <TextBlock Text="Sort:" Foreground="#94a7bc" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="UpdateSortLabel" Text="Sort:" Foreground="#94a7bc" FontSize="11.5" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <ComboBox x:Name="UpdateSortCombo" Width="140" FontSize="11.5" VerticalAlignment="Center" AutomationProperties.Name="Sort update list"/>
                         </StackPanel>
                     </StackPanel>
@@ -1888,7 +1890,7 @@ function Show-WinGetInstallerGUI {
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Border Grid.Row="0" Padding="16,14" BorderBrush="#1d2a3a" BorderThickness="0,0,0,1">
+                    <Border x:Name="SidebarHeaderBorder" Grid.Row="0" Padding="16,14" BorderBrush="#1d2a3a" BorderThickness="0,0,0,1">
                         <StackPanel>
                             <TextBlock x:Name="SidebarTitle" Text="Browse categories" FontSize="12.5" FontWeight="SemiBold" Foreground="#8cd2ff"/>
                             <TextBlock x:Name="SidebarSubtitle" Text="Jump into the software collection." FontSize="11.5" Foreground="#8196aa" Margin="0,4,0,0"/>
@@ -2165,9 +2167,11 @@ function Show-WinGetInstallerGUI {
     $SearchPlaceholder= $Window.FindName("SearchPlaceholder")
     $VisibleCountText = $Window.FindName("VisibleCountText")
     $SidebarBorder    = $Window.FindName("SidebarBorder")
+    $SidebarHeaderBorder = $Window.FindName("SidebarHeaderBorder")
     $SidebarPanel     = $Window.FindName("SidebarPanel")
     $Divider1         = $Window.FindName("Divider1")
     $UpdateSortPanel  = $Window.FindName("UpdateSortPanel")
+    $UpdateSortLabel  = $Window.FindName("UpdateSortLabel")
     $UpdateSortCombo  = $Window.FindName("UpdateSortCombo")
     $LogPanelBorder   = $Window.FindName("LogPanelBorder")
     $LogEntriesPanel  = $Window.FindName("LogEntriesPanel")
@@ -2179,6 +2183,7 @@ function Show-WinGetInstallerGUI {
     $PackageDetailsBorder = $Window.FindName("PackageDetailsBorder")
     $PackageDetailsCloseBtn = $Window.FindName("PackageDetailsCloseBtn")
     $EmptyStateBorder = $Window.FindName("EmptyStateBorder")
+    $EmptyStateEyebrow = $Window.FindName("EmptyStateEyebrow")
     $EmptyStateTitle  = $Window.FindName("EmptyStateTitle")
     $EmptyStateBody   = $Window.FindName("EmptyStateBody")
     $EmptyStateClearBtn = $Window.FindName("EmptyStateClearBtn")
@@ -2528,6 +2533,7 @@ function Show-WinGetInstallerGUI {
         $ui["ToolbarHintBorder"].Background  = $bc.ConvertFromString($t["CountBg"])
         $ui["ToolbarHintBorder"].BorderBrush = $bc.ConvertFromString($t["SecBtnBorder"])
         $ui["ToolbarHintText"].Foreground    = $bc.ConvertFromString($t["FooterText"])
+        $UpdateSortLabel.Foreground          = $bc.ConvertFromString($t["FooterText"])
 
         # DynamicResource brush updates (ComboBox, ScrollBar, Dividers, CheckBox)
         $res = $ui["Window"].Resources
@@ -2589,6 +2595,11 @@ function Show-WinGetInstallerGUI {
         for ($i = 0; $i -lt $el["AppStatusTexts"].Count; $i++) {
             $el["AppStatusTexts"][$i].Foreground = $bc.ConvertFromString($t["InstalledBadgeText"])
         }
+        foreach ($pinBadge in @($ui["PinBadgesById"].Values)) {
+            $pinBadge.Background = $bc.ConvertFromString($t["PinBadgeBg"])
+            $pinBadge.BorderBrush = $bc.ConvertFromString($t["PinBadgeBorder"])
+            if ($pinBadge.Child) { $pinBadge.Child.Foreground = $bc.ConvertFromString($t["PinBadgeText"]) }
+        }
         for ($i = 0; $i -lt $el["AppBorders"].Count; $i++) {
             $ab = $el["AppBorders"][$i]
             $cb = $ab.Child.Children[0]
@@ -2616,6 +2627,7 @@ function Show-WinGetInstallerGUI {
         try {
             $ui["SidebarBorder"].Background = $bc.ConvertFromString($t["SidebarBg"])
             $ui["SidebarBorder"].BorderBrush = $bc.ConvertFromString($t["SidebarBorder"])
+            $SidebarHeaderBorder.BorderBrush = $bc.ConvertFromString($t["SidebarBorder"])
             $ui["SidebarTitle"].Foreground = $bc.ConvertFromString($t["CategoryTitle"])
             $ui["SidebarSubtitle"].Foreground = $bc.ConvertFromString($t["SidebarSubtitle"])
             foreach ($sbBtn in $ui["Elements"]["SidebarButtons"]) {
@@ -2655,6 +2667,7 @@ function Show-WinGetInstallerGUI {
         try {
             $ui["EmptyStateBorder"].Background = $bc.ConvertFromString($t["EmptyStateBg"])
             $ui["EmptyStateBorder"].BorderBrush = $bc.ConvertFromString($t["EmptyStateBorder"])
+            $EmptyStateEyebrow.Foreground = $bc.ConvertFromString($t["CategoryTitle"])
             $ui["EmptyStateTitle"].Foreground = $bc.ConvertFromString($t["EmptyStateTitle"])
             $ui["EmptyStateBody"].Foreground = $bc.ConvertFromString($t["EmptyStateText"])
         } catch {}
@@ -2952,8 +2965,9 @@ function Show-WinGetInstallerGUI {
             [void]$ui["Elements"]["AppStatusTexts"].Add($installedText)
 
             $pinBadge = New-Object System.Windows.Controls.Border
-            $pinBadge.Background = (& $toBrush "#3a2a10")
-            $pinBadge.BorderBrush = (& $toBrush "#604315")
+            $initTheme = if ($ui["IsDark"]) { $ui["Themes"]["Dark"] } else { $ui["Themes"]["Light"] }
+            $pinBadge.Background = (& $toBrush $initTheme["PinBadgeBg"])
+            $pinBadge.BorderBrush = (& $toBrush $initTheme["PinBadgeBorder"])
             $pinBadge.BorderThickness = [System.Windows.Thickness]::new(1)
             $pinBadge.CornerRadius = [System.Windows.CornerRadius]::new(8)
             $pinBadge.Padding = [System.Windows.Thickness]::new(7, 2, 7, 2)
@@ -2966,7 +2980,7 @@ function Show-WinGetInstallerGUI {
             $pinText.Text = "Pinned"
             $pinText.FontSize = 9.5
             $pinText.FontWeight = [System.Windows.FontWeights]::SemiBold
-            $pinText.Foreground = (& $toBrush "#ffbf69")
+            $pinText.Foreground = (& $toBrush $initTheme["PinBadgeText"])
             $pinBadge.Child = $pinText
             $ui["PinBadgesById"][$app.WingetId] = $pinBadge
 
