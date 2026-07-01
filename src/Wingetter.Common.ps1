@@ -152,12 +152,12 @@ function Save-WingetterSettings {
         [string]$Path = (Get-WingetterSettingsPath)
     )
 
-    $settingsToSave = Get-WingetterSettings -Path $Path
-    foreach ($propertyName in Get-WingetterObjectPropertyNames -InputObject $settingsToSave) {
+    $defaults = New-WingetterDefaultSettings
+    $settingsToSave = [PSCustomObject][ordered]@{}
+    foreach ($propertyName in Get-WingetterObjectPropertyNames -InputObject $defaults) {
         $value = Get-WingetterObjectPropertyValue -InputObject $Settings -PropertyName $propertyName
-        if ($null -ne $value) {
-            $settingsToSave.$propertyName = $value
-        }
+        if ($null -eq $value) { $value = Get-WingetterObjectPropertyValue -InputObject $defaults -PropertyName $propertyName }
+        $settingsToSave | Add-Member -MemberType NoteProperty -Name $propertyName -Value $value
     }
     $settingsToSave.Schema = "Wingetter.Settings.v1"
     $settingsToSave.PrivateIconMode = [bool]$settingsToSave.PrivateIconMode
