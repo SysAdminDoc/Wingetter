@@ -4,13 +4,6 @@
 
 ### P2
 
-- [ ] P2 - Add editable source-policy allowlist and blocklist UI
-  Why: Corporate source policy already exists but can only be toggled/exported in the UI, leaving source edits and blocklist maintenance to manual JSON changes.
-  Evidence: `src\Wingetter.Sources.ps1:425-954`; `src\Wingetter.Ui.ps1:2739-2742`; Romanitho/Winget-AutoUpdate issue #1159; Microsoft `winget source` docs.
-  Touches: `src\Wingetter.Sources.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-SourcePolicy.ps1`, `README.md`.
-  Acceptance: a Source Policy dialog can add/edit/remove allowed sources and package/source block rules, validates names/URLs/priority/header redaction before save, imports/exports the existing schema, shows drift results, and preserves private headers only when explicitly requested.
-  Complexity: M
-
 ### P3
 
 - [ ] P3 - Extract UI strings after workflow tests exist

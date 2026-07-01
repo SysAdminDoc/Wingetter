@@ -694,6 +694,185 @@ function Start-WingetterDiagnosticsWorker {
     }
 }
 
+function Show-WingetterSourcePolicyDialog {
+    param(
+        [object]$Policy,
+        [System.Windows.Window]$Owner = $null,
+        [bool]$IsDark = $true
+    )
+
+    $bc = [System.Windows.Media.BrushConverter]::new()
+    $winBg    = if ($IsDark) { "#071018" } else { "#f3f6fb" }
+    $titleFg  = if ($IsDark) { "#f8fafc" } else { "#12263a" }
+    $subtleFg = if ($IsDark) { "#94a7bc" } else { "#54697c" }
+    $labelFg  = if ($IsDark) { "#c4d2df" } else { "#304658" }
+    $boxBg    = if ($IsDark) { "#08131f" } else { "#ffffff" }
+    $boxFg    = if ($IsDark) { "#eff6fb" } else { "#0f2438" }
+    $boxBd    = if ($IsDark) { "#24374a" } else { "#c7d6e3" }
+    $btnBg    = if ($IsDark) { "#1fb879" } else { "#198754" }
+    $cancelBg = if ($IsDark) { "#102133" } else { "#f6f9fc" }
+    $cancelFg = if ($IsDark) { "#dbe7f1" } else { "#22384d" }
+    $cancelBd = if ($IsDark) { "#24374a" } else { "#d2dde8" }
+
+    $win = New-Object System.Windows.Window
+    $win.Title = "Source Policy Editor"
+    $win.Width = 640
+    $win.Height = 500
+    $win.MinWidth = 520
+    $win.MinHeight = 420
+    $win.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
+    $win.Background = $bc.ConvertFromString($winBg)
+    $win.FontFamily = [System.Windows.Media.FontFamily]::new("Segoe UI")
+    if ($Owner) { $win.Owner = $Owner; $win.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterOwner }
+
+    $root = New-Object System.Windows.Controls.DockPanel
+    $root.Margin = [System.Windows.Thickness]::new(22)
+    $win.Content = $root
+
+    $title = New-Object System.Windows.Controls.TextBlock
+    $title.Text = "Corporate Source Policy"
+    $title.FontSize = 18; $title.FontWeight = [System.Windows.FontWeights]::SemiBold
+    $title.Foreground = $bc.ConvertFromString($titleFg)
+    $title.Margin = [System.Windows.Thickness]::new(0, 0, 0, 4)
+    [System.Windows.Controls.DockPanel]::SetDock($title, [System.Windows.Controls.Dock]::Top)
+    [void]$root.Children.Add($title)
+
+    $subtitle = New-Object System.Windows.Controls.TextBlock
+    $subtitle.Text = "Define which sources are allowed and configure private REST sources."
+    $subtitle.FontSize = 12; $subtitle.Foreground = $bc.ConvertFromString($subtleFg)
+    $subtitle.Margin = [System.Windows.Thickness]::new(0, 0, 0, 16)
+    [System.Windows.Controls.DockPanel]::SetDock($subtitle, [System.Windows.Controls.Dock]::Top)
+    [void]$root.Children.Add($subtitle)
+
+    $buttonBar = New-Object System.Windows.Controls.StackPanel
+    $buttonBar.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+    $buttonBar.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+    $buttonBar.Margin = [System.Windows.Thickness]::new(0, 16, 0, 0)
+    [System.Windows.Controls.DockPanel]::SetDock($buttonBar, [System.Windows.Controls.Dock]::Bottom)
+    [void]$root.Children.Add($buttonBar)
+
+    $saveBtn = New-Object System.Windows.Controls.Button
+    $saveBtn.Content = "Save Policy"; $saveBtn.Padding = [System.Windows.Thickness]::new(18, 8, 18, 8)
+    $saveBtn.Margin = [System.Windows.Thickness]::new(0, 0, 8, 0); $saveBtn.IsDefault = $true
+    $saveBtn.Background = $bc.ConvertFromString($btnBg); $saveBtn.Foreground = [System.Windows.Media.Brushes]::White
+    $saveBtn.BorderThickness = [System.Windows.Thickness]::new(0); $saveBtn.Cursor = [System.Windows.Input.Cursors]::Hand
+    [void]$buttonBar.Children.Add($saveBtn)
+
+    $cancelBtn = New-Object System.Windows.Controls.Button
+    $cancelBtn.Content = "Cancel"; $cancelBtn.Padding = [System.Windows.Thickness]::new(18, 8, 18, 8)
+    $cancelBtn.IsCancel = $true; $cancelBtn.Cursor = [System.Windows.Input.Cursors]::Hand
+    $cancelBtn.Background = $bc.ConvertFromString($cancelBg); $cancelBtn.Foreground = $bc.ConvertFromString($cancelFg)
+    $cancelBtn.BorderBrush = $bc.ConvertFromString($cancelBd); $cancelBtn.BorderThickness = [System.Windows.Thickness]::new(1)
+    [void]$buttonBar.Children.Add($cancelBtn)
+
+    $scroll = New-Object System.Windows.Controls.ScrollViewer
+    $scroll.VerticalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Auto
+    [void]$root.Children.Add($scroll)
+
+    $form = New-Object System.Windows.Controls.StackPanel
+    $form.Margin = [System.Windows.Thickness]::new(0, 0, 8, 0)
+    $scroll.Content = $form
+
+    $NewLabel = { param([string]$Text)
+        $lbl = New-Object System.Windows.Controls.TextBlock
+        $lbl.Text = $Text; $lbl.FontSize = 12; $lbl.Foreground = $bc.ConvertFromString($labelFg)
+        $lbl.Margin = [System.Windows.Thickness]::new(0, 10, 0, 4)
+        $lbl
+    }
+
+    $corpCheck = New-Object System.Windows.Controls.CheckBox
+    $corpCheck.Content = "Enable corporate mode (block packages from unlisted sources)"
+    $corpCheck.IsChecked = [bool]$Policy.CorporateMode
+    $corpCheck.FontSize = 12.5; $corpCheck.Foreground = $bc.ConvertFromString($labelFg)
+    $corpCheck.Margin = [System.Windows.Thickness]::new(0, 0, 0, 8)
+    [void]$form.Children.Add($corpCheck)
+
+    [void]$form.Children.Add((& $NewLabel "Allowed sources (one per line: Name,Type,URL,TrustLevel)"))
+    $allowedBox = New-Object System.Windows.Controls.TextBox
+    $allowedBox.AcceptsReturn = $true; $allowedBox.TextWrapping = [System.Windows.TextWrapping]::Wrap
+    $allowedBox.Height = 100; $allowedBox.FontSize = 12; $allowedBox.FontFamily = [System.Windows.Media.FontFamily]::new("Consolas")
+    $allowedBox.Padding = [System.Windows.Thickness]::new(8, 6, 8, 6)
+    $allowedBox.Background = $bc.ConvertFromString($boxBg); $allowedBox.Foreground = $bc.ConvertFromString($boxFg)
+    $allowedBox.BorderBrush = $bc.ConvertFromString($boxBd); $allowedBox.BorderThickness = [System.Windows.Thickness]::new(1)
+    $allowedBox.VerticalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Auto
+    [System.Windows.Automation.AutomationProperties]::SetName($allowedBox, "Allowed sources")
+    $allowedLines = [System.Collections.ArrayList]::new()
+    foreach ($s in @($Policy.AllowedSources)) {
+        [void]$allowedLines.Add("$($s.Name),$($s.Type),$($s.Argument),$($s.TrustLevel)")
+    }
+    $allowedBox.Text = ($allowedLines -join "`r`n")
+    [void]$form.Children.Add($allowedBox)
+
+    $hint1 = New-Object System.Windows.Controls.TextBlock
+    $hint1.Text = "Example: winget,Microsoft.PreIndexed.Package,https://cdn.winget.microsoft.com/cache,Community"
+    $hint1.FontSize = 10.5; $hint1.Foreground = $bc.ConvertFromString($subtleFg); $hint1.Margin = [System.Windows.Thickness]::new(0, 2, 0, 0)
+    [void]$form.Children.Add($hint1)
+
+    [void]$form.Children.Add((& $NewLabel "Private REST sources (one per line: Name,URL)"))
+    $privateBox = New-Object System.Windows.Controls.TextBox
+    $privateBox.AcceptsReturn = $true; $privateBox.TextWrapping = [System.Windows.TextWrapping]::Wrap
+    $privateBox.Height = 60; $privateBox.FontSize = 12; $privateBox.FontFamily = [System.Windows.Media.FontFamily]::new("Consolas")
+    $privateBox.Padding = [System.Windows.Thickness]::new(8, 6, 8, 6)
+    $privateBox.Background = $bc.ConvertFromString($boxBg); $privateBox.Foreground = $bc.ConvertFromString($boxFg)
+    $privateBox.BorderBrush = $bc.ConvertFromString($boxBd); $privateBox.BorderThickness = [System.Windows.Thickness]::new(1)
+    $privateBox.VerticalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Auto
+    [System.Windows.Automation.AutomationProperties]::SetName($privateBox, "Private sources")
+    $privateLines = [System.Collections.ArrayList]::new()
+    foreach ($s in @($Policy.PrivateSources)) {
+        [void]$privateLines.Add("$($s.Name),$($s.Argument)")
+    }
+    $privateBox.Text = ($privateLines -join "`r`n")
+    [void]$form.Children.Add($privateBox)
+
+    $statusText = New-Object System.Windows.Controls.TextBlock
+    $statusText.FontSize = 11.5; $statusText.Foreground = $bc.ConvertFromString($subtleFg)
+    $statusText.Margin = [System.Windows.Thickness]::new(0, 10, 0, 0); $statusText.TextWrapping = [System.Windows.TextWrapping]::Wrap
+    [void]$form.Children.Add($statusText)
+
+    $saveBtn.Add_Click({
+        $errors = [System.Collections.ArrayList]::new()
+        $parsedAllowed = [System.Collections.ArrayList]::new()
+        foreach ($line in @($allowedBox.Text -split '(?:\r\n|\n)')) {
+            $line = $line.Trim()
+            if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            $parts = $line -split ','
+            if ($parts.Count -lt 3) { [void]$errors.Add("Allowed source '$line' needs at least Name,Type,URL."); continue }
+            $name = $parts[0].Trim()
+            if ([string]::IsNullOrWhiteSpace($name)) { [void]$errors.Add("Source name cannot be empty."); continue }
+            $trust = if ($parts.Count -ge 4) { $parts[3].Trim() } else { "Community" }
+            if ($trust -notin @("Community", "Trusted", "Private", "Unknown")) { $trust = "Community" }
+            [void]$parsedAllowed.Add((New-WingetterSourceDefinition -Name $name -Type $parts[1].Trim() -Argument $parts[2].Trim() -TrustLevel $trust))
+        }
+        $parsedPrivate = [System.Collections.ArrayList]::new()
+        foreach ($line in @($privateBox.Text -split '(?:\r\n|\n)')) {
+            $line = $line.Trim()
+            if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            $parts = $line -split ','
+            if ($parts.Count -lt 2) { [void]$errors.Add("Private source '$line' needs Name,URL."); continue }
+            $name = $parts[0].Trim()
+            if ([string]::IsNullOrWhiteSpace($name)) { [void]$errors.Add("Private source name cannot be empty."); continue }
+            [void]$parsedPrivate.Add((New-WingetterPrivateRestSourceDefinition -Name $name -Argument $parts[1].Trim()))
+        }
+        if ($errors.Count -gt 0) {
+            $statusText.Text = $errors -join " "
+            $statusText.Foreground = $bc.ConvertFromString($(if ($IsDark) { "#ff6b6b" } else { "#dc3545" }))
+            return
+        }
+        $newPolicy = New-WingetterDefaultSourcePolicy
+        $newPolicy.CorporateMode = [bool]$corpCheck.IsChecked
+        $newPolicy.AllowedSources = @($parsedAllowed.ToArray())
+        $newPolicy.PrivateSources = @($parsedPrivate.ToArray())
+        $win.Tag = $newPolicy
+        $win.DialogResult = $true
+        $win.Close()
+    }.GetNewClosure())
+
+    $cancelBtn.Add_Click({ $win.DialogResult = $false; $win.Close() }.GetNewClosure())
+
+    if ($win.ShowDialog() -eq $true) { return $win.Tag }
+    return $null
+}
+
 function Show-WingetterUpdatePolicyDialog {
     param(
         [object]$Policy,
@@ -1681,8 +1860,9 @@ function Show-WinGetInstallerGUI {
                         <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="0,2,12,2"/>
                         <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON, PowerShell, or WinGet Configuration"/>
                         <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and redacted winget source commands"/>
-                        <Button x:Name="DiagnosticsBtn" Style="{StaticResource ToolBtn}" Content="Diagnostics" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export a redacted diagnostics ZIP for support and recovery"/>
-                        <Button x:Name="UpdatePolicyBtn" Style="{StaticResource ToolBtn}" Content="Update Policy" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Edit scheduled update check deferrals and maintenance windows"/>
+                        <Button x:Name="EditSourcePolicyBtn" Style="{StaticResource ToolBtn}" Content="Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Edit the corporate source policy allowlist and private sources"/>
+                        <Button x:Name="DiagnosticsBtn" Style="{StaticResource ToolBtn}" Content="Diag" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export a redacted diagnostics ZIP for support and recovery"/>
+                        <Button x:Name="UpdatePolicyBtn" Style="{StaticResource ToolBtn}" Content="Policy" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Edit scheduled update check deferrals and maintenance windows"/>
                         <Button x:Name="DownloadCacheBtn" Style="{StaticResource ToolBtn}" Content="Download Cache" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Download selected installers and write an offline cache manifest"/>
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="GalleryBtn" Style="{StaticResource ToolBtn}" Content="Profile Gallery" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Browse hashed public profiles and review every package before import"/>
@@ -1960,6 +2140,7 @@ function Show-WinGetInstallerGUI {
     $DeselectAllBtn   = $Window.FindName("DeselectAllBtn")
     $ExportBtn        = $Window.FindName("ExportBtn")
     $ExportSourcesBtn = $Window.FindName("ExportSourcesBtn")
+    $EditSourcePolicyBtn = $Window.FindName("EditSourcePolicyBtn")
     $DiagnosticsBtn   = $Window.FindName("DiagnosticsBtn")
     $UpdatePolicyBtn  = $Window.FindName("UpdatePolicyBtn")
     $DownloadCacheBtn = $Window.FindName("DownloadCacheBtn")
@@ -2108,7 +2289,7 @@ function Show-WinGetInstallerGUI {
     $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
     $PrivateIconModeCheck.IsChecked = [bool]$ui["PrivateIconMode"]
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $UpdatePolicyBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $EditSourcePolicyBtn, $DiagnosticsBtn, $UpdatePolicyBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
     foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck, $PrivateIconModeCheck, $CorporateModeCheck)) {
@@ -3453,6 +3634,21 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
+    $EditSourcePolicyBtn.Add_Click({
+        try {
+            $currentPolicy = Get-WingetterSourcePolicy
+            $newPolicy = Show-WingetterSourcePolicyDialog -Policy $currentPolicy -Owner $Window -IsDark $ui["IsDark"]
+            if ($null -ne $newPolicy) {
+                Save-WingetterSourcePolicy -Policy $newPolicy | Out-Null
+                $ui["SourcePolicy"] = Get-WingetterSourcePolicy
+                $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
+                $ProgressText.Text = "Source policy saved. $(@($newPolicy.AllowedSources).Count) allowed source(s), $(@($newPolicy.PrivateSources).Count) private source(s)."
+            }
+        } catch {
+            $ProgressText.Text = "Source policy error: $($_.Exception.Message)"
+        }
+    }.GetNewClosure())
+
     $UpdatePolicyBtn.Add_Click({
         try {
             $currentPolicy = Get-WingetterUpdatePolicy
@@ -3769,7 +3965,7 @@ function Show-WinGetInstallerGUI {
         foreach ($ctl in @($InstallBtn, $DownloadCacheBtn, $UpdateAllBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
             if ($null -ne $ctl) { $ctl.IsEnabled = -not $anyRunning }
         }
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $UpdatePolicyBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $SearchBox, $ClearSearchBtn, $SelectAllBtn, $DeselectAllBtn)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $EditSourcePolicyBtn, $DiagnosticsBtn, $UpdatePolicyBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $SearchBox, $ClearSearchBtn, $SelectAllBtn, $DeselectAllBtn)) {
             if ($null -ne $ctl) { $ctl.IsEnabled = -not $pkgRunning }
         }
         foreach ($cb in @($ui["AllCheckboxes"].Values)) {
@@ -4080,6 +4276,7 @@ function Show-WinGetInstallerGUI {
         $DeleteGroupBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ExportBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Collapsed
+        $EditSourcePolicyBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $DiagnosticsBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $UpdatePolicyBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Collapsed
@@ -4163,6 +4360,7 @@ function Show-WinGetInstallerGUI {
         $DeleteGroupBtn.Visibility = [System.Windows.Visibility]::Visible
         $ExportBtn.Visibility = [System.Windows.Visibility]::Visible
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Visible
+        $EditSourcePolicyBtn.Visibility = [System.Windows.Visibility]::Visible
         $DiagnosticsBtn.Visibility = [System.Windows.Visibility]::Visible
         $UpdatePolicyBtn.Visibility = [System.Windows.Visibility]::Visible
         $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Visible
