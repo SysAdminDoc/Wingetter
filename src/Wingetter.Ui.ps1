@@ -1863,9 +1863,9 @@ function Show-WinGetInstallerGUI {
                         <Border x:Name="Divider1" Background="{DynamicResource DividerBrush}" Width="1" Margin="0,2,12,2"/>
                         <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON, PowerShell, or WinGet Configuration"/>
                         <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and redacted winget source commands"/>
-                        <Button x:Name="EditSourcePolicyBtn" Style="{StaticResource ToolBtn}" Content="Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Edit the corporate source policy allowlist and private sources"/>
-                        <Button x:Name="DiagnosticsBtn" Style="{StaticResource ToolBtn}" Content="Diag" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export a redacted diagnostics ZIP for support and recovery"/>
-                        <Button x:Name="UpdatePolicyBtn" Style="{StaticResource ToolBtn}" Content="Policy" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Edit scheduled update check deferrals and maintenance windows"/>
+                        <Button x:Name="EditSourcePolicyBtn" Style="{StaticResource ToolBtn}" Content="Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Edit the corporate source policy allowlist and private sources" AutomationProperties.Name="Edit source policy"/>
+                        <Button x:Name="DiagnosticsBtn" Style="{StaticResource ToolBtn}" Content="Diag" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export a redacted diagnostics ZIP for support and recovery" AutomationProperties.Name="Export diagnostics bundle"/>
+                        <Button x:Name="UpdatePolicyBtn" Style="{StaticResource ToolBtn}" Content="Policy" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Edit scheduled update check deferrals and maintenance windows" AutomationProperties.Name="Edit update policy"/>
                         <Button x:Name="DownloadCacheBtn" Style="{StaticResource ToolBtn}" Content="Download Cache" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Download selected installers and write an offline cache manifest"/>
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="GalleryBtn" Style="{StaticResource ToolBtn}" Content="Profile Gallery" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Browse hashed public profiles and review every package before import"/>
@@ -2659,6 +2659,33 @@ function Show-WinGetInstallerGUI {
             $ui["LogPanelBorder"].BorderBrush = $bc.ConvertFromString($t["LogBorder"])
             $ui["LogTitle"].Foreground = $bc.ConvertFromString($t["CategoryTitle"])
             $ui["LogSubtitle"].Foreground = $bc.ConvertFromString($t["FooterText"])
+            foreach ($logEntry in @($LogEntriesPanel.Children)) {
+                $logStatus = [string]$logEntry.Tag
+                $logBg = switch ($logStatus) {
+                    "SUCCESS" { if ($ui["IsDark"]) { "#183a2c" } else { "#ecfaf2" } }
+                    "DOWNLOADED" { if ($ui["IsDark"]) { "#183a2c" } else { "#ecfaf2" } }
+                    "UP TO DATE" { if ($ui["IsDark"]) { "#3d3119" } else { "#fff8ea" } }
+                    "CANCELLED" { if ($ui["IsDark"]) { "#3d3119" } else { "#fff8ea" } }
+                    "FAILED" { if ($ui["IsDark"]) { "#3d2024" } else { "#fdf0f2" } }
+                    "ERROR" { if ($ui["IsDark"]) { "#3d2024" } else { "#fdf0f2" } }
+                    default { $t["LogEntryBg"] }
+                }
+                $logEntry.Background = $bc.ConvertFromString($logBg)
+                $grid = $logEntry.Child
+                if ($grid -and $grid.Children.Count -ge 2) {
+                    $grid.Children[0].Foreground = $bc.ConvertFromString($t["LogText"])
+                    $badge = $grid.Children[1]
+                    $badge.Background = $bc.ConvertFromString($t["LogEntryBg"])
+                    $statusColor = switch ($logStatus) {
+                        "SUCCESS" { $t["LogSuccess"] }
+                        "DOWNLOADED" { $t["LogSuccess"] }
+                        "FAILED" { $t["LogFail"] }
+                        "ERROR" { $t["LogFail"] }
+                        default { $t["LogSkip"] }
+                    }
+                    if ($badge.Child) { $badge.Child.Foreground = $bc.ConvertFromString($statusColor) }
+                }
+            }
         } catch {}
 
         # Package detail panel theming
@@ -4048,6 +4075,7 @@ function Show-WinGetInstallerGUI {
             }
         }
         $entry = New-Object System.Windows.Controls.Border
+        $entry.Tag = $Status
         $entry.Padding = [System.Windows.Thickness]::new(10, 8, 10, 8)
         $entry.Margin = [System.Windows.Thickness]::new(0, 2, 0, 2)
         $entry.CornerRadius = [System.Windows.CornerRadius]::new(10)

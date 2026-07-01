@@ -4,6 +4,9 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Fixed: Log entry rows now update their background, text, and status badge colors when the user toggles dark/light mode mid-session, instead of showing stale colors from the original render.
+- Fixed: Generated PS1 install scripts now check for "already installed" text before checking exit code, correctly counting re-installs as skipped instead of newly installed.
+- Fixed: Toolbar buttons "Diag", "Policy", "Sources" now have descriptive `AutomationProperties.Name` attributes for screen readers ("Export diagnostics bundle", "Edit update policy", "Edit source policy").
 - Refactored: Version string is now defined once in `$Script:WingetterVersion` (Common.ps1) and referenced by Resources.ps1, splash screen, header badge, and window title. Version bumps now require changing only one line.
 - Fixed: `Save-WingetterSettings` no longer re-reads settings from disk before writing, eliminating the read-modify-write race condition where two rapid saves could lose one change. Settings values (including null) are now written directly from the caller's object.
 - Fixed: XAML ControlTemplate trigger colors (hover/focus borders, disabled button backgrounds) now use DynamicResource bindings to the theme system instead of hardcoded dark-mode hex values. Light mode hover borders now use the correct blue, and disabled Install/Update buttons use theme-appropriate muted backgrounds.
