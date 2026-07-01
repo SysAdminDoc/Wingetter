@@ -689,10 +689,26 @@ function Start-WingetterDiagnosticsWorker {
 function Show-WingetterRunPlanDialog {
     param(
         [object]$RunPlan,
-        [System.Windows.Window]$Owner = $null
+        [System.Windows.Window]$Owner = $null,
+        [bool]$IsDark = $true
     )
 
     $bc = [System.Windows.Media.BrushConverter]::new()
+    $winBg    = if ($IsDark) { "#071018" } else { "#f3f6fb" }
+    $titleFg  = if ($IsDark) { "#f8fafc" } else { "#12263a" }
+    $subtleFg = if ($IsDark) { "#94a7bc" } else { "#54697c" }
+    $scrollBg = if ($IsDark) { "#0b1725" } else { "#ffffff" }
+    $rowBorder = if ($IsDark) { "#1f3145" } else { "#d7e2ed" }
+    $rowBgRun  = if ($IsDark) { "#0d1b2b" } else { "#ffffff" }
+    $rowBgSkip = if ($IsDark) { "#111827" } else { "#f6f9fc" }
+    $nameFg    = if ($IsDark) { "#e5edf5" } else { "#17293b" }
+    $reasonOk  = if ($IsDark) { "#9fd3ff" } else { "#0f6fd6" }
+    $reasonWarn = if ($IsDark) { "#ffbf69" } else { "#b7791f" }
+    $statusOk  = if ($IsDark) { "#78ddb1" } else { "#198754" }
+    $btnRunBg  = if ($IsDark) { "#1fb879" } else { "#198754" }
+    $btnCancelBg = if ($IsDark) { "#102133" } else { "#f6f9fc" }
+    $btnCancelFg = if ($IsDark) { "#dbe7f1" } else { "#22384d" }
+    $btnCancelBd = if ($IsDark) { "#24374a" } else { "#d2dde8" }
     $window = New-Object System.Windows.Window
     $window.Title = "Review Wingetter Run Plan"
     $window.Width = 860
@@ -700,7 +716,7 @@ function Show-WingetterRunPlanDialog {
     $window.MinWidth = 720
     $window.MinHeight = 440
     $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
-    $window.Background = $bc.ConvertFromString("#071018")
+    $window.Background = $bc.ConvertFromString($winBg)
     if ($Owner) {
         $window.Owner = $Owner
         $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterOwner
@@ -719,13 +735,13 @@ function Show-WingetterRunPlanDialog {
     $title.Text = "Preflight run plan"
     $title.FontSize = 20
     $title.FontWeight = [System.Windows.FontWeights]::SemiBold
-    $title.Foreground = $bc.ConvertFromString("#f8fafc")
+    $title.Foreground = $bc.ConvertFromString($titleFg)
     [void]$header.Children.Add($title)
 
     $summary = New-Object System.Windows.Controls.TextBlock
     $summary.Margin = [System.Windows.Thickness]::new(0, 6, 0, 0)
     $summary.FontSize = 12
-    $summary.Foreground = $bc.ConvertFromString("#94a7bc")
+    $summary.Foreground = $bc.ConvertFromString($subtleFg)
     $summary.Text = "$($RunPlan.Summary.runnable) runnable, $($RunPlan.Summary.skipped) skipped, $($RunPlan.Summary.blocked) blocked, $($RunPlan.Summary.current) current."
     [void]$header.Children.Add($summary)
 
@@ -751,7 +767,7 @@ function Show-WingetterRunPlanDialog {
 
     $scroll = New-Object System.Windows.Controls.ScrollViewer
     $scroll.VerticalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Auto
-    $scroll.Background = $bc.ConvertFromString("#0b1725")
+    $scroll.Background = $bc.ConvertFromString($scrollBg)
     $scroll.Padding = [System.Windows.Thickness]::new(8)
     [void]$root.Children.Add($scroll)
 
@@ -765,8 +781,8 @@ function Show-WingetterRunPlanDialog {
         $row.Padding = [System.Windows.Thickness]::new(10)
         $row.CornerRadius = [System.Windows.CornerRadius]::new(6)
         $row.BorderThickness = [System.Windows.Thickness]::new(1)
-        $row.BorderBrush = $bc.ConvertFromString("#1f3145")
-        $row.Background = if ($item.CanRun) { $bc.ConvertFromString("#0d1b2b") } else { $bc.ConvertFromString("#111827") }
+        $row.BorderBrush = $bc.ConvertFromString($rowBorder)
+        $row.Background = if ($item.CanRun) { $bc.ConvertFromString($rowBgRun) } else { $bc.ConvertFromString($rowBgSkip) }
 
         $grid = New-Object System.Windows.Controls.Grid
         $col0 = New-Object System.Windows.Controls.ColumnDefinition; $col0.Width = [System.Windows.GridLength]::Auto
@@ -790,7 +806,7 @@ function Show-WingetterRunPlanDialog {
 
         $nameText = New-Object System.Windows.Controls.TextBlock
         $nameText.Text = "$($item.Name) [$($item.PackageId)]"
-        $nameText.Foreground = $bc.ConvertFromString("#e5edf5")
+        $nameText.Foreground = $bc.ConvertFromString($nameFg)
         $nameText.FontWeight = [System.Windows.FontWeights]::SemiBold
         $nameText.TextWrapping = [System.Windows.TextWrapping]::Wrap
         [void]$textStack.Children.Add($nameText)
@@ -799,7 +815,7 @@ function Show-WingetterRunPlanDialog {
         $itemOptionsSummary = if ($item.PSObject.Properties["InstallOptionsSummary"]) { [string]$item.InstallOptionsSummary } else { "" }
         $optionsText = if (![string]::IsNullOrWhiteSpace($itemOptionsSummary)) { "  Options: $itemOptionsSummary" } else { "" }
         $detailText.Text = "Source: $($item.SourceName)  Installed: $($item.InstalledVersion)  Available: $($item.AvailableVersion)  Pin: $($item.PinStatus)$optionsText"
-        $detailText.Foreground = $bc.ConvertFromString("#94a7bc")
+        $detailText.Foreground = $bc.ConvertFromString($subtleFg)
         $detailText.FontSize = 11
         $detailText.Margin = [System.Windows.Thickness]::new(0, 4, 0, 0)
         $detailText.TextWrapping = [System.Windows.TextWrapping]::Wrap
@@ -807,7 +823,7 @@ function Show-WingetterRunPlanDialog {
 
         $reasonText = New-Object System.Windows.Controls.TextBlock
         $reasonText.Text = $item.Reason
-        $reasonText.Foreground = if ($item.CanRun) { $bc.ConvertFromString("#9fd3ff") } else { $bc.ConvertFromString("#ffbf69") }
+        $reasonText.Foreground = if ($item.CanRun) { $bc.ConvertFromString($reasonOk) } else { $bc.ConvertFromString($reasonWarn) }
         $reasonText.FontSize = 11
         $reasonText.Margin = [System.Windows.Thickness]::new(0, 4, 0, 0)
         $reasonText.TextWrapping = [System.Windows.TextWrapping]::Wrap
@@ -815,7 +831,7 @@ function Show-WingetterRunPlanDialog {
 
         $status = New-Object System.Windows.Controls.TextBlock
         $status.Text = "$($item.PlannedAction) / $($item.Status)"
-        $status.Foreground = if ($item.CanRun) { $bc.ConvertFromString("#78ddb1") } else { $bc.ConvertFromString("#ffbf69") }
+        $status.Foreground = if ($item.CanRun) { $bc.ConvertFromString($statusOk) } else { $bc.ConvertFromString($reasonWarn) }
         $status.FontWeight = [System.Windows.FontWeights]::SemiBold
         $status.FontSize = 11
         $status.Margin = [System.Windows.Thickness]::new(12, 2, 0, 0)
@@ -3010,20 +3026,21 @@ function Show-WinGetInstallerGUI {
         }
 
         # Input dialog for group name
+        $d = if ($ui["IsDark"]) { @{ WinBg="#071018"; TitleFg="#f0f6fb"; SubFg="#90a4b8"; LabelFg="#c4d2df"; BoxBg="#08131f"; BoxFg="#eff6fb"; BoxBd="#24374a"; NoteFg="#7a90a6"; BtnBg="#1fb879"; CancelBg="#102133"; CancelFg="#dbe7f1"; CancelBd="#24374a" } } else { @{ WinBg="#f3f6fb"; TitleFg="#12263a"; SubFg="#60778b"; LabelFg="#304658"; BoxBg="#ffffff"; BoxFg="#0f2438"; BoxBd="#c7d6e3"; NoteFg="#5f7487"; BtnBg="#198754"; CancelBg="#f6f9fc"; CancelFg="#22384d"; CancelBd="#d2dde8" } }
         $inputXaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Save Package Group" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize" Background="#071018" MinWidth="420">
+        ResizeMode="NoResize" Background="$($d.WinBg)" MinWidth="420">
     <StackPanel Margin="26,22,26,22">
-        <TextBlock Text="Save the current selection as a reusable group" Foreground="#f0f6fb" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
-        <TextBlock Text="Wingetter will keep the exact package IDs so you can reload this setup later." Foreground="#90a4b8" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap" MaxWidth="340"/>
-        <TextBlock Text="Group name" Foreground="#c4d2df" FontSize="12" Margin="0,0,0,6"/>
-        <TextBox x:Name="GroupNameBox" FontSize="13" Padding="10,8" Background="#08131f" Foreground="#eff6fb" BorderBrush="#24374a" BorderThickness="1" AutomationProperties.Name="Group name"/>
-        <TextBlock Text="$($sel.Count) selected apps will be included." Foreground="#7a90a6" FontSize="11.5" Margin="0,10,0,0"/>
+        <TextBlock Text="Save the current selection as a reusable group" Foreground="$($d.TitleFg)" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,6"/>
+        <TextBlock Text="Wingetter will keep the exact package IDs so you can reload this setup later." Foreground="$($d.SubFg)" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap" MaxWidth="340"/>
+        <TextBlock Text="Group name" Foreground="$($d.LabelFg)" FontSize="12" Margin="0,0,0,6"/>
+        <TextBox x:Name="GroupNameBox" FontSize="13" Padding="10,8" Background="$($d.BoxBg)" Foreground="$($d.BoxFg)" BorderBrush="$($d.BoxBd)" BorderThickness="1" AutomationProperties.Name="Group name"/>
+        <TextBlock Text="$($sel.Count) selected apps will be included." Foreground="$($d.NoteFg)" FontSize="11.5" Margin="0,10,0,0"/>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
-            <Button x:Name="OkBtn" Content="Save Group" Padding="20,7" Margin="0,0,8,0" FontSize="12" IsDefault="True" Background="#1fb879" Foreground="White" BorderThickness="0" Cursor="Hand"/>
-            <Button x:Name="CancelDlgBtn" Content="Cancel" Padding="18,7" FontSize="12" IsCancel="True" Background="#102133" Foreground="#dbe7f1" BorderBrush="#24374a" BorderThickness="1" Cursor="Hand"/>
+            <Button x:Name="OkBtn" Content="Save Group" Padding="20,7" Margin="0,0,8,0" FontSize="12" IsDefault="True" Background="$($d.BtnBg)" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+            <Button x:Name="CancelDlgBtn" Content="Cancel" Padding="18,7" FontSize="12" IsCancel="True" Background="$($d.CancelBg)" Foreground="$($d.CancelFg)" BorderBrush="$($d.CancelBd)" BorderThickness="1" Cursor="Hand"/>
         </StackPanel>
     </StackPanel>
 </Window>
@@ -3251,11 +3268,12 @@ function Show-WinGetInstallerGUI {
                 return
             }
 
+            $g = if ($ui["IsDark"]) { @{ WinBg="#071018"; TitleFg="#f0f6fb"; SubFg="#90a4b8"; ListBg="#08131f"; ListFg="#dbe7f1"; ListBd="#24374a"; PanelBg="#08131f"; PanelBd="#24374a"; BoxBg="#071018"; BoxFg="#dbe7f1"; BoxBd="#1d2a3a"; BtnBg="#1fb879"; CancelBg="#102133"; CancelFg="#dbe7f1"; CancelBd="#24374a" } } else { @{ WinBg="#f3f6fb"; TitleFg="#12263a"; SubFg="#60778b"; ListBg="#ffffff"; ListFg="#17293b"; ListBd="#c7d6e3"; PanelBg="#ffffff"; PanelBd="#d7e2ed"; BoxBg="#f8fbff"; BoxFg="#17293b"; BoxBd="#dbe6f0"; BtnBg="#198754"; CancelBg="#f6f9fc"; CancelFg="#22384d"; CancelBd="#d2dde8" } }
             $galleryXaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Wingetter Profile Gallery" Height="640" Width="900" MinHeight="520" MinWidth="780"
-        WindowStartupLocation="CenterOwner" ResizeMode="CanResize" Background="#071018"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResize" Background="$($g.WinBg)"
         FontFamily="Segoe UI" SnapsToDevicePixels="True" UseLayoutRounding="True">
     <Grid Margin="22">
         <Grid.RowDefinitions>
@@ -3264,8 +3282,8 @@ function Show-WinGetInstallerGUI {
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
-            <TextBlock Text="Profile Gallery" Foreground="#f0f6fb" FontSize="20" FontWeight="SemiBold"/>
-            <TextBlock Text="Profiles are read-only, hash-verified, and imported only after package review." Foreground="#90a4b8" FontSize="12.5" Margin="0,4,0,0"/>
+            <TextBlock Text="Profile Gallery" Foreground="$($g.TitleFg)" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="Profiles are read-only, hash-verified, and imported only after package review." Foreground="$($g.SubFg)" FontSize="12.5" Margin="0,4,0,0"/>
         </StackPanel>
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -3273,15 +3291,15 @@ function Show-WinGetInstallerGUI {
                 <ColumnDefinition Width="16"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <ListBox x:Name="ProfilesList" Grid.Column="0" Background="#08131f" Foreground="#dbe7f1" BorderBrush="#24374a" BorderThickness="1" Padding="4" AutomationProperties.Name="Available profile gallery profiles"/>
-            <Border Grid.Column="2" Background="#08131f" BorderBrush="#24374a" BorderThickness="1" CornerRadius="8" Padding="14">
+            <ListBox x:Name="ProfilesList" Grid.Column="0" Background="$($g.ListBg)" Foreground="$($g.ListFg)" BorderBrush="$($g.ListBd)" BorderThickness="1" Padding="4" AutomationProperties.Name="Available profile gallery profiles"/>
+            <Border Grid.Column="2" Background="$($g.PanelBg)" BorderBrush="$($g.PanelBd)" BorderThickness="1" CornerRadius="8" Padding="14">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock x:Name="ProfileTitle" Text="Choose a profile" Foreground="#f0f6fb" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <TextBox x:Name="PreviewBox" Grid.Row="1" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="#071018" Foreground="#dbe7f1" BorderBrush="#1d2a3a" FontFamily="Consolas" FontSize="12.5" Padding="10" AutomationProperties.Name="Profile package review"/>
+                    <TextBlock x:Name="ProfileTitle" Text="Choose a profile" Foreground="$($g.TitleFg)" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <TextBox x:Name="PreviewBox" Grid.Row="1" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="$($g.BoxBg)" Foreground="$($g.BoxFg)" BorderBrush="$($g.BoxBd)" FontFamily="Consolas" FontSize="12.5" Padding="10" AutomationProperties.Name="Profile package review"/>
                 </Grid>
             </Border>
         </Grid>
@@ -3290,10 +3308,10 @@ function Show-WinGetInstallerGUI {
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock x:Name="GalleryStatus" Grid.Column="0" Text="Select a profile to verify its hash and review package IDs." Foreground="#90a4b8" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            <TextBlock x:Name="GalleryStatus" Grid.Column="0" Text="Select a profile to verify its hash and review package IDs." Foreground="$($g.SubFg)" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button x:Name="ImportProfileBtn" Content="Import Reviewed Profile" IsEnabled="False" Padding="18,8" Margin="0,0,8,0" Background="#1fb879" Foreground="White" BorderThickness="0" Cursor="Hand"/>
-                <Button x:Name="CancelGalleryBtn" Content="Cancel" Padding="18,8" Background="#102133" Foreground="#dbe7f1" BorderBrush="#24374a" BorderThickness="1" Cursor="Hand" IsCancel="True"/>
+                <Button x:Name="ImportProfileBtn" Content="Import Reviewed Profile" IsEnabled="False" Padding="18,8" Margin="0,0,8,0" Background="$($g.BtnBg)" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                <Button x:Name="CancelGalleryBtn" Content="Cancel" Padding="18,8" Background="$($g.CancelBg)" Foreground="$($g.CancelFg)" BorderBrush="$($g.CancelBd)" BorderThickness="1" Cursor="Hand" IsCancel="True"/>
             </StackPanel>
         </Grid>
     </Grid>
@@ -3723,7 +3741,7 @@ function Show-WinGetInstallerGUI {
         $runPlanPath = Join-Path $runLogDir "preflight-plan.json"
         $runPlan | Add-Member -MemberType NoteProperty -Name PlanPath -Value $runPlanPath -Force
         Export-WingetterRunPlan -RunPlan $runPlan -FilePath $runPlanPath | Out-Null
-        if (-not (Show-WingetterRunPlanDialog -RunPlan $runPlan -Owner $Window)) {
+        if (-not (Show-WingetterRunPlanDialog -RunPlan $runPlan -Owner $Window -IsDark $ui["IsDark"])) {
             Export-WingetterRunPlan -RunPlan $runPlan -FilePath $runPlanPath | Out-Null
             $ProgressText.Text = "Run cancelled before execution. Preflight plan: $runPlanPath"
             return
