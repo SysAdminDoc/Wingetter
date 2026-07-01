@@ -759,10 +759,38 @@ function Get-WinGetLogDirectory {
     return $null
 }
 
+function Remove-WingetterProgressNoise {
+    param([string]$Text)
+
+    if ([string]::IsNullOrWhiteSpace($Text)) { return "" }
+    $lines = @($Text -split '(?:\r\n|\n|\r)')
+    $clean = [System.Collections.ArrayList]::new()
+    $collapsedCount = 0
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmed)) { continue }
+        if ($trimmed -match '^[\|/\-\\]+$') { $collapsedCount++; continue }
+        if ($trimmed -match '^\r') { $collapsedCount++; continue }
+        if ($trimmed -match '(?:^[\s\x08]*[\|/\-\\][\s\x08]*$)') { $collapsedCount++; continue }
+        if ($trimmed -match '^\[[\s=\-#>\.oO]*\]\s*\d+%?$') { $collapsedCount++; continue }
+        if ($trimmed -match '^(?:\d{1,3}%|\.{2,}|={2,}|-{3,})$') { $collapsedCount++; continue }
+        if ($trimmed -match '^\x1b\[') { $trimmed = $trimmed -replace '\x1b\[[0-9;]*[A-Za-z]', '' }
+        $trimmed = $trimmed.Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmed)) { continue }
+        [void]$clean.Add($trimmed)
+    }
+    $result = $clean -join "`n"
+    if ($collapsedCount -gt 0 -and $clean.Count -gt 0) {
+        $result += "`n[collapsed $collapsedCount progress line(s)]"
+    }
+    return $result
+}
+
 function Get-TextExcerpt {
     param([string]$Text, [int]$MaxLength = 1000)
     if ([string]::IsNullOrWhiteSpace($Text)) { return "" }
-    $clean = ($Text -replace '\s+', ' ').Trim()
+    $clean = (Remove-WingetterProgressNoise -Text $Text) -replace '\s+', ' '
+    $clean = $clean.Trim()
     if ($clean.Length -le $MaxLength) { return $clean }
     return $clean.Substring(0, $MaxLength)
 }

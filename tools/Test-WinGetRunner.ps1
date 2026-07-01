@@ -541,6 +541,29 @@ Google Chrome Google.Chrome 124.0   Blocking
     if ($msstoreSource.Status -ne "Offline") { Add-Failure "Source health msstore source not classified as Offline." }
     if ($healthResult.Summary -ne "1/2 source(s) healthy") { Add-Failure "Source health summary mismatch: $($healthResult.Summary)." }
 
+    $noisy = "Installing Google Chrome...`n|`n/`n-`n\`nSuccessfully installed."
+    $cleanedNoisy = Remove-WingetterProgressNoise -Text $noisy
+    if ($cleanedNoisy -notmatch "Installing Google Chrome") { Add-Failure "Progress noise removal lost meaningful line." }
+    if ($cleanedNoisy -notmatch "Successfully installed") { Add-Failure "Progress noise removal lost success line." }
+    if ($cleanedNoisy -match '^\|$') { Add-Failure "Progress noise removal did not collapse spinner characters." }
+    if ($cleanedNoisy -notmatch "\[collapsed") { Add-Failure "Progress noise removal did not report collapsed count." }
+
+    $progressBar = "Downloading...`n[=====>     ] 50%`n[==========>] 100%`nDone."
+    $cleanedBar = Remove-WingetterProgressNoise -Text $progressBar
+    if ($cleanedBar -notmatch "Downloading") { Add-Failure "Progress bar removal lost label." }
+    if ($cleanedBar -notmatch "Done") { Add-Failure "Progress bar removal lost final status." }
+
+    $emptyResult = Remove-WingetterProgressNoise -Text ""
+    if ($emptyResult -ne "") { Add-Failure "Progress noise removal on empty input should return empty." }
+
+    $meaningfulOnly = "Line one`nLine two"
+    $cleanedMeaningful = Remove-WingetterProgressNoise -Text $meaningfulOnly
+    if ($cleanedMeaningful -match "\[collapsed") { Add-Failure "Progress noise removal falsely reported collapsed lines on clean input." }
+
+    $excerpt = Get-TextExcerpt -Text "Status: ok`n|`n/`n-`n\`nDone." -MaxLength 100
+    if ($excerpt -match '^\|$') { Add-Failure "Get-TextExcerpt did not filter spinner lines." }
+    if ($excerpt -notmatch "Status: ok") { Add-Failure "Get-TextExcerpt lost meaningful content." }
+
     $boundsDir = Join-Path ([System.IO.Path]::GetTempPath()) ("wingetter-bounds-test-" + [System.Guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $boundsDir -Force | Out-Null
     try {

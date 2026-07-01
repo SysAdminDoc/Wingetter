@@ -36,13 +36,6 @@
   Acceptance: after reviewed install/update/offline-cache runs, Wingetter can export a lockfile with package ID, source, resolved version, installer URL/hash when available, selected safe options, timestamp, and warnings; import shows drift before selecting packages.
   Complexity: L
 
-- [ ] P2 - Normalize noisy installer progress in operation logs
-  Why: WinGet 1.29 `--no-progress` reduces CLI noise, but older WinGet builds and individual installers can still emit spinner/progress streams that make GUI logs hard to follow.
-  Evidence: `src/Wingetter.WinGet.ps1:171-188`; `src/Wingetter.Ui.ps1:325-526`; UniGetUI issue #5004.
-  Touches: `src\Wingetter.WinGet.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-WinGetRunner.ps1`, `tools\fixtures\winget\`.
-  Acceptance: captured stdout/stderr records keep raw logs on disk but the GUI/log summary collapses repeated spinner/progress-only lines, preserves meaningful installer output, and tests cover common `|/-\` and carriage-return progress patterns.
-  Complexity: M
-
 ## Research-Driven Additions
 
 ### P2
