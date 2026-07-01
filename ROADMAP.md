@@ -54,3 +54,25 @@
   Touches: `src\Wingetter.Configuration.ps1`, `src\Wingetter.Ui.ps1`, `tools\Test-ConfigurationExport.ps1`, `README.md`.
   Acceptance: configuration export has a feature-detected compatibility layer for native DSC v3 resources while defaulting to the current schema until stable; fixture tests cover current schema and simulated v3 resource availability without requiring prerelease WinGet on normal validation.
   Complexity: M
+
+## Audit-Driven Additions
+
+### P2
+
+- [ ] P2 - Dispose XmlReader and StringReader after XamlReader.Load in dialog creation
+  Why: Three XmlReader instances (main window, save group, gallery dialog) are created but never disposed, leaking native resources repeatedly during a session.
+  Where: `src\Wingetter.Ui.ps1` lines 1728, 3048, 3320
+
+- [ ] P2 - Deduplicate Get-WingetterFileSha256 from launcher to single Common.ps1 definition
+  Why: The function is identically defined in both Wingetter.ps1 and Wingetter.Common.ps1; manual sync via Sync-LauncherManifest is fragile and divergence risks silent hash-check failures.
+  Where: `Wingetter.ps1:60`, `src\Wingetter.Common.ps1:204`
+
+- [ ] P2 - Add iconDomain validation in external catalog loader
+  Why: External catalog JSON can supply arbitrary iconDomain values; the HTTPS URL scheme check on download covers most SSRF risk but the iconDomain-to-URL template construction should also validate no URL-encoding tricks or injected query parameters.
+  Where: `src\Wingetter.Catalog.ps1:20`
+
+### P3
+
+- [ ] P3 - Theme the ProgressBar gradient fill colors for light mode
+  Why: The ProgressBar XAML gradient stops at lines 1335-1338 and the ToolBtn hover border at line 1191 are hardcoded to dark-theme colors and not updated by ApplyTheme.
+  Where: `src\Wingetter.Ui.ps1`
