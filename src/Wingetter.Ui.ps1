@@ -694,6 +694,186 @@ function Start-WingetterDiagnosticsWorker {
     }
 }
 
+function Show-WingetterUpdatePolicyDialog {
+    param(
+        [object]$Policy,
+        [System.Windows.Window]$Owner = $null,
+        [bool]$IsDark = $true
+    )
+
+    $bc = [System.Windows.Media.BrushConverter]::new()
+    $winBg    = if ($IsDark) { "#071018" } else { "#f3f6fb" }
+    $titleFg  = if ($IsDark) { "#f8fafc" } else { "#12263a" }
+    $subtleFg = if ($IsDark) { "#94a7bc" } else { "#54697c" }
+    $labelFg  = if ($IsDark) { "#c4d2df" } else { "#304658" }
+    $boxBg    = if ($IsDark) { "#08131f" } else { "#ffffff" }
+    $boxFg    = if ($IsDark) { "#eff6fb" } else { "#0f2438" }
+    $boxBd    = if ($IsDark) { "#24374a" } else { "#c7d6e3" }
+    $btnBg    = if ($IsDark) { "#1fb879" } else { "#198754" }
+    $cancelBg = if ($IsDark) { "#102133" } else { "#f6f9fc" }
+    $cancelFg = if ($IsDark) { "#dbe7f1" } else { "#22384d" }
+    $cancelBd = if ($IsDark) { "#24374a" } else { "#d2dde8" }
+
+    $win = New-Object System.Windows.Window
+    $win.Title = "Update Policy Editor"
+    $win.Width = 580
+    $win.Height = 440
+    $win.MinWidth = 480
+    $win.MinHeight = 380
+    $win.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
+    $win.Background = $bc.ConvertFromString($winBg)
+    $win.FontFamily = [System.Windows.Media.FontFamily]::new("Segoe UI")
+    if ($Owner) { $win.Owner = $Owner; $win.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterOwner }
+
+    $root = New-Object System.Windows.Controls.DockPanel
+    $root.Margin = [System.Windows.Thickness]::new(22)
+    $win.Content = $root
+
+    $title = New-Object System.Windows.Controls.TextBlock
+    $title.Text = "Scheduled Update Policy"
+    $title.FontSize = 18; $title.FontWeight = [System.Windows.FontWeights]::SemiBold
+    $title.Foreground = $bc.ConvertFromString($titleFg)
+    $title.Margin = [System.Windows.Thickness]::new(0, 0, 0, 4)
+    [System.Windows.Controls.DockPanel]::SetDock($title, [System.Windows.Controls.Dock]::Top)
+    [void]$root.Children.Add($title)
+
+    $subtitle = New-Object System.Windows.Controls.TextBlock
+    $subtitle.Text = "Configure when and how update checks run."
+    $subtitle.FontSize = 12; $subtitle.Foreground = $bc.ConvertFromString($subtleFg)
+    $subtitle.Margin = [System.Windows.Thickness]::new(0, 0, 0, 16)
+    [System.Windows.Controls.DockPanel]::SetDock($subtitle, [System.Windows.Controls.Dock]::Top)
+    [void]$root.Children.Add($subtitle)
+
+    $buttonBar = New-Object System.Windows.Controls.StackPanel
+    $buttonBar.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+    $buttonBar.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Right
+    $buttonBar.Margin = [System.Windows.Thickness]::new(0, 16, 0, 0)
+    [System.Windows.Controls.DockPanel]::SetDock($buttonBar, [System.Windows.Controls.Dock]::Bottom)
+    [void]$root.Children.Add($buttonBar)
+
+    $saveBtn = New-Object System.Windows.Controls.Button
+    $saveBtn.Content = "Save Policy"; $saveBtn.Padding = [System.Windows.Thickness]::new(18, 8, 18, 8)
+    $saveBtn.Margin = [System.Windows.Thickness]::new(0, 0, 8, 0); $saveBtn.IsDefault = $true
+    $saveBtn.Background = $bc.ConvertFromString($btnBg); $saveBtn.Foreground = [System.Windows.Media.Brushes]::White
+    $saveBtn.BorderThickness = [System.Windows.Thickness]::new(0); $saveBtn.Cursor = [System.Windows.Input.Cursors]::Hand
+    [void]$buttonBar.Children.Add($saveBtn)
+
+    $cancelBtn = New-Object System.Windows.Controls.Button
+    $cancelBtn.Content = "Cancel"; $cancelBtn.Padding = [System.Windows.Thickness]::new(18, 8, 18, 8)
+    $cancelBtn.IsCancel = $true; $cancelBtn.Cursor = [System.Windows.Input.Cursors]::Hand
+    $cancelBtn.Background = $bc.ConvertFromString($cancelBg); $cancelBtn.Foreground = $bc.ConvertFromString($cancelFg)
+    $cancelBtn.BorderBrush = $bc.ConvertFromString($cancelBd); $cancelBtn.BorderThickness = [System.Windows.Thickness]::new(1)
+    [void]$buttonBar.Children.Add($cancelBtn)
+
+    $scroll = New-Object System.Windows.Controls.ScrollViewer
+    $scroll.VerticalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Auto
+    [void]$root.Children.Add($scroll)
+
+    $form = New-Object System.Windows.Controls.StackPanel
+    $form.Margin = [System.Windows.Thickness]::new(0, 0, 8, 0)
+    $scroll.Content = $form
+
+    $NewLabel = { param([string]$Text)
+        $lbl = New-Object System.Windows.Controls.TextBlock
+        $lbl.Text = $Text; $lbl.FontSize = 12; $lbl.Foreground = $bc.ConvertFromString($labelFg)
+        $lbl.Margin = [System.Windows.Thickness]::new(0, 10, 0, 4)
+        $lbl
+    }
+    $NewTextBox = { param([string]$Value, [string]$AutoName)
+        $tb = New-Object System.Windows.Controls.TextBox
+        $tb.Text = $Value; $tb.FontSize = 12; $tb.Padding = [System.Windows.Thickness]::new(8, 6, 8, 6)
+        $tb.Background = $bc.ConvertFromString($boxBg); $tb.Foreground = $bc.ConvertFromString($boxFg)
+        $tb.BorderBrush = $bc.ConvertFromString($boxBd); $tb.BorderThickness = [System.Windows.Thickness]::new(1)
+        [System.Windows.Automation.AutomationProperties]::SetName($tb, $AutoName)
+        $tb
+    }
+
+    [void]$form.Children.Add((& $NewLabel "Global not-before (UTC, e.g. 2026-08-01T00:00:00Z, or leave empty)"))
+    $globalNotBeforeBox = & $NewTextBox ([string]$Policy.GlobalNotBeforeUtc) "Global not-before UTC"
+    [void]$form.Children.Add($globalNotBeforeBox)
+
+    [void]$form.Children.Add((& $NewLabel "Max deferrals per package (0 = no limit)"))
+    $maxDeferralsBox = & $NewTextBox ([string]$Policy.MaxDeferrals) "Max deferrals"
+    [void]$form.Children.Add($maxDeferralsBox)
+
+    [void]$form.Children.Add((& $NewLabel "Maintenance windows (one per line: Name,Days,Start,End)"))
+    $windowsBox = New-Object System.Windows.Controls.TextBox
+    $windowsBox.AcceptsReturn = $true; $windowsBox.TextWrapping = [System.Windows.TextWrapping]::Wrap
+    $windowsBox.Height = 80; $windowsBox.FontSize = 12; $windowsBox.FontFamily = [System.Windows.Media.FontFamily]::new("Consolas")
+    $windowsBox.Padding = [System.Windows.Thickness]::new(8, 6, 8, 6)
+    $windowsBox.Background = $bc.ConvertFromString($boxBg); $windowsBox.Foreground = $bc.ConvertFromString($boxFg)
+    $windowsBox.BorderBrush = $bc.ConvertFromString($boxBd); $windowsBox.BorderThickness = [System.Windows.Thickness]::new(1)
+    $windowsBox.VerticalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Auto
+    [System.Windows.Automation.AutomationProperties]::SetName($windowsBox, "Maintenance windows")
+    $windowLines = [System.Collections.ArrayList]::new()
+    foreach ($w in @($Policy.MaintenanceWindows)) {
+        [void]$windowLines.Add("$($w.Name),$($w.DaysOfWeek -join ';'),$($w.StartLocalTime),$($w.EndLocalTime)")
+    }
+    $windowsBox.Text = ($windowLines -join "`r`n")
+    [void]$form.Children.Add($windowsBox)
+
+    $hintText = New-Object System.Windows.Controls.TextBlock
+    $hintText.Text = "Example: Weeknight,Monday;Tuesday;Wednesday;Thursday;Friday,22:00,06:00"
+    $hintText.FontSize = 10.5; $hintText.Foreground = $bc.ConvertFromString($subtleFg)
+    $hintText.Margin = [System.Windows.Thickness]::new(0, 2, 0, 0)
+    [void]$form.Children.Add($hintText)
+
+    $statusText = New-Object System.Windows.Controls.TextBlock
+    $statusText.FontSize = 11.5; $statusText.Foreground = $bc.ConvertFromString($subtleFg)
+    $statusText.Margin = [System.Windows.Thickness]::new(0, 10, 0, 0); $statusText.TextWrapping = [System.Windows.TextWrapping]::Wrap
+    [void]$form.Children.Add($statusText)
+
+    $saveBtn.Add_Click({
+        $errors = [System.Collections.ArrayList]::new()
+        $globalNB = $globalNotBeforeBox.Text.Trim()
+        if (![string]::IsNullOrWhiteSpace($globalNB)) {
+            $parsed = Get-WingetterUpdatePolicyDateTime -Value $globalNB
+            if ($null -eq $parsed) { [void]$errors.Add("Global not-before is not a valid UTC datetime.") }
+        }
+        $maxDefStr = $maxDeferralsBox.Text.Trim()
+        if (![string]::IsNullOrWhiteSpace($maxDefStr) -and $maxDefStr -notmatch '^\d+$') {
+            [void]$errors.Add("Max deferrals must be a non-negative integer.")
+        }
+        $parsedWindows = [System.Collections.ArrayList]::new()
+        foreach ($line in @($windowsBox.Text -split '(?:\r\n|\n)')) {
+            $line = $line.Trim()
+            if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            $parts = $line -split ','
+            if ($parts.Count -lt 4) { [void]$errors.Add("Maintenance window line '$line' needs Name,Days,Start,End."); continue }
+            $days = @($parts[1] -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+            $tsStart = [TimeSpan]::Zero; $tsEnd = [TimeSpan]::Zero
+            if (![TimeSpan]::TryParse($parts[2].Trim(), [ref]$tsStart)) { [void]$errors.Add("Invalid start time '$($parts[2])'.") }
+            if (![TimeSpan]::TryParse($parts[3].Trim(), [ref]$tsEnd)) { [void]$errors.Add("Invalid end time '$($parts[3])'.") }
+            [void]$parsedWindows.Add((New-WingetterUpdateMaintenanceWindow -Name $parts[0].Trim() -DaysOfWeek $days -StartLocalTime $parts[2].Trim() -EndLocalTime $parts[3].Trim()))
+        }
+
+        if ($errors.Count -gt 0) {
+            $statusText.Text = $errors -join " "
+            $statusText.Foreground = $bc.ConvertFromString($(if ($IsDark) { "#ff6b6b" } else { "#dc3545" }))
+            return
+        }
+
+        $newPolicy = New-WingetterDefaultUpdatePolicy
+        $newPolicy.GlobalNotBeforeUtc = $globalNB
+        $newPolicy.MaxDeferrals = if ($maxDefStr -match '^\d+$') { [int]$maxDefStr } else { 0 }
+        $newPolicy.MaintenanceWindows = @($parsedWindows.ToArray())
+        $newPolicy.PackagePolicies = @($Policy.PackagePolicies)
+        $win.Tag = $newPolicy
+        $win.DialogResult = $true
+        $win.Close()
+    }.GetNewClosure())
+
+    $cancelBtn.Add_Click({
+        $win.DialogResult = $false
+        $win.Close()
+    }.GetNewClosure())
+
+    if ($win.ShowDialog() -eq $true) {
+        return $win.Tag
+    }
+    return $null
+}
+
 function Show-WingetterRunPlanDialog {
     param(
         [object]$RunPlan,
@@ -1502,6 +1682,7 @@ function Show-WinGetInstallerGUI {
                         <Button x:Name="ExportBtn" Style="{StaticResource ToolBtn}" Content="Export Selection" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export the current selection as JSON, PowerShell, or WinGet Configuration"/>
                         <Button x:Name="ExportSourcesBtn" Style="{StaticResource ToolBtn}" Content="Export Sources" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export source policy and redacted winget source commands"/>
                         <Button x:Name="DiagnosticsBtn" Style="{StaticResource ToolBtn}" Content="Diagnostics" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Export a redacted diagnostics ZIP for support and recovery"/>
+                        <Button x:Name="UpdatePolicyBtn" Style="{StaticResource ToolBtn}" Content="Update Policy" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Edit scheduled update check deferrals and maintenance windows"/>
                         <Button x:Name="DownloadCacheBtn" Style="{StaticResource ToolBtn}" Content="Download Cache" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Download selected installers and write an offline cache manifest"/>
                         <Button x:Name="ImportBtn" Style="{StaticResource ToolBtn}" Content="Import Group" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand"/>
                         <Button x:Name="GalleryBtn" Style="{StaticResource ToolBtn}" Content="Profile Gallery" Margin="0,0,8,0" FontSize="11.5" Cursor="Hand" ToolTip="Browse hashed public profiles and review every package before import"/>
@@ -1780,6 +1961,7 @@ function Show-WinGetInstallerGUI {
     $ExportBtn        = $Window.FindName("ExportBtn")
     $ExportSourcesBtn = $Window.FindName("ExportSourcesBtn")
     $DiagnosticsBtn   = $Window.FindName("DiagnosticsBtn")
+    $UpdatePolicyBtn  = $Window.FindName("UpdatePolicyBtn")
     $DownloadCacheBtn = $Window.FindName("DownloadCacheBtn")
     $ImportBtn        = $Window.FindName("ImportBtn")
     $GalleryBtn       = $Window.FindName("GalleryBtn")
@@ -1926,7 +2108,7 @@ function Show-WinGetInstallerGUI {
     $CorporateModeCheck.IsChecked = [bool]$ui["SourcePolicy"].CorporateMode
     $PrivateIconModeCheck.IsChecked = [bool]$ui["PrivateIconMode"]
 
-    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
+    foreach ($btn in @($SelectAllBtn, $DeselectAllBtn, $CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $UpdatePolicyBtn, $DownloadCacheBtn, $ImportBtn, $GalleryBtn, $InstallWinGetBtn, $ExportReportBtn, $CancelBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $PackageDetailsCloseBtn, $ui["PinPackageBtn"], $ui["PinBlockingBtn"], $ui["PinInstalledBtn"], $ui["RemovePinBtn"])) {
         [void]$ui["Elements"]["SecButtons"].Add($btn)
     }
     foreach ($chk in @($SilentCheck, $AcceptCheck, $IncludePinnedCheck, $PrivateIconModeCheck, $CorporateModeCheck)) {
@@ -3271,6 +3453,19 @@ function Show-WinGetInstallerGUI {
         }
     }.GetNewClosure())
 
+    $UpdatePolicyBtn.Add_Click({
+        try {
+            $currentPolicy = Get-WingetterUpdatePolicy
+            $newPolicy = Show-WingetterUpdatePolicyDialog -Policy $currentPolicy -Owner $Window -IsDark $ui["IsDark"]
+            if ($null -ne $newPolicy) {
+                Save-WingetterUpdatePolicy -Policy $newPolicy | Out-Null
+                $ProgressText.Text = "Update policy saved. $($newPolicy.MaintenanceWindows.Count) maintenance window(s), max deferrals $($newPolicy.MaxDeferrals)."
+            }
+        } catch {
+            $ProgressText.Text = "Update policy error: $($_.Exception.Message)"
+        }
+    }.GetNewClosure())
+
     $DiagnosticsBtn.Add_Click({
         $dlg = New-Object Microsoft.Win32.SaveFileDialog
         $dlg.Filter = "Diagnostics ZIP (*.zip)|*.zip"
@@ -3574,7 +3769,7 @@ function Show-WinGetInstallerGUI {
         foreach ($ctl in @($InstallBtn, $DownloadCacheBtn, $UpdateAllBtn, $InstallWinGetBtn, $IncludePinnedCheck, $CorporateModeCheck)) {
             if ($null -ne $ctl) { $ctl.IsEnabled = -not $anyRunning }
         }
-        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $SearchBox, $ClearSearchBtn, $SelectAllBtn, $DeselectAllBtn)) {
+        foreach ($ctl in @($CopyCommandBtn, $ExportBtn, $ExportSourcesBtn, $DiagnosticsBtn, $UpdatePolicyBtn, $ExportReportBtn, $ImportBtn, $GalleryBtn, $LoadGroupBtn, $SaveGroupBtn, $DeleteGroupBtn, $GroupCombo, $SearchBox, $ClearSearchBtn, $SelectAllBtn, $DeselectAllBtn)) {
             if ($null -ne $ctl) { $ctl.IsEnabled = -not $pkgRunning }
         }
         foreach ($cb in @($ui["AllCheckboxes"].Values)) {
@@ -3886,6 +4081,7 @@ function Show-WinGetInstallerGUI {
         $ExportBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $DiagnosticsBtn.Visibility = [System.Windows.Visibility]::Collapsed
+        $UpdatePolicyBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $ImportBtn.Visibility = [System.Windows.Visibility]::Collapsed
         $GalleryBtn.Visibility = [System.Windows.Visibility]::Collapsed
@@ -3968,6 +4164,7 @@ function Show-WinGetInstallerGUI {
         $ExportBtn.Visibility = [System.Windows.Visibility]::Visible
         $ExportSourcesBtn.Visibility = [System.Windows.Visibility]::Visible
         $DiagnosticsBtn.Visibility = [System.Windows.Visibility]::Visible
+        $UpdatePolicyBtn.Visibility = [System.Windows.Visibility]::Visible
         $DownloadCacheBtn.Visibility = [System.Windows.Visibility]::Visible
         $ImportBtn.Visibility = [System.Windows.Visibility]::Visible
         $GalleryBtn.Visibility = [System.Windows.Visibility]::Visible

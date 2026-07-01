@@ -4,6 +4,7 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: Update Policy editor dialog accessible via the toolbar "Update Policy" button. Edits global not-before UTC, max deferrals, and maintenance windows (Name,Days,Start,End format). Validates datetime format and time ranges before saving. The dialog respects the current theme and preserves existing per-package policies.
 - Added: Update view now has a sort control (Name, Category, Installed Version) that persists the selected sort order in `settings.json` under `UpdateSortBy`. The sort is applied when entering update mode and when changed, and falls back to "Name" for invalid saved values.
 - Changed: Install/update and offline-cache operations now use separate state tracking (`PackageOperationRunning` / `CacheDownloadRunning`). Package operations block all controls as before. Cache downloads block only install/update/download buttons but allow browsing, selection, search, export, and group management to continue. Both types prevent starting the other type concurrently.
 - Added: Read-only Scoop source adapter (`Wingetter.Scoop.ps1`). Detects Scoop installation via `$env:SCOOP` or `~/scoop`, discovers installed apps from the apps directory with version/bucket metadata, and registers as a package source with `InstalledScan` capability. All mutating operations (install/upgrade/uninstall) throw as expected for a read-only adapter. Tests verify adapter contract, capabilities, and availability status.
