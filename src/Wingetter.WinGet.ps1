@@ -357,7 +357,7 @@ function Get-WingetterSourceHealthState {
         return [PSCustomObject][ordered]@{
             Status   = "Offline"
             Message  = "Source update timed out."
-            Guidance = "Check network connectivity. If the source URL is unreachable, run: winget source reset --name $SourceName --force"
+            Guidance = "Check network connectivity. If the source URL is unreachable, run: winget source reset --name '$SourceName' --force"
         }
     }
     if ($ExitCode -eq 0 -and $combined -notmatch '(?i)fail|error|corrupt') {
@@ -371,27 +371,27 @@ function Get-WingetterSourceHealthState {
         return [PSCustomObject][ordered]@{
             Status   = "Corrupt"
             Message  = "Source index appears corrupted."
-            Guidance = "Run: winget source reset --name $SourceName --force"
+            Guidance = "Run: winget source reset --name '$SourceName' --force"
         }
     }
     if ($combined -match '(?i)authenticat|401|403|certificate.*error|credentials|access\s*denied') {
         return [PSCustomObject][ordered]@{
             Status   = "AuthRequired"
             Message  = "Source requires authentication or the token has expired."
-            Guidance = "Re-add the source with a valid --header token: winget source remove --name $SourceName && winget source add --name $SourceName --arg <URL> --header <token>"
+            Guidance = "Re-add the source with a valid --header token: winget source remove --name '$SourceName' && winget source add --name '$SourceName' --arg <URL> --header <token>"
         }
     }
     if ($combined -match '(?i)connection|network|offline|unreachable|resolve|timeout|timed\s*out|WININET|could\s*not\s*connect') {
         return [PSCustomObject][ordered]@{
             Status   = "Offline"
             Message  = "Source is unreachable."
-            Guidance = "Check network connectivity. For persistent failures: winget source reset --name $SourceName --force"
+            Guidance = "Check network connectivity. For persistent failures: winget source reset --name '$SourceName' --force"
         }
     }
     [PSCustomObject][ordered]@{
         Status   = "Unknown"
         Message  = "Source update returned exit code $ExitCode."
-        Guidance = "Inspect winget output. General reset: winget source reset --name $SourceName --force"
+        Guidance = "Inspect winget output. General reset: winget source reset --name '$SourceName' --force"
     }
 }
 

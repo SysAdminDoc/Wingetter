@@ -3006,7 +3006,7 @@ function Show-WinGetInstallerGUI {
             $tipName = New-Object System.Windows.Controls.TextBlock
             $tipName.Text = $app.Name; $tipName.FontWeight = [System.Windows.FontWeights]::SemiBold; $tipName.FontSize = 12
             $tipId = New-Object System.Windows.Controls.TextBlock
-            $tipId.Text = $app.WingetId; $tipId.Foreground = (& $toBrush "#6c7a89"); $tipId.FontSize = 11
+            $tipId.Text = $app.WingetId; $tipId.Foreground = (& $toBrush $initTheme["AppSubtleText"]); $tipId.FontSize = 11
             [void]$tipStack.Children.Add($tipName); [void]$tipStack.Children.Add($tipId)
             $appBorder.ToolTip = $tipStack
 

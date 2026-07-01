@@ -15,6 +15,8 @@ All notable changes to Wingetter will be documented in this file.
 - Fixed: Sidebar internal header border is now themed via `SidebarBorder` instead of hardcoded `#1d2a3a`.
 - Fixed: Update sort label is now themed via `FooterText` instead of hardcoded `#94a7bc`.
 - Fixed: Version pill badge in the header now uses `StatusPillBg`/`StatusPillBorder` theme tokens instead of hardcoded dark-mode colors.
+- Fixed: Source health guidance strings now quote `$SourceName` in generated shell commands to prevent issues with special characters when users copy-paste the suggested commands.
+- Fixed: Tooltip ID text now uses `AppSubtleText` theme token instead of hardcoded `#6c7a89`.
 - Fixed: Log entry status text colors now use the theme's `LogSuccess`/`LogFail`/`LogSkip` values instead of hardcoded worker-sent colors that didn't match any theme. Status badge background uses `LogEntryBg`.
 - Added: `Wingetter.Resources.ps1` centralizes user-facing UI strings into a keyed `$Script:WingetterStrings` hashtable with `Get-WingetterString` accessor supporting `[string]::Format` placeholders. Initial extraction covers progress bar defaults, button labels, update view hints, and empty-state text. The pattern is established for incremental extraction of remaining strings.
 - Added: WinGet DSC v3 `PackageList` export support. `ConvertTo-WingetterConfigurationYaml` accepts a `-ResourceFormat` parameter (`Auto`, `PerPackage`, `PackageList`). Auto-detection probes for `Microsoft.WinGet.DSC` v3+ and falls back to per-package `WinGetPackage` resources when unavailable. The `PackageList` format emits a single resource with a packages array instead of one resource per package.
