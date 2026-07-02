@@ -4,6 +4,10 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Fixed: Top accent gradient bar now uses theme-appropriate colors in light mode (darker blues/greens) instead of the fixed dark-mode palette.
+- Fixed: Run Plan dialog checkboxes now use a fully themed ControlTemplate (custom border, hover highlight, checkmark color) instead of default WPF chrome.
+- Fixed: `Get-WingetterString` format string calls now wrapped in try/catch to prevent unhandled FormatException when callers pass mismatched argument counts.
+- Removed: Stale codex-branding comments and fixed indentation in icon-loading section.
 - Fixed: Run Plan dialog buttons now use proper themed background/foreground/border styling instead of default WPF chrome. Previously the computed theme colors were calculated but never applied to the button controls.
 - Fixed: DOWNLOADED log entries now render with success-green background at creation time, matching the ApplyTheme re-theme behavior. Previously they fell through to the default neutral background.
 - Fixed: Shift-click range selection in app list now wrapped in try/catch to prevent unhandled exceptions from crashing the WPF dispatcher thread.

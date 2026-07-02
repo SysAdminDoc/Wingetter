@@ -1078,6 +1078,10 @@ function Show-WingetterRunPlanDialog {
     $btnCancelBg = if ($IsDark) { "#102133" } else { "#f6f9fc" }
     $btnCancelFg = if ($IsDark) { "#dbe7f1" } else { "#22384d" }
     $btnCancelBd = if ($IsDark) { "#24374a" } else { "#d2dde8" }
+    $chkBorder = if ($IsDark) { "#36506a" } else { "#94abc0" }
+    $chkHover  = if ($IsDark) { "#63b7ff" } else { "#0f6fd6" }
+    $chkMark   = if ($IsDark) { "#63b7ff" } else { "#0f6fd6" }
+    $chkText   = if ($IsDark) { "#dbe7f1" } else { "#22384d" }
     $window = New-Object System.Windows.Window
     $window.Title = "Review Wingetter Run Plan"
     $window.Width = 860
@@ -1086,6 +1090,38 @@ function Show-WingetterRunPlanDialog {
     $window.MinHeight = 440
     $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
     $window.Background = $bc.ConvertFromString($winBg)
+    $chkStyleXaml = @"
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="$chkText"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border x:Name="box" Width="18" Height="18" Background="Transparent" BorderBrush="$chkBorder" BorderThickness="1.5" CornerRadius="5" VerticalAlignment="Center">
+                            <Path x:Name="mark" Data="M3,8 L7,12 L14,4" Stroke="$chkMark" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Visibility="Collapsed"/>
+                        </Border>
+                        <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="mark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="box" Property="BorderBrush" Value="$chkHover"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>
+"@
+    try { $window.Resources = [System.Windows.Markup.XamlReader]::Parse($chkStyleXaml) } catch {}
     if ($Owner) {
         $window.Owner = $Owner
         $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterOwner
@@ -1760,7 +1796,7 @@ function Show-WinGetInstallerGUI {
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <!-- Top gradient accent bar -->
-        <Border Grid.Row="0" Height="4">
+        <Border x:Name="AccentBar" Grid.Row="0" Height="4">
             <Border.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                     <GradientStop Color="#3da4ff" Offset="0"/>
@@ -2127,15 +2163,12 @@ function Show-WinGetInstallerGUI {
         })
     }
 
-# codex-branding:start
-                try {
-                    $brandingIconPath = Join-Path (Get-WingetterRootPath) 'icon.ico'
-                    if (Test-Path $brandingIconPath) {
-                        $Window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri($brandingIconPath)))
-                    }
-                } catch {
-                }
-                # codex-branding:end
+    try {
+        $brandingIconPath = Join-Path (Get-WingetterRootPath) 'icon.ico'
+        if (Test-Path $brandingIconPath) {
+            $Window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create((New-Object System.Uri($brandingIconPath)))
+        }
+    } catch {}
     # Named controls
     $CategoriesPanel  = $Window.FindName("CategoriesPanel")
     $SelectedCount    = $Window.FindName("SelectedCount")
@@ -2275,6 +2308,7 @@ function Show-WinGetInstallerGUI {
     $ui["ToolbarHintBorder"]   = $Window.FindName("ToolbarHintBorder")
     $ui["ToolbarHintText"]     = $Window.FindName("ToolbarHintText")
     $ui["ClearSearchBtn"]      = $ClearSearchBtn
+    $ui["AccentBar"]           = $Window.FindName("AccentBar")
     $ui["EmptyStateBorder"]    = $EmptyStateBorder
     $ui["EmptyStateTitle"]     = $EmptyStateTitle
     $ui["EmptyStateBody"]      = $EmptyStateBody
@@ -2506,6 +2540,19 @@ function Show-WinGetInstallerGUI {
             $titleGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#d6e2ee"), 1)))
         }
         $ui["HeaderTitle"].Foreground         = $titleGrad
+        $accentGrad = New-Object System.Windows.Media.LinearGradientBrush
+        $accentGrad.StartPoint = [System.Windows.Point]::new(0, 0)
+        $accentGrad.EndPoint = [System.Windows.Point]::new(1, 0)
+        if ($ui["IsDark"]) {
+            $accentGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#3da4ff"), 0)))
+            $accentGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#7dd3fc"), 0.58)))
+            $accentGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#22c55e"), 1)))
+        } else {
+            $accentGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#2563eb"), 0)))
+            $accentGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#60a5fa"), 0.58)))
+            $accentGrad.GradientStops.Add((New-Object System.Windows.Media.GradientStop([System.Windows.Media.ColorConverter]::ConvertFromString("#16a34a"), 1)))
+        }
+        $ui["AccentBar"].Background           = $accentGrad
         $ui["HeaderSubtitle"].Foreground      = $bc.ConvertFromString($t["HeaderSubText"])
         $ui["ToolbarBorder"].Background       = $bc.ConvertFromString($t["ToolbarBg"])
         $ui["ToolbarBorder"].BorderBrush      = $bc.ConvertFromString($t["ToolbarBorder"])

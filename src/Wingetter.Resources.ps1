@@ -63,7 +63,7 @@ function Get-WingetterString {
     $value = $Script:WingetterStrings[$Key]
     if ($null -eq $value) { return $Key }
     if ($FormatArgs.Count -gt 0) {
-        return [string]::Format($value, [object[]]$FormatArgs)
+        try { return [string]::Format($value, [object[]]$FormatArgs) } catch { return $value }
     }
     return $value
 }
