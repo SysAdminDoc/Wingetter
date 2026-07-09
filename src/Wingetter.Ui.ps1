@@ -2156,7 +2156,17 @@ function Show-WinGetInstallerGUI {
 
     $Window.Title = Get-WingetterString "WindowTitle"
 
-    if (-not $SmokeTest) {
+    if ($SmokeTest) {
+        # Render smoke captures without activating or surfacing the test window
+        # on the user's desktop. RenderTargetBitmap still captures the fully
+        # measured visual tree while the native window remains offscreen.
+        $Window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::Manual
+        $Window.ShowInTaskbar = $false
+        $Window.ShowActivated = $false
+        $Window.Topmost = $false
+        $Window.Left = -32000
+        $Window.Top = -32000
+    } else {
         try { Restore-WingetterWindowBounds -Window $Window } catch {}
         $Window.Add_Closing({
             try { Save-WingetterWindowBounds -Window $Window } catch {}

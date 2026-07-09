@@ -110,6 +110,18 @@ if ($failures.Count -eq 0) {
             Add-Failure "Could not import '$moduleName': $($_.Exception.Message)"
         }
     }
+
+    $uiSource = Get-Content -LiteralPath (Join-Path $SourceDir "Wingetter.Ui.ps1") -Raw
+    foreach ($backgroundContract in @(
+        '$Window.ShowInTaskbar = $false',
+        '$Window.ShowActivated = $false',
+        '$Window.Left = -32000',
+        '$Window.Top = -32000'
+    )) {
+        if ($uiSource -notlike "*$backgroundContract*") {
+            Add-Failure "UI smoke background contract is missing: $backgroundContract"
+        }
+    }
 }
 
 if ($failures.Count -eq 0) {
