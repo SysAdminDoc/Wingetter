@@ -116,9 +116,10 @@ if ($failures.Count -eq 0) {
         '$Window.ShowInTaskbar = $false',
         '$Window.ShowActivated = $false',
         '$Window.Left = -32000',
-        '$Window.Top = -32000'
+        '$Window.Top = -32000',
+        'if (-not $SmokeTest) { [void]$splash.Window.Show() }'
     )) {
-        if ($uiSource -notlike "*$backgroundContract*") {
+        if (!$uiSource.Contains($backgroundContract)) {
             Add-Failure "UI smoke background contract is missing: $backgroundContract"
         }
     }
@@ -143,7 +144,8 @@ if ($failures.Count -eq 0) {
                 "03-empty-state.png",
                 "04-profile-gallery.png",
                 "06-update-mode.png",
-                "07-browse-restored.png"
+                "07-browse-restored.png",
+                "08-readme.png"
             )) {
                 $expectedPath = Join-Path $OutputPath $requiredName
                 if ($screenshots -notcontains $expectedPath) {
@@ -152,8 +154,8 @@ if ($failures.Count -eq 0) {
                 Test-SmokeScreenshot -Path $expectedPath
             }
 
-            if ($screenshots.Count -lt 6) {
-                Add-Failure "UI smoke captured $($screenshots.Count) screenshots; expected at least 6."
+            if ($screenshots.Count -lt 7) {
+                Add-Failure "UI smoke captured $($screenshots.Count) screenshots; expected at least 7."
             }
         }
     } catch {
