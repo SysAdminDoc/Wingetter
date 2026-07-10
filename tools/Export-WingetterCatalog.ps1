@@ -214,7 +214,9 @@ if ($Check) {
             continue
         }
         $actual = [System.IO.File]::ReadAllText((Resolve-Path $target.Path).Path).Trim()
-        if ($actual -ne $target.Expected.Trim()) {
+        $normalizedActual = $actual.Replace("`r`n", "`n").Replace("`r", "`n")
+        $normalizedExpected = $target.Expected.Trim().Replace("`r`n", "`n").Replace("`r", "`n")
+        if ($normalizedActual -ne $normalizedExpected) {
             Write-Error "Generated $($target.Name) file is stale: $($target.Path). Run tools/Export-WingetterCatalog.ps1."
             $failed = $true
         }

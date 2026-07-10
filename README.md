@@ -3,7 +3,7 @@
 A powerful PowerShell GUI application for discovering, selecting, and bulk installing Windows software using [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/winget/). Think Ninite, but with 765 apps and full winget integration.
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)
-![Version](https://img.shields.io/badge/version-v6.1.0-blue)
+![Version](https://img.shields.io/badge/version-v6.2.0-blue)
 ![Apps](https://img.shields.io/badge/Apps-765-green)
 ![Categories](https://img.shields.io/badge/Categories-39-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
@@ -28,6 +28,8 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 **765 applications** across **39 categories** with a polished WPF interface:
 
 - **Dark / Light mode** -- defaults to dark, toggle with one click
+- **Premium discovery workspace** -- responsive search and command hierarchy, three-column catalog density, and a persistent reviewed-selection panel with per-app removal
+- **Accessible catalog navigation** -- keyboard-operable app rows, category sections, sidebar jumps, visible focus states, and screen-reader package labels
 - **Metadata-rich search** -- ranked local search across names, package IDs, categories, built-in groups, publisher-like ID tokens, installed state, source, scope, update state, and pin state
 - **Favicon icons** -- parallel-fetched from app domains with colored letter fallbacks and local caching
 - **Private icon mode** -- disable remote favicon fetches and use deterministic letter icons for restricted or privacy-sensitive networks

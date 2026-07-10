@@ -4,6 +4,17 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+## [v6.2.0] - 2026-07-09
+
+- Changed: Reimagined the main WPF shell around a premium discovery workspace with a full-width command area, responsive search, denser three-column catalog, and a persistent selection and run-options panel.
+- Added: Live reviewed-selection queue with package names, IDs, compact identity marks, per-package remove actions, clear-all action, count-aware install/update calls to action, and helpful empty guidance.
+- Fixed: Light theme now updates every new action-panel surface, border, primary/secondary text, and accent resource instead of retaining unreadable dark-theme values.
+- Changed: Unified primary actions around an indigo accent while preserving semantic green for WinGet readiness and installed state and amber for update navigation.
+- Changed: Refined catalog, empty, installed-app, profile-gallery, save-group, source-policy, update-policy, and run-plan surfaces with a shared navy/indigo visual language and bounded radius scale.
+- Added: Keyboard activation and automation labels for app rows, category headers, category select-all controls, sidebar destinations, and selected-package remove actions.
+- Fixed: Background UI smoke no longer opens the centered topmost splash, and screenshot rendering now uses a deterministic visual brush so theme and mode transitions are captured without black regions.
+- Changed: Disabled report/stop utilities stay hidden until they are relevant, update-only pin options stay hidden in browse mode, and microcopy now describes actions and privacy/source behavior directly.
+
 - Fixed: Top accent gradient bar now uses theme-appropriate colors in light mode (darker blues/greens) instead of the fixed dark-mode palette.
 - Fixed: Run Plan dialog checkboxes now use a fully themed ControlTemplate (custom border, hover highlight, checkmark color) instead of default WPF chrome.
 - Fixed: `Get-WingetterString` format string calls now wrapped in try/catch to prevent unhandled FormatException when callers pass mismatched argument counts.

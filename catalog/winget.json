@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "version":  "v6.1.0",
+    "version":  "v6.2.0",
     "canonicalFile":  "catalog/winget.json",
     "embeddedFallbackFile":  "src/Wingetter.Catalog.ps1",
     "appCount":  765,
