@@ -1,29 +1,29 @@
 {
     "schema":  "Wingetter.ReleaseArtifactManifest.v1",
-    "version":  "v6.1.0",
-    "generatedAtUtc":  "2026-07-02T02:11:50Z",
+    "version":  "v6.2.0",
+    "generatedAtUtc":  "2026-07-10T03:57:28Z",
     "build":  {
-                  "source":  "Bundled launcher generated from Wingetter.ps1 plus the dot-sourced modules under src/ at v6.1.0",
+                  "source":  "Bundled launcher generated from Wingetter.ps1 plus the dot-sourced modules under src/ at v6.2.0",
                   "tool":  "tools\\\\Build-WingetterExe.ps1",
-                  "ps2exeVersion":  "",
+                  "ps2exeVersion":  "1.0.18",
                   "bundle":  {
                                  "path":  "release\\\\Wingetter.bundled.ps1",
-                                 "sha256":  "C181FE829EFBC4AEB7AC9B123EB24E823E05C0C83B8BE81D202AFF3FB9CE26FB",
-                                 "size":  634170,
+                                 "sha256":  "89618C43EC44E3D89F774AAD50C9B9DFACD69342886AF0954EBD765AB297BFA2",
+                                 "size":  654666,
                                  "generatedBy":  "tools\\\\Build-WingetterExe.ps1"
                              },
                   "exe":  {
                               "path":  "Wingetter.exe",
-                              "builtFromBundleSha256":  "C181FE829EFBC4AEB7AC9B123EB24E823E05C0C83B8BE81D202AFF3FB9CE26FB",
+                              "builtFromBundleSha256":  "89618C43EC44E3D89F774AAD50C9B9DFACD69342886AF0954EBD765AB297BFA2",
                               "fileDescription":  "Wingetter",
-                              "comments":  "Wingetter bundled launcher SHA256 C8397B0E6D48A7B5E234DDE1822F67878027B3469AB959D76E8C38F097F37AAB",
+                              "comments":  "Wingetter bundled launcher SHA256 89618C43EC44E3D89F774AAD50C9B9DFACD69342886AF0954EBD765AB297BFA2",
                               "productName":  "Wingetter",
-                              "productVersion":  "6.1.0.0",
-                              "fileVersion":  "6.1.0.0"
+                              "productVersion":  "6.2.0.0",
+                              "fileVersion":  "6.2.0.0"
                           },
                   "authenticode":  {
                                        "status":  "NotSigned",
-                                       "statusMessage":  "The file C:\\Users\\--\\repos\\Wingetter\\Wingetter.exe is not digitally signed. You cannot run this script on the current system. For more information about running scripts and setting execution policy, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170",
+                                       "statusMessage":  "No embedded Authenticode signature was found; Get-AuthenticodeSignature was unavailable in this host.",
                                        "signerSubject":  "",
                                        "signerThumbprint":  "",
                                        "timestamp":  "",
@@ -34,9 +34,9 @@
     "artifacts":  [
                       {
                           "path":  "Wingetter.exe",
-                          "sha256":  "9E4626CB229C5C0470ACCE483DB90A88F8B25B62395ADAE5CD2821F687C72EED",
-                          "size":  593408,
-                          "description":  "PS2EXE-packaged Wingetter launcher built from v6.1.0."
+                          "sha256":  "60FDFF31521DEFCED99CAA2BD46DC7B251B9036701E5BB48F4A4AF63B71018E9",
+                          "size":  699904,
+                          "description":  "PS2EXE-packaged Wingetter launcher built from v6.2.0."
                       },
                       {
                           "path":  "Wingetter.ico",
