@@ -1,8 +1,8 @@
 # Roadmap - Wingetter
 
-## Audit-Driven Items
+Actionable work only. Historical and completed roadmap material is archived in CHANGELOG.md; blocked work is kept in Roadmap_Blocked.md.
 
-### P2
+## Actionable Items
 
 - [ ] P2 - Diagnostics bundle may miss header tokens in non-standard log positions
   Why: Header tokens in run log files are redacted via regex patterns, but tokens appearing in unexpected positions (e.g., stderr output, URL query parameters) may slip through the generic patterns.
@@ -11,8 +11,6 @@
 - [ ] P2 - WINGETTER_MODULE_BASE_URL env var enables download-source information leak
   Why: Any same-user process can set this env var to redirect module download requests to an attacker server. SHA256 hash verification prevents code execution but the attacker learns the user's IP and Wingetter usage.
   Where: `Wingetter.ps1` download path
-
-### P3
 
 - [ ] P3 - `$PumpUi` scriptblock is dead logic in background worker
   Why: The PumpUi parameter defaults to an empty scriptblock and is never set to anything useful by the UI tier. The 100ms polling loop serves only for cancel-checking.
