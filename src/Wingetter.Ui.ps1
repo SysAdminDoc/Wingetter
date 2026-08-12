@@ -1612,6 +1612,9 @@ function Show-WinGetInstallerGUI {
         <SolidColorBrush x:Key="PrimaryText" Color="#f1f4fb"/>
         <SolidColorBrush x:Key="SecondaryText" Color="#aebbd0"/>
         <SolidColorBrush x:Key="AccentText" Color="#9db5ff"/>
+        <SolidColorBrush x:Key="SidebarText" Color="#c4cee0"/>
+        <SolidColorBrush x:Key="SidebarHover" Color="#17243e"/>
+        <SolidColorBrush x:Key="SidebarActive" Color="#20345f"/>
         <!-- Toolbar / secondary button style -->
         <Style x:Key="ToolBtn" TargetType="Button">
             <Setter Property="Background" Value="#102133"/>
@@ -1810,8 +1813,97 @@ function Show-WinGetInstallerGUI {
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Navigation rail buttons for the workspace pages. -->
+        <Style x:Key="NavBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource SidebarText}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,9"/>
+            <Setter Property="Margin" Value="8,2"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SidebarHover}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource ChkBorderHover}"/>
+                                <Setter TargetName="bd" Property="BorderThickness" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PageActionBtn" TargetType="Button" BasedOn="{StaticResource ToolBtn}">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryText}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorder}"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="MinHeight" Value="34"/>
+        </Style>
     </Window.Resources>
-    <Grid>
+    <Grid x:Name="AppRoot">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="118"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Border x:Name="NavRail" Grid.Column="0" Background="#0b1020" BorderBrush="#435572" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Margin="10,18,10,16">
+                    <Border x:Name="NavBrandMark" Width="36" Height="36" HorizontalAlignment="Left" CornerRadius="9" Background="#4c63d2">
+                        <TextBlock Text="W" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock x:Name="NavBrandTitle" Text="Wingetter" FontSize="12" FontWeight="SemiBold" Foreground="#f1f4fb" Margin="2,10,0,0"/>
+                    <TextBlock x:Name="NavBrandVersion" Text="v$Script:WingetterVersion" FontSize="9.5" Foreground="#9cabc2" Margin="2,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Row="1">
+                    <TextBlock Text="WORKSPACE" FontSize="9" FontWeight="SemiBold" Foreground="#7486a0" Margin="18,2,0,8"/>
+                    <Button x:Name="NavExploreBtn" Style="{StaticResource NavBtn}" AutomationProperties.Name="Explore page">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="20"/><TextBlock Text="Explore" FontSize="11.5"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavInstalledBtn" Style="{StaticResource NavBtn}" AutomationProperties.Name="Installed page">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7B8;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="20"/><TextBlock Text="Installed" FontSize="11.5"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavUpdatesBtn" Style="{StaticResource NavBtn}" AutomationProperties.Name="Updates page">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="20"/><TextBlock Text="Updates" FontSize="11.5"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavProfilesBtn" Style="{StaticResource NavBtn}" AutomationProperties.Name="Profiles page">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="20"/><TextBlock Text="Profiles" FontSize="11.5"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavPolicyBtn" Style="{StaticResource NavBtn}" AutomationProperties.Name="Policy page">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="20"/><TextBlock Text="Policy" FontSize="11.5"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavDiagnosticsBtn" Style="{StaticResource NavBtn}" AutomationProperties.Name="Diagnostics page">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="20"/><TextBlock Text="Diagnostics" FontSize="11.5"/></StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel Grid.Row="2" Margin="0,0,0,14">
+                    <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="18,0,18,8"/>
+                    <Button x:Name="NavSettingsBtn" Style="{StaticResource NavBtn}" AutomationProperties.Name="Settings page">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="20"/><TextBlock Text="Settings" FontSize="11.5"/></StackPanel>
+                    </Button>
+                    <Button x:Name="NavAboutBtn" Style="{StaticResource NavBtn}" AutomationProperties.Name="About page">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="13" Width="20"/><TextBlock Text="About" FontSize="11.5"/></StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <Grid x:Name="MainShell" Grid.Column="1">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="320"/>
@@ -2192,6 +2284,10 @@ function Show-WinGetInstallerGUI {
                 </StackPanel>
             </Grid>
         </Border>
+        <Border x:Name="UtilityPageHost" Grid.Row="2" Grid.RowSpan="5" Grid.ColumnSpan="2" Background="{DynamicResource SurfaceBg}" Visibility="Collapsed" Panel.ZIndex="50" Padding="28,24,28,18">
+            <Grid x:Name="UtilityPageContent"/>
+        </Border>
+    </Grid>
     </Grid>
 </Window>
 "@
@@ -2297,6 +2393,20 @@ function Show-WinGetInstallerGUI {
     $EmptyStateBody   = $Window.FindName("EmptyStateBody")
     $EmptyStateClearBtn = $Window.FindName("EmptyStateClearBtn")
     $EmptyStateResetModeBtn = $Window.FindName("EmptyStateResetModeBtn")
+    $NavRail          = $Window.FindName("NavRail")
+    $NavBrandMark     = $Window.FindName("NavBrandMark")
+    $NavBrandTitle    = $Window.FindName("NavBrandTitle")
+    $NavBrandVersion  = $Window.FindName("NavBrandVersion")
+    $NavExploreBtn    = $Window.FindName("NavExploreBtn")
+    $NavInstalledBtn  = $Window.FindName("NavInstalledBtn")
+    $NavUpdatesBtn    = $Window.FindName("NavUpdatesBtn")
+    $NavProfilesBtn   = $Window.FindName("NavProfilesBtn")
+    $NavPolicyBtn     = $Window.FindName("NavPolicyBtn")
+    $NavDiagnosticsBtn = $Window.FindName("NavDiagnosticsBtn")
+    $NavSettingsBtn   = $Window.FindName("NavSettingsBtn")
+    $NavAboutBtn      = $Window.FindName("NavAboutBtn")
+    $UtilityPageHost  = $Window.FindName("UtilityPageHost")
+    $UtilityPageContent = $Window.FindName("UtilityPageContent")
 
     # Store in $ui for closure access
     $ui["Window"]          = $Window
@@ -2387,8 +2497,19 @@ function Show-WinGetInstallerGUI {
     $ui["SelectionEmptyText"] = $SelectionEmptyText
     $ui["SelectionPreviewPanel"] = $SelectionPreviewPanel
     $ui["UtilityActionsGrid"] = $UtilityActionsGrid
+    $ui["NavRail"] = $NavRail
+    $ui["NavBrandMark"] = $NavBrandMark
+    $ui["NavBrandTitle"] = $NavBrandTitle
+    $ui["NavBrandVersion"] = $NavBrandVersion
+    $ui["NavButtons"] = @($NavExploreBtn, $NavInstalledBtn, $NavUpdatesBtn, $NavProfilesBtn, $NavPolicyBtn, $NavDiagnosticsBtn, $NavSettingsBtn, $NavAboutBtn)
+    $ui["UtilityPageHost"] = $UtilityPageHost
+    $ui["UtilityPageContent"] = $UtilityPageContent
+    $ui["PageViews"] = @{}
+    $ui["PageControls"] = @{}
+    $ui["ActivePage"] = "Explore"
 
     $ui["IsUpdateMode"]        = $false
+    $ui["UpdateOnlyMode"]      = $false
     $ui["LastClickedIndex"]    = -1
     $ui["InstalledIds"]        = @{}
     $ui["PinnedIds"]           = @{}
@@ -2587,6 +2708,10 @@ function Show-WinGetInstallerGUI {
                 [void]$SelectionPreviewPanel.Children.Add($more)
             }
         }
+        if ($ui["PageControls"].ContainsKey("QueueCount")) {
+            $ui["PageControls"]["QueueCount"].Text = "$count selected"
+            $ui["PageControls"]["QueueRunBtn"].IsEnabled = ($count -gt 0 -and -not [bool]$ui["PackageOperationRunning"])
+        }
     }
 
     # ========================================================
@@ -2618,6 +2743,7 @@ function Show-WinGetInstallerGUI {
                 $nameMatch = ($searchText -eq "") -or ($score -gt 0)
                 # In update mode, also require the app to be installed
                 if ($inUpdateMode -and -not $ui["InstalledIds"].ContainsKey($packageId)) { $nameMatch = $false }
+                if ($inUpdateMode -and $ui["UpdateOnlyMode"] -and $ui["InstalledIds"].ContainsKey($packageId) -and -not [bool]$installedRecord.IsUpdateAvailable) { $nameMatch = $false }
                 if ($nameMatch) {
                     $appEntry["Border"].Visibility = [System.Windows.Visibility]::Visible
                     $catVisible++
@@ -2769,6 +2895,9 @@ function Show-WinGetInstallerGUI {
         $res["PrimaryText"]      = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["PrimaryText"]))
         $res["SecondaryText"]    = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["SecondaryText"]))
         $res["AccentText"]       = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["AccentText"]))
+        $res["SidebarText"]      = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["SidebarText"]))
+        $res["SidebarHover"]     = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["SidebarHover"]))
+        $res["SidebarActive"]    = [System.Windows.Media.SolidColorBrush]::new((& $toColor $t["SidebarActive"]))
 
         # Search icon
         $ui["SearchIcon"].Foreground = $bc.ConvertFromString($t["SearchIcon"])
@@ -2860,6 +2989,24 @@ function Show-WinGetInstallerGUI {
                     $sbRow.Background = $bc.ConvertFromString($t["SidebarActive"])
                 } else {
                     $sbRow.Background = [System.Windows.Media.Brushes]::Transparent
+                }
+            }
+        } catch {}
+
+        # Workspace navigation rail and page surfaces
+        try {
+            $ui["NavRail"].Background = $bc.ConvertFromString($t["SidebarBg"])
+            $ui["NavRail"].BorderBrush = $bc.ConvertFromString($t["SidebarBorder"])
+            $ui["NavBrandMark"].Background = $bc.ConvertFromString($t["AccentPrimary"])
+            $ui["NavBrandTitle"].Foreground = $bc.ConvertFromString($t["PrimaryText"])
+            $ui["NavBrandVersion"].Foreground = $bc.ConvertFromString($t["SidebarSubtitle"])
+            foreach ($navButton in @($ui["NavButtons"])) {
+                if ($null -eq $navButton) { continue }
+                $navButton.Foreground = $bc.ConvertFromString($t["SidebarText"])
+                $navButton.Background = if ([string]$navButton.Tag -eq [string]$ui["ActivePage"]) {
+                    $bc.ConvertFromString($t["SidebarActive"])
+                } else {
+                    [System.Windows.Media.Brushes]::Transparent
                 }
             }
         } catch {}
@@ -4788,9 +4935,10 @@ function Show-WinGetInstallerGUI {
 
             foreach ($app in $apps) {
                 $isInstalled = $ui["InstalledIds"].ContainsKey($app.WingetId)
+                $showInstalled = $isInstalled -and (-not $ui["UpdateOnlyMode"] -or [bool]$ui["InstalledIds"][$app.WingetId].IsUpdateAvailable)
                 $border = $ui["Elements"]["AppBorders"][$appIdx]
 
-                if ($isInstalled) {
+                if ($showInstalled) {
                     $border.Visibility = [System.Windows.Visibility]::Visible
                     $border.Opacity = 1.0
                     $ui["Elements"]["AppLabels"][$appIdx].Foreground = $bc.ConvertFromString($activeTheme["AppText"])
@@ -4837,6 +4985,7 @@ function Show-WinGetInstallerGUI {
 
     $ExitUpdateView = {
         $ui["IsUpdateMode"] = $false
+        $ui["UpdateOnlyMode"] = $false
         $bc = [System.Windows.Media.BrushConverter]::new()
 
         # Restore sidebar
@@ -4915,6 +5064,725 @@ function Show-WinGetInstallerGUI {
         & $UpdateCardLayout
     }
 
+    # ========================================================
+    # WORKSPACE PAGES - shared shell and navigation views
+    # ========================================================
+    $SetPageResource = {
+        param([object]$Element, [object]$Property, [string]$ResourceName)
+        if ($Element -and $Property -and $ResourceName) {
+            $Element.SetResourceReference($Property, $ResourceName)
+        }
+    }
+    $NewPageText = {
+        param(
+            [string]$Text,
+            [double]$Size = 12,
+            [string]$ResourceName = "PrimaryText",
+            [string]$Weight = "Normal"
+        )
+        $textBlock = New-Object System.Windows.Controls.TextBlock
+        $textBlock.Text = $Text
+        $textBlock.FontSize = $Size
+        $textBlock.TextWrapping = [System.Windows.TextWrapping]::Wrap
+        $textBlock.FontWeight = switch ($Weight) {
+            "Bold" { [System.Windows.FontWeights]::Bold; break }
+            "SemiBold" { [System.Windows.FontWeights]::SemiBold; break }
+            default { [System.Windows.FontWeights]::Normal }
+        }
+        if ($ResourceName) {
+            & $SetPageResource $textBlock ([System.Windows.Controls.TextBlock]::ForegroundProperty) $ResourceName
+        }
+        return $textBlock
+    }
+    $NewPageCard = {
+        param([object]$Child, [object]$Margin = $null, [object]$Padding = $null)
+        $card = New-Object System.Windows.Controls.Border
+        & $SetPageResource $card ([System.Windows.Controls.Border]::BackgroundProperty) "SurfaceRaisedBg"
+        & $SetPageResource $card ([System.Windows.Controls.Border]::BorderBrushProperty) "SurfaceBorder"
+        $card.BorderThickness = [System.Windows.Thickness]::new(1)
+        $card.CornerRadius = [System.Windows.CornerRadius]::new(10)
+        $card.Padding = if ($Padding) { $Padding } else { [System.Windows.Thickness]::new(16) }
+        $card.Margin = if ($Margin) { $Margin } else { [System.Windows.Thickness]::new(0) }
+        if ($Child) { $card.Child = $Child }
+        return $card
+    }
+    $NewPageButton = {
+        param([string]$Content, [string]$ToolTip = "")
+        $button = New-Object System.Windows.Controls.Button
+        $button.Content = $Content
+        $button.Style = $Window.FindResource("PageActionBtn")
+        $button.Cursor = [System.Windows.Input.Cursors]::Hand
+        if ($ToolTip) { $button.ToolTip = $ToolTip }
+        return $button
+    }
+    $NewPageMetric = {
+        param([string]$Label, [string]$Value, [string]$Caption)
+        $stack = New-Object System.Windows.Controls.StackPanel
+        [void]$stack.Children.Add((& $NewPageText $Label 10.5 "SecondaryText" "SemiBold"))
+        $valueText = & $NewPageText $Value 21 "PrimaryText" "SemiBold"
+        $valueText.Margin = [System.Windows.Thickness]::new(0, 6, 0, 0)
+        [void]$stack.Children.Add($valueText)
+        $captionText = & $NewPageText $Caption 10.5 "SecondaryText"
+        $captionText.Margin = [System.Windows.Thickness]::new(0, 3, 0, 0)
+        [void]$stack.Children.Add($captionText)
+        $card = & $NewPageCard $stack ([System.Windows.Thickness]::new(0, 0, 10, 0)) ([System.Windows.Thickness]::new(14))
+        return [PSCustomObject]@{ Card = $card; Value = $valueText; Caption = $captionText }
+    }
+    $NewPageTable = {
+        param([string[]]$Headers, [object[]]$Rows)
+        $rawRows = @()
+        $rawRowCount = 0
+        foreach ($rawRow in @($Rows)) {
+            $rawRows += ,$rawRow
+            $rawRowCount++
+        }
+        $rowList = $rawRows
+        $firstIsArray = ($rawRowCount -gt 0 -and $rawRows[0] -is [System.Array])
+        if (-not $firstIsArray -and $Headers.Count -gt 0 -and $rawRowCount -gt 0 -and ($rawRowCount % $Headers.Count) -eq 0) {
+            $rowList = @()
+            for ($offset = 0; $offset -lt $rawRowCount; $offset += $Headers.Count) {
+                $rowValues = New-Object object[] $Headers.Count
+                for ($cellIndex = 0; $cellIndex -lt $Headers.Count; $cellIndex++) {
+                    $rowValues[$cellIndex] = $rawRows[$offset + $cellIndex]
+                }
+                $rowList += ,$rowValues
+            }
+        }
+        $table = New-Object System.Windows.Controls.StackPanel
+        $headerGrid = New-Object System.Windows.Controls.Grid
+        foreach ($header in $Headers) {
+            $column = New-Object System.Windows.Controls.ColumnDefinition
+            $column.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+            [void]$headerGrid.ColumnDefinitions.Add($column)
+        }
+        $headerBorder = New-Object System.Windows.Controls.Border
+        & $SetPageResource $headerBorder ([System.Windows.Controls.Border]::BackgroundProperty) "SurfaceBg"
+        & $SetPageResource $headerBorder ([System.Windows.Controls.Border]::BorderBrushProperty) "SurfaceBorder"
+        $headerBorder.BorderThickness = [System.Windows.Thickness]::new(0, 0, 0, 1)
+        for ($i = 0; $i -lt $Headers.Count; $i++) {
+            $headerText = & $NewPageText $Headers[$i] 10 "SecondaryText" "SemiBold"
+            $headerText.Margin = [System.Windows.Thickness]::new(10, 9, 10, 9)
+            [System.Windows.Controls.Grid]::SetColumn($headerText, $i)
+            [void]$headerGrid.Children.Add($headerText)
+        }
+        $headerBorder.Child = $headerGrid
+        [void]$table.Children.Add($headerBorder)
+
+        $rowCount = 0
+        foreach ($row in $rowList) {
+            $rowCount++
+            $rowGrid = New-Object System.Windows.Controls.Grid
+            foreach ($header in $Headers) {
+                $column = New-Object System.Windows.Controls.ColumnDefinition
+                $column.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+                [void]$rowGrid.ColumnDefinitions.Add($column)
+            }
+            $rowCells = @()
+            $rowCellCount = 0
+            foreach ($rowCell in @($row)) {
+                $rowCells += ,$rowCell
+                $rowCellCount++
+            }
+            for ($i = 0; $i -lt $Headers.Count; $i++) {
+                $cellText = if ($i -lt $rowCellCount) { [string]$rowCells[$i] } else { "" }
+                $cell = & $NewPageText $cellText 10.5 "PrimaryText"
+                $cell.Margin = [System.Windows.Thickness]::new(10, 8, 10, 8)
+                $cell.TextTrimming = [System.Windows.TextTrimming]::CharacterEllipsis
+                [System.Windows.Controls.Grid]::SetColumn($cell, $i)
+                [void]$rowGrid.Children.Add($cell)
+            }
+            $rowBorder = & $NewPageCard $rowGrid ([System.Windows.Thickness]::new(0, 0, 0, 2)) ([System.Windows.Thickness]::new(0))
+            $rowBorder.CornerRadius = [System.Windows.CornerRadius]::new(0)
+            [void]$table.Children.Add($rowBorder)
+        }
+        if ($rowCount -eq 0) {
+            $empty = & $NewPageText "Nothing to show yet. Refresh the workspace or complete a scan to populate this view." 11.5 "SecondaryText"
+            $empty.Margin = [System.Windows.Thickness]::new(12, 16, 12, 16)
+            [void]$table.Children.Add($empty)
+        }
+        return $table
+    }
+    $NewPageShell = {
+        param([string]$Title, [string]$Subtitle)
+        $root = New-Object System.Windows.Controls.Grid
+        [void]$root.RowDefinitions.Add((New-Object System.Windows.Controls.RowDefinition))
+        $root.RowDefinitions[0].Height = [System.Windows.GridLength]::Auto
+        $bodyRow = New-Object System.Windows.Controls.RowDefinition
+        $bodyRow.Height = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+        [void]$root.RowDefinitions.Add($bodyRow)
+        $footerRow = New-Object System.Windows.Controls.RowDefinition
+        $footerRow.Height = [System.Windows.GridLength]::Auto
+        [void]$root.RowDefinitions.Add($footerRow)
+
+        $header = New-Object System.Windows.Controls.Grid
+        $header.Margin = [System.Windows.Thickness]::new(0, 0, 0, 4)
+        [void]$header.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition))
+        $header.ColumnDefinitions[0].Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+        $actionColumn = New-Object System.Windows.Controls.ColumnDefinition
+        $actionColumn.Width = [System.Windows.GridLength]::Auto
+        [void]$header.ColumnDefinitions.Add($actionColumn)
+        $titleStack = New-Object System.Windows.Controls.StackPanel
+        $titleText = & $NewPageText $Title 26 "PrimaryText" "SemiBold"
+        $subtitleText = & $NewPageText $Subtitle 12 "SecondaryText"
+        $subtitleText.Margin = [System.Windows.Thickness]::new(0, 5, 0, 0)
+        [void]$titleStack.Children.Add($titleText)
+        [void]$titleStack.Children.Add($subtitleText)
+        [System.Windows.Controls.Grid]::SetColumn($titleStack, 0)
+        [void]$header.Children.Add($titleStack)
+        $actions = New-Object System.Windows.Controls.StackPanel
+        $actions.Orientation = [System.Windows.Controls.Orientation]::Horizontal
+        [System.Windows.Controls.Grid]::SetColumn($actions, 1)
+        [void]$header.Children.Add($actions)
+        [System.Windows.Controls.Grid]::SetRow($header, 0)
+        [void]$root.Children.Add($header)
+
+        $bodyScroll = New-Object System.Windows.Controls.ScrollViewer
+        $bodyScroll.VerticalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Auto
+        $bodyScroll.HorizontalScrollBarVisibility = [System.Windows.Controls.ScrollBarVisibility]::Disabled
+        $bodyScroll.Margin = [System.Windows.Thickness]::new(0, 18, 0, 18)
+        $body = New-Object System.Windows.Controls.StackPanel
+        $bodyScroll.Content = $body
+        [System.Windows.Controls.Grid]::SetRow($bodyScroll, 1)
+        [void]$root.Children.Add($bodyScroll)
+
+        $queueGrid = New-Object System.Windows.Controls.Grid
+        [void]$queueGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition))
+        $queueGrid.ColumnDefinitions[0].Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+        $queueActionColumn = New-Object System.Windows.Controls.ColumnDefinition
+        $queueActionColumn.Width = [System.Windows.GridLength]::Auto
+        [void]$queueGrid.ColumnDefinitions.Add($queueActionColumn)
+        $queueStack = New-Object System.Windows.Controls.StackPanel
+        [void]$queueStack.Children.Add((& $NewPageText "Review queue" 11.5 "AccentText" "SemiBold"))
+        $queueCount = & $NewPageText "0 selected" 11 "SecondaryText"
+        $queueCount.Margin = [System.Windows.Thickness]::new(0, 3, 0, 0)
+        [void]$queueStack.Children.Add($queueCount)
+        [System.Windows.Controls.Grid]::SetColumn($queueStack, 0)
+        [void]$queueGrid.Children.Add($queueStack)
+        $queueButton = & $NewPageButton "Run" "Open the reviewed run plan for the current selection."
+        $queueButton.MinWidth = 88
+        [System.Windows.Controls.Grid]::SetColumn($queueButton, 1)
+        [void]$queueGrid.Children.Add($queueButton)
+        $queueBorder = & $NewPageCard $queueGrid ([System.Windows.Thickness]::new(0)) ([System.Windows.Thickness]::new(12, 10, 12, 10))
+        [System.Windows.Controls.Grid]::SetRow($queueBorder, 2)
+        [void]$root.Children.Add($queueBorder)
+
+        return [PSCustomObject]@{ Root = $root; Body = $body; Actions = $actions; QueueCount = $queueCount; QueueRunBtn = $queueButton }
+    }
+    $RegisterPage = {
+        param([string]$Name, [object]$Page)
+        $ui["PageViews"][$Name] = $Page.Root
+        $ui["PageControls"][$Name] = $Page
+    }
+
+    # Profiles and reusable groups page
+    $profilesPage = & $NewPageShell "Profiles" "Manage reusable installation profiles and package groups."
+    $profilesGalleryBtn = & $NewPageButton "Profile gallery" "Browse hash-verified public profiles."
+    $profilesImportBtn = & $NewPageButton "Import profile" "Import a local package group."
+    $profilesNewBtn = & $NewPageButton "New profile" "Save the current selection as a reusable profile."
+    [void]$profilesPage.Actions.Children.Add($profilesGalleryBtn)
+    [void]$profilesPage.Actions.Children.Add($profilesImportBtn)
+    [void]$profilesPage.Actions.Children.Add($profilesNewBtn)
+    $profileMetrics = New-Object System.Windows.Controls.Primitives.UniformGrid
+    $profileMetrics.Columns = 3
+    $profileMetrics.Rows = 1
+    $profilesBuiltInMetric = & $NewPageMetric "Starter groups" "0" "Curated sets ready to apply"
+    $profilesSavedMetric = & $NewPageMetric "Saved profiles" "0" "Reusable groups stored locally"
+    $profilesCatalogMetric = & $NewPageMetric "Catalog apps" "$($ui["TotalApps"])" "Available for review"
+    [void]$profileMetrics.Children.Add($profilesBuiltInMetric.Card)
+    [void]$profileMetrics.Children.Add($profilesSavedMetric.Card)
+    [void]$profileMetrics.Children.Add($profilesCatalogMetric.Card)
+    [void]$profilesPage.Body.Children.Add($profileMetrics)
+    $profilesSection = New-Object System.Windows.Controls.StackPanel
+    $profilesSection.Margin = [System.Windows.Thickness]::new(0, 18, 0, 0)
+    [void]$profilesSection.Children.Add((& $NewPageText "Profiles and groups" 14 "PrimaryText" "SemiBold"))
+    $profilesSectionSubtitle = & $NewPageText "Select a profile to review its package set before adding it to the run queue." 11.5 "SecondaryText"
+    $profilesSectionSubtitle.Margin = [System.Windows.Thickness]::new(0, 4, 0, 10)
+    [void]$profilesSection.Children.Add($profilesSectionSubtitle)
+    $profilesTableHost = New-Object System.Windows.Controls.StackPanel
+    $profilesTableHost.Tag = "ProfilesTableHost"
+    [void]$profilesSection.Children.Add($profilesTableHost)
+    [void]$profilesPage.Body.Children.Add((& $NewPageCard $profilesSection))
+    $profilesInfo = New-Object System.Windows.Controls.StackPanel
+    [void]$profilesInfo.Children.Add((& $NewPageText "Profile workflow" 13 "AccentText" "SemiBold"))
+    foreach ($step in @(
+        "1. Choose a starter or saved profile.",
+        "2. Review every package and source.",
+        "3. Add the approved set to the run queue."
+    )) {
+        $stepText = & $NewPageText $step 11.5 "SecondaryText"
+        $stepText.Margin = [System.Windows.Thickness]::new(0, 8, 0, 0)
+        [void]$profilesInfo.Children.Add($stepText)
+    }
+    $profilesInfoCard = & $NewPageCard $profilesInfo ([System.Windows.Thickness]::new(0, 18, 0, 0))
+    [void]$profilesPage.Body.Children.Add($profilesInfoCard)
+    $ui["PageControls"]["ProfilesTableHost"] = $profilesTableHost
+    $ui["PageControls"]["ProfilesBuiltInValue"] = $profilesBuiltInMetric.Value
+    $ui["PageControls"]["ProfilesSavedValue"] = $profilesSavedMetric.Value
+    & $RegisterPage "Profiles" $profilesPage
+
+    # Installed apps page
+    $installedPage = & $NewPageShell "Installed" "View and manage apps detected on this device."
+    $installedCatalogBtn = & $NewPageButton "Open catalog" "Return to the Explore page."
+    $installedUpdatesBtn = & $NewPageButton "Review updates" "Review installed apps with available updates."
+    [void]$installedPage.Actions.Children.Add($installedCatalogBtn)
+    [void]$installedPage.Actions.Children.Add($installedUpdatesBtn)
+    $installedMetrics = New-Object System.Windows.Controls.Primitives.UniformGrid
+    $installedMetrics.Columns = 4
+    $installedMetrics.Rows = 1
+    $installedTotalMetric = & $NewPageMetric "Installed apps" "0" "Catalog matches on this device"
+    $installedUpdatesMetric = & $NewPageMetric "Updates available" "0" "Ready for a reviewed run"
+    $installedSourcesMetric = & $NewPageMetric "Sources" "0" "Observed package sources"
+    $installedSelectedMetric = & $NewPageMetric "Selected" "0" "Apps in the run queue"
+    foreach ($metric in @($installedTotalMetric, $installedUpdatesMetric, $installedSourcesMetric, $installedSelectedMetric)) {
+        [void]$installedMetrics.Children.Add($metric.Card)
+    }
+    [void]$installedPage.Body.Children.Add($installedMetrics)
+    $installedSection = New-Object System.Windows.Controls.StackPanel
+    $installedSection.Margin = [System.Windows.Thickness]::new(0, 18, 0, 0)
+    [void]$installedSection.Children.Add((& $NewPageText "Installed catalog matches" 14 "PrimaryText" "SemiBold"))
+    $installedSectionSubtitle = & $NewPageText "Only packages in the curated catalog appear here; source and version details remain visible for review." 11.5 "SecondaryText"
+    $installedSectionSubtitle.Margin = [System.Windows.Thickness]::new(0, 4, 0, 10)
+    [void]$installedSection.Children.Add($installedSectionSubtitle)
+    $installedTableHost = New-Object System.Windows.Controls.StackPanel
+    [void]$installedSection.Children.Add($installedTableHost)
+    [void]$installedPage.Body.Children.Add((& $NewPageCard $installedSection))
+    $ui["PageControls"]["InstalledTableHost"] = $installedTableHost
+    $ui["PageControls"]["InstalledTotalValue"] = $installedTotalMetric.Value
+    $ui["PageControls"]["InstalledUpdatesValue"] = $installedUpdatesMetric.Value
+    $ui["PageControls"]["InstalledSourcesValue"] = $installedSourcesMetric.Value
+    $ui["PageControls"]["InstalledSelectedValue"] = $installedSelectedMetric.Value
+    & $RegisterPage "Installed" $installedPage
+
+    # Updates page
+    $updatesPage = & $NewPageShell "Updates" "Review and update installed apps without losing operator control."
+    $updatesRunBtn = & $NewPageButton "Review updates" "Open the reviewed update run view."
+    $updatesPolicyBtn = & $NewPageButton "Change policy" "Edit scheduled update checks and deferrals."
+    [void]$updatesPage.Actions.Children.Add($updatesRunBtn)
+    [void]$updatesPage.Actions.Children.Add($updatesPolicyBtn)
+    $updatesMetrics = New-Object System.Windows.Controls.Primitives.UniformGrid
+    $updatesMetrics.Columns = 4
+    $updatesMetrics.Rows = 1
+    $updatesAvailableMetric = & $NewPageMetric "Updates available" "0" "Packages with a newer version"
+    $updatesCriticalMetric = & $NewPageMetric "Critical updates" "0" "Policy severity review"
+    $updatesCurrentMetric = & $NewPageMetric "Up to date" "0" "Installed catalog matches"
+    $updatesSelectedMetric = & $NewPageMetric "Selected" "0" "Apps in the run queue"
+    foreach ($metric in @($updatesAvailableMetric, $updatesCriticalMetric, $updatesCurrentMetric, $updatesSelectedMetric)) {
+        [void]$updatesMetrics.Children.Add($metric.Card)
+    }
+    [void]$updatesPage.Body.Children.Add($updatesMetrics)
+    $updatesSection = New-Object System.Windows.Controls.StackPanel
+    $updatesSection.Margin = [System.Windows.Thickness]::new(0, 18, 0, 0)
+    [void]$updatesSection.Children.Add((& $NewPageText "Update review" 14 "PrimaryText" "SemiBold"))
+    $updatesSectionSubtitle = & $NewPageText "Compare installed and available versions, then send only the approved rows to the reviewed run plan." 11.5 "SecondaryText"
+    $updatesSectionSubtitle.Margin = [System.Windows.Thickness]::new(0, 4, 0, 10)
+    [void]$updatesSection.Children.Add($updatesSectionSubtitle)
+    $updatesTableHost = New-Object System.Windows.Controls.StackPanel
+    [void]$updatesSection.Children.Add($updatesTableHost)
+    [void]$updatesPage.Body.Children.Add((& $NewPageCard $updatesSection))
+    $ui["PageControls"]["UpdatesTableHost"] = $updatesTableHost
+    $ui["PageControls"]["UpdatesAvailableValue"] = $updatesAvailableMetric.Value
+    $ui["PageControls"]["UpdatesCriticalValue"] = $updatesCriticalMetric.Value
+    $ui["PageControls"]["UpdatesCurrentValue"] = $updatesCurrentMetric.Value
+    $ui["PageControls"]["UpdatesSelectedValue"] = $updatesSelectedMetric.Value
+    & $RegisterPage "Updates" $updatesPage
+
+    # Trust and source policy page
+    $policyPage = & $NewPageShell "Policy" "Configure trusted sources and update review behavior."
+    $policySourceBtn = & $NewPageButton "Edit sources" "Edit the corporate source allowlist and private sources."
+    $policyUpdateBtn = & $NewPageButton "Update policy" "Edit scheduled update checks and deferrals."
+    [void]$policyPage.Actions.Children.Add($policySourceBtn)
+    [void]$policyPage.Actions.Children.Add($policyUpdateBtn)
+    $policyMetrics = New-Object System.Windows.Controls.Primitives.UniformGrid
+    $policyMetrics.Columns = 3
+    $policyMetrics.Rows = 1
+    $policyTrustedMetric = & $NewPageMetric "Trusted sources" "0" "Allowed by the active policy"
+    $policyPrivateMetric = & $NewPageMetric "Private sources" "0" "Managed or internal endpoints"
+    $policyEnforcedMetric = & $NewPageMetric "Enforcement" "Off" "Packages are checked before runs"
+    foreach ($metric in @($policyTrustedMetric, $policyPrivateMetric, $policyEnforcedMetric)) {
+        [void]$policyMetrics.Children.Add($metric.Card)
+    }
+    [void]$policyPage.Body.Children.Add($policyMetrics)
+    $policyGrid = New-Object System.Windows.Controls.Grid
+    $policyGrid.Margin = [System.Windows.Thickness]::new(0, 18, 0, 0)
+    [void]$policyGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition))
+    $policyGrid.ColumnDefinitions[0].Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+    $policySummaryColumn = New-Object System.Windows.Controls.ColumnDefinition
+    $policySummaryColumn.Width = [System.Windows.GridLength]::new(0.42, [System.Windows.GridUnitType]::Star)
+    [void]$policyGrid.ColumnDefinitions.Add($policySummaryColumn)
+    $policySourceSection = New-Object System.Windows.Controls.StackPanel
+    [void]$policySourceSection.Children.Add((& $NewPageText "Sources" 14 "PrimaryText" "SemiBold"))
+    $policySourceSubtitle = & $NewPageText "The source table mirrors the policy definitions used by preflight checks." 11.5 "SecondaryText"
+    $policySourceSubtitle.Margin = [System.Windows.Thickness]::new(0, 4, 0, 10)
+    [void]$policySourceSection.Children.Add($policySourceSubtitle)
+    $policySourceTableHost = New-Object System.Windows.Controls.StackPanel
+    [void]$policySourceSection.Children.Add($policySourceTableHost)
+    $policySourceCard = & $NewPageCard $policySourceSection ([System.Windows.Thickness]::new(0, 0, 12, 0))
+    [System.Windows.Controls.Grid]::SetColumn($policySourceCard, 0)
+    [void]$policyGrid.Children.Add($policySourceCard)
+    $policySummary = New-Object System.Windows.Controls.StackPanel
+    [void]$policySummary.Children.Add((& $NewPageText "Policy summary" 14 "AccentText" "SemiBold"))
+    $policySummaryText = & $NewPageText "Loading policy state..." 11.5 "SecondaryText"
+    $policySummaryText.Margin = [System.Windows.Thickness]::new(0, 10, 0, 10)
+    [void]$policySummary.Children.Add($policySummaryText)
+    $policySummaryNote = & $NewPageText "Use the action buttons above to make changes. Every package operation re-checks the active policy before it runs." 11 "SecondaryText"
+    [void]$policySummary.Children.Add($policySummaryNote)
+    $policySummaryCard = & $NewPageCard $policySummary ([System.Windows.Thickness]::new(0))
+    [System.Windows.Controls.Grid]::SetColumn($policySummaryCard, 1)
+    [void]$policyGrid.Children.Add($policySummaryCard)
+    [void]$policyPage.Body.Children.Add($policyGrid)
+    $ui["PageControls"]["PolicySourceTableHost"] = $policySourceTableHost
+    $ui["PageControls"]["PolicyTrustedValue"] = $policyTrustedMetric.Value
+    $ui["PageControls"]["PolicyPrivateValue"] = $policyPrivateMetric.Value
+    $ui["PageControls"]["PolicyEnforcedValue"] = $policyEnforcedMetric.Value
+    $ui["PageControls"]["PolicySummaryText"] = $policySummaryText
+    & $RegisterPage "Policy" $policyPage
+
+    # Diagnostics page
+    $diagnosticsPage = & $NewPageShell "Diagnostics" "Troubleshoot WinGet and package management with local evidence."
+    $diagnosticsRunBtn = & $NewPageButton "Run health checks" "Refresh local client, source, and environment checks."
+    $diagnosticsExportBtn = & $NewPageButton "Export diagnostics" "Write a redacted diagnostics ZIP for support."
+    [void]$diagnosticsPage.Actions.Children.Add($diagnosticsRunBtn)
+    [void]$diagnosticsPage.Actions.Children.Add($diagnosticsExportBtn)
+    $diagnosticsHealth = New-Object System.Windows.Controls.Primitives.UniformGrid
+    $diagnosticsHealth.Columns = 5
+    $diagnosticsHealth.Rows = 1
+    $diagWinGetMetric = & $NewPageMetric "WinGet" "Ready" "Client readiness"
+    $diagSourceMetric = & $NewPageMetric "Sources" "Ready" "Configured sources"
+    $diagNetworkMetric = & $NewPageMetric "Network" "Local" "No remote upload"
+    $diagDiskMetric = & $NewPageMetric "Disk" "Ready" "Cache and logs"
+    $diagPermissionMetric = & $NewPageMetric "Permissions" "User" "Current Windows context"
+    foreach ($metric in @($diagWinGetMetric, $diagSourceMetric, $diagNetworkMetric, $diagDiskMetric, $diagPermissionMetric)) {
+        [void]$diagnosticsHealth.Children.Add($metric.Card)
+    }
+    [void]$diagnosticsPage.Body.Children.Add($diagnosticsHealth)
+    $diagnosticsGrid = New-Object System.Windows.Controls.Grid
+    $diagnosticsGrid.Margin = [System.Windows.Thickness]::new(0, 18, 0, 0)
+    [void]$diagnosticsGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition))
+    $diagnosticsGrid.ColumnDefinitions[0].Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+    $diagnosticsToolsColumn = New-Object System.Windows.Controls.ColumnDefinition
+    $diagnosticsToolsColumn.Width = [System.Windows.GridLength]::new(0.42, [System.Windows.GridUnitType]::Star)
+    [void]$diagnosticsGrid.ColumnDefinitions.Add($diagnosticsToolsColumn)
+    $diagnosticsRecent = New-Object System.Windows.Controls.StackPanel
+    [void]$diagnosticsRecent.Children.Add((& $NewPageText "Recent activity" 14 "PrimaryText" "SemiBold"))
+    $diagnosticsRecentSubtitle = & $NewPageText "Local activity and the latest run evidence are summarized here." 11.5 "SecondaryText"
+    $diagnosticsRecentSubtitle.Margin = [System.Windows.Thickness]::new(0, 4, 0, 10)
+    [void]$diagnosticsRecent.Children.Add($diagnosticsRecentSubtitle)
+    $diagnosticsActivityHost = New-Object System.Windows.Controls.StackPanel
+    [void]$diagnosticsRecent.Children.Add($diagnosticsActivityHost)
+    $diagnosticsRecentCard = & $NewPageCard $diagnosticsRecent ([System.Windows.Thickness]::new(0, 0, 12, 0))
+    [System.Windows.Controls.Grid]::SetColumn($diagnosticsRecentCard, 0)
+    [void]$diagnosticsGrid.Children.Add($diagnosticsRecentCard)
+    $diagnosticsTools = New-Object System.Windows.Controls.StackPanel
+    [void]$diagnosticsTools.Children.Add((& $NewPageText "Tools" 14 "AccentText" "SemiBold"))
+    foreach ($toolName in @("Open logs", "Export source report", "Reset WinGet cache")) {
+        $toolButton = & $NewPageButton $toolName
+        $toolButton.Margin = [System.Windows.Thickness]::new(0, 10, 0, 0)
+        [void]$diagnosticsTools.Children.Add($toolButton)
+    }
+    $diagnosticsToolsCard = & $NewPageCard $diagnosticsTools ([System.Windows.Thickness]::new(0))
+    [System.Windows.Controls.Grid]::SetColumn($diagnosticsToolsCard, 1)
+    [void]$diagnosticsGrid.Children.Add($diagnosticsToolsCard)
+    [void]$diagnosticsPage.Body.Children.Add($diagnosticsGrid)
+    $ui["PageControls"]["DiagnosticsRunBtn"] = $diagnosticsRunBtn
+    $ui["PageControls"]["DiagnosticsExportBtn"] = $diagnosticsExportBtn
+    $ui["PageControls"]["DiagnosticsWinGetValue"] = $diagWinGetMetric.Value
+    $ui["PageControls"]["DiagnosticsSourceValue"] = $diagSourceMetric.Value
+    $ui["PageControls"]["DiagnosticsActivityHost"] = $diagnosticsActivityHost
+    & $RegisterPage "Diagnostics" $diagnosticsPage
+
+    # Settings page
+    $settingsPage = & $NewPageShell "Settings" "Tune appearance, trust, and default run behavior for this workstation."
+    $settingsThemeBtn = & $NewPageButton "Switch theme" "Switch between the dark and light workspace themes."
+    [void]$settingsPage.Actions.Children.Add($settingsThemeBtn)
+    $settingsGrid = New-Object System.Windows.Controls.Grid
+    [void]$settingsGrid.ColumnDefinitions.Add((New-Object System.Windows.Controls.ColumnDefinition))
+    $settingsGrid.ColumnDefinitions[0].Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+    $settingsRightColumn = New-Object System.Windows.Controls.ColumnDefinition
+    $settingsRightColumn.Width = [System.Windows.GridLength]::new(1, [System.Windows.GridUnitType]::Star)
+    [void]$settingsGrid.ColumnDefinitions.Add($settingsRightColumn)
+    $appearanceStack = New-Object System.Windows.Controls.StackPanel
+    [void]$appearanceStack.Children.Add((& $NewPageText "Appearance" 14 "PrimaryText" "SemiBold"))
+    $settingsThemeText = & $NewPageText "Dark workspace" 12 "AccentText" "SemiBold"
+    $settingsThemeText.Margin = [System.Windows.Thickness]::new(0, 10, 0, 0)
+    [void]$appearanceStack.Children.Add($settingsThemeText)
+    $appearanceDescription = & $NewPageText "Use the theme toggle in the header or this page action. The same navigation and page surfaces are available in both themes." 11.5 "SecondaryText"
+    $appearanceDescription.Margin = [System.Windows.Thickness]::new(0, 6, 0, 0)
+    [void]$appearanceStack.Children.Add($appearanceDescription)
+    $appearanceCard = & $NewPageCard $appearanceStack ([System.Windows.Thickness]::new(0, 0, 12, 0))
+    [System.Windows.Controls.Grid]::SetColumn($appearanceCard, 0)
+    [void]$settingsGrid.Children.Add($appearanceCard)
+    $privacyStack = New-Object System.Windows.Controls.StackPanel
+    [void]$privacyStack.Children.Add((& $NewPageText "Trust and privacy" 14 "PrimaryText" "SemiBold"))
+    $settingsIconCheck = New-Object System.Windows.Controls.CheckBox
+    $settingsIconCheck.Content = "Do not download app icons"
+    $settingsIconCheck.IsChecked = [bool]$PrivateIconModeCheck.IsChecked
+    $settingsIconCheck.Margin = [System.Windows.Thickness]::new(0, 12, 0, 0)
+    $settingsCorporateCheck = New-Object System.Windows.Controls.CheckBox
+    $settingsCorporateCheck.Content = "Enforce trusted source policy"
+    $settingsCorporateCheck.IsChecked = [bool]$CorporateModeCheck.IsChecked
+    $settingsCorporateCheck.Margin = [System.Windows.Thickness]::new(0, 12, 0, 0)
+    $settingsSilentCheck = New-Object System.Windows.Controls.CheckBox
+    $settingsSilentCheck.Content = "Install silently when supported"
+    $settingsSilentCheck.IsChecked = [bool]$SilentCheck.IsChecked
+    $settingsSilentCheck.Margin = [System.Windows.Thickness]::new(0, 12, 0, 0)
+    $settingsAgreementsCheck = New-Object System.Windows.Controls.CheckBox
+    $settingsAgreementsCheck.Content = "Accept package and source agreements"
+    $settingsAgreementsCheck.IsChecked = [bool]$AcceptCheck.IsChecked
+    $settingsAgreementsCheck.Margin = [System.Windows.Thickness]::new(0, 12, 0, 0)
+    foreach ($check in @($settingsIconCheck, $settingsCorporateCheck, $settingsSilentCheck, $settingsAgreementsCheck)) {
+        [void]$privacyStack.Children.Add($check)
+    }
+    $settingsStatusText = & $NewPageText "Changes are saved to the local Wingetter settings file." 10.5 "SecondaryText"
+    $settingsStatusText.Margin = [System.Windows.Thickness]::new(0, 14, 0, 0)
+    [void]$privacyStack.Children.Add($settingsStatusText)
+    $privacyCard = & $NewPageCard $privacyStack ([System.Windows.Thickness]::new(0))
+    [System.Windows.Controls.Grid]::SetColumn($privacyCard, 1)
+    [void]$settingsGrid.Children.Add($privacyCard)
+    [void]$settingsPage.Body.Children.Add($settingsGrid)
+    $settingsInfo = New-Object System.Windows.Controls.StackPanel
+    $settingsInfo.Margin = [System.Windows.Thickness]::new(0, 18, 0, 0)
+    [void]$settingsInfo.Children.Add((& $NewPageText "Local state" 14 "PrimaryText" "SemiBold"))
+    [void]$settingsInfo.Children.Add((& $NewPageText "Settings, policies, logs, caches, and reports remain on this workstation unless you explicitly export a file or diagnostics bundle." 11.5 "SecondaryText"))
+    $settingsInfo.Children[1].Margin = [System.Windows.Thickness]::new(0, 5, 0, 0)
+    [void]$settingsPage.Body.Children.Add((& $NewPageCard $settingsInfo))
+    $ui["PageControls"]["SettingsThemeBtn"] = $settingsThemeBtn
+    $ui["PageControls"]["SettingsThemeText"] = $settingsThemeText
+    $ui["PageControls"]["SettingsIconCheck"] = $settingsIconCheck
+    $ui["PageControls"]["SettingsCorporateCheck"] = $settingsCorporateCheck
+    $ui["PageControls"]["SettingsSilentCheck"] = $settingsSilentCheck
+    $ui["PageControls"]["SettingsAgreementsCheck"] = $settingsAgreementsCheck
+    $ui["PageControls"]["SettingsStatusText"] = $settingsStatusText
+    & $RegisterPage "Settings" $settingsPage
+
+    # About page
+    $aboutPage = & $NewPageShell "About" "A reviewed, local-first cockpit for curated Windows setup."
+    $aboutContent = New-Object System.Windows.Controls.StackPanel
+    $aboutBrand = New-Object System.Windows.Controls.StackPanel
+    $aboutMark = New-Object System.Windows.Controls.Border
+    $aboutMark.Width = 58; $aboutMark.Height = 58; $aboutMark.CornerRadius = [System.Windows.CornerRadius]::new(14)
+    & $SetPageResource $aboutMark ([System.Windows.Controls.Border]::BackgroundProperty) "AccentText"
+    $aboutMarkText = & $NewPageText "W" 30 "PrimaryText" "Bold"
+    $aboutMarkText.Foreground = [System.Windows.Media.Brushes]::White
+    $aboutMarkText.HorizontalAlignment = [System.Windows.HorizontalAlignment]::Center
+    $aboutMarkText.VerticalAlignment = [System.Windows.VerticalAlignment]::Center
+    $aboutMark.Child = $aboutMarkText
+    [void]$aboutBrand.Children.Add($aboutMark)
+    $aboutTitle = & $NewPageText "Wingetter" 24 "PrimaryText" "SemiBold"
+    $aboutTitle.Margin = [System.Windows.Thickness]::new(0, 14, 0, 0)
+    [void]$aboutBrand.Children.Add($aboutTitle)
+    [void]$aboutBrand.Children.Add((& $NewPageText "Version v$Script:WingetterVersion" 12 "AccentText" "SemiBold"))
+    $aboutDescription = & $NewPageText "Curated WinGet discovery, reviewed install and update plans, reusable profiles, source policy, offline cache, diagnostics, and exportable local evidence." 12 "SecondaryText"
+    $aboutDescription.Margin = [System.Windows.Thickness]::new(0, 12, 0, 0)
+    [void]$aboutBrand.Children.Add($aboutDescription)
+    [void]$aboutContent.Children.Add((& $NewPageCard $aboutBrand))
+    $aboutMetrics = New-Object System.Windows.Controls.Primitives.UniformGrid
+    $aboutMetrics.Columns = 3; $aboutMetrics.Rows = 1
+    $aboutCatalogMetric = & $NewPageMetric "Catalog" "$($ui["TotalApps"])" "Curated applications"
+    $aboutCategoryMetric = & $NewPageMetric "Categories" "$($Script:SoftwareDatabase.Keys.Count)" "Browseable collections"
+    $aboutGroupMetric = & $NewPageMetric "Starter groups" "$($ui["BuiltInGroups"].Count)" "Reusable package sets"
+    foreach ($metric in @($aboutCatalogMetric, $aboutCategoryMetric, $aboutGroupMetric)) { [void]$aboutMetrics.Children.Add($metric.Card) }
+    $aboutMetrics.Margin = [System.Windows.Thickness]::new(0, 18, 0, 0)
+    [void]$aboutContent.Children.Add($aboutMetrics)
+    $aboutTrust = New-Object System.Windows.Controls.StackPanel
+    $aboutTrust.Margin = [System.Windows.Thickness]::new(0, 18, 0, 0)
+    [void]$aboutTrust.Children.Add((& $NewPageText "Design principles" 14 "PrimaryText" "SemiBold"))
+    foreach ($principle in @(
+        "Review before write: package operations are planned and visible before execution.",
+        "Local by default: settings, logs, caches, and reports stay on the workstation.",
+        "Evidence first: source policy, diagnostics, hashes, and export formats stay inspectable."
+    )) {
+        $principleText = & $NewPageText $principle 11.5 "SecondaryText"
+        $principleText.Margin = [System.Windows.Thickness]::new(0, 8, 0, 0)
+        [void]$aboutTrust.Children.Add($principleText)
+    }
+    [void]$aboutContent.Children.Add((& $NewPageCard $aboutTrust))
+    [void]$aboutPage.Body.Children.Add($aboutContent)
+    & $RegisterPage "About" $aboutPage
+    $InvokeWorkspaceButton = {
+        param([object]$Button)
+        if ($Button) {
+            $clickArgs = [System.Windows.RoutedEventArgs]::new([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
+            $Button.RaiseEvent($clickArgs)
+        }
+    }
+    $RefreshWorkspacePages = {
+        # Profiles table
+        $profileRows = New-Object System.Collections.ArrayList
+        foreach ($groupName in @($ui["BuiltInGroups"].Keys)) {
+            [void]$profileRows.Add(@($groupName, "Starter group", "$(@($ui["BuiltInGroups"][$groupName]).Count) apps", "Ready"))
+        }
+        $savedGroups = $null
+        try { $savedGroups = Get-SavedGroups } catch { $savedGroups = $null }
+        $savedCount = 0
+        if ($savedGroups) {
+            foreach ($property in @($savedGroups.PSObject.Properties)) {
+                $savedCount++
+                $savedEntries = @()
+                try { $savedEntries = @(Get-WingetterGroupRecordPackageIds -GroupRecord $property.Value) } catch {}
+                [void]$profileRows.Add(@([string]$property.Name, "Saved profile", "$($savedEntries.Count) apps", "Local"))
+            }
+        }
+        $profilesTableHost = $ui["PageControls"]["ProfilesTableHost"]
+        $profilesTableHost.Children.Clear()
+        [void]$profilesTableHost.Children.Add((& $NewPageTable @("Profile name", "Type", "Packages", "State") $profileRows.ToArray()))
+        $ui["PageControls"]["ProfilesBuiltInValue"].Text = "$($ui["BuiltInGroups"].Count)"
+        $ui["PageControls"]["ProfilesSavedValue"].Text = "$savedCount"
+
+        # Installed and update tables
+        $installedRecords = @($ui["InstalledIds"].Values | Sort-Object @{ Expression = { [string]$_.Name } })
+        $updateRecords = @($installedRecords | Where-Object { [bool]$_.IsUpdateAvailable })
+        $sourceNames = @($installedRecords | ForEach-Object { [string]$_.Source } | Where-Object { $_ } | Sort-Object -Unique)
+        $installedRows = foreach ($record in $installedRecords) {
+            $name = if ($record.Name) { [string]$record.Name } else { [string]$record.PackageId }
+            $status = if ([bool]$record.IsUpdateAvailable) { "Update available" } else { "Up to date" }
+            @($name, [string]$record.PackageId, [string]$record.InstalledVersion, [string]$record.Source, $status)
+        }
+        $updateRows = foreach ($record in $updateRecords) {
+            $name = if ($record.Name) { [string]$record.Name } else { [string]$record.PackageId }
+            @($name, [string]$record.InstalledVersion, [string]$record.AvailableVersion, [string]$record.Source, "Review")
+        }
+        $ui["PageControls"]["InstalledTableHost"].Children.Clear()
+        [void]$ui["PageControls"]["InstalledTableHost"].Children.Add((& $NewPageTable @("Name", "Package ID", "Installed", "Source", "Status") $installedRows))
+        $ui["PageControls"]["UpdatesTableHost"].Children.Clear()
+        [void]$ui["PageControls"]["UpdatesTableHost"].Children.Add((& $NewPageTable @("Name", "Installed", "New version", "Source", "Action") $updateRows))
+        $ui["PageControls"]["InstalledTotalValue"].Text = "$($installedRecords.Count)"
+        $ui["PageControls"]["InstalledUpdatesValue"].Text = "$($updateRecords.Count)"
+        $ui["PageControls"]["InstalledSourcesValue"].Text = "$($sourceNames.Count)"
+        $ui["PageControls"]["InstalledSelectedValue"].Text = "$($SelectedCount.Text)"
+        $ui["PageControls"]["UpdatesAvailableValue"].Text = "$($updateRecords.Count)"
+        $ui["PageControls"]["UpdatesCriticalValue"].Text = "0"
+        $ui["PageControls"]["UpdatesCurrentValue"].Text = "$([math]::Max(0, $installedRecords.Count - $updateRecords.Count))"
+        $ui["PageControls"]["UpdatesSelectedValue"].Text = "$($SelectedCount.Text)"
+
+        # Source and update policy summary
+        $sourceDefinitions = @()
+        try { $sourceDefinitions = @(Get-WingetterSourcePolicyDefinitions -Policy $ui["SourcePolicy"]) } catch {}
+        $privateCount = @($ui["SourcePolicy"].PrivateSources).Count
+        $ui["PageControls"]["PolicySourceTableHost"].Children.Clear()
+        $policyRows = foreach ($source in $sourceDefinitions) {
+            $sourceTypeValue = Get-WingetterObjectPropertyValue -InputObject $source -PropertyName "Type"
+            $trustedValue = Get-WingetterObjectPropertyValue -InputObject $source -PropertyName "Trusted"
+            $enabledValue = Get-WingetterObjectPropertyValue -InputObject $source -PropertyName "Enabled"
+            $sourceType = if ($sourceTypeValue) { [string]$sourceTypeValue } else { "Configured" }
+            $trust = if ($trustedValue -eq $false) { "Limited" } else { "Trusted" }
+            $state = if ($enabledValue -eq $false) { "Disabled" } else { "Enabled" }
+            @([string]$source.Name, $sourceType, $trust, $state)
+        }
+        [void]$ui["PageControls"]["PolicySourceTableHost"].Children.Add((& $NewPageTable @("Source name", "Type", "Trust", "State") $policyRows))
+        $ui["PageControls"]["PolicyTrustedValue"].Text = "$($sourceDefinitions.Count)"
+        $ui["PageControls"]["PolicyPrivateValue"].Text = "$privateCount"
+        $ui["PageControls"]["PolicyEnforcedValue"].Text = if ([bool]$ui["SourcePolicy"].CorporateMode) { "On" } else { "Off" }
+        try {
+            $updatePolicy = Get-WingetterUpdatePolicy
+            $ui["PageControls"]["PolicySummaryText"].Text = "Enforcement: $($ui["PageControls"]["PolicyEnforcedValue"].Text)`nMax deferrals: $($updatePolicy.MaxDeferrals)`nMaintenance windows: $(@($updatePolicy.MaintenanceWindows).Count)"
+        } catch {
+            $ui["PageControls"]["PolicySummaryText"].Text = "Policy state is unavailable until the local policy file can be read."
+        }
+
+        # Diagnostics activity
+        $ui["PageControls"]["DiagnosticsActivityHost"].Children.Clear()
+        $activityRows = @()
+        if ($ui["LastRunReport"]) {
+            $activityRows += @(@("Last package run", "Completed", [string]$ui["LastRunReport"].Path))
+        } else {
+            $activityRows += @(@("Workspace startup", "Ready", "No package run recorded yet"))
+        }
+        $scanState = if ($installedRecords.Count -gt 0) { "Completed" } else { "Waiting" }
+        $activityRows += @(@("Installed scan", $scanState, "$($installedRecords.Count) catalog matches"))
+        [void]$ui["PageControls"]["DiagnosticsActivityHost"].Children.Add((& $NewPageTable @("Activity", "State", "Detail") $activityRows))
+        $readinessText = [string]$WinGetStatus.Text
+        if ([string]::IsNullOrWhiteSpace($readinessText)) { $readinessText = "Checking" }
+        $ui["PageControls"]["DiagnosticsWinGetValue"].Text = $readinessText
+        $ui["PageControls"]["DiagnosticsSourceValue"].Text = if ($sourceDefinitions.Count -gt 0) { "Ready" } else { "Review" }
+    }
+    $ShowWorkspacePage = {
+        param([string]$Name)
+        if ($Name -ne "Explore" -and !$ui["PageViews"].ContainsKey($Name)) { return }
+        if ($ui["IsUpdateMode"]) { & $ExitUpdateView }
+        if ($Name -eq "Explore") {
+            $UtilityPageHost.Visibility = [System.Windows.Visibility]::Collapsed
+            $ui["ActivePage"] = "Explore"
+            $ui["PageControls"].Remove("QueueCount")
+            $ui["PageControls"].Remove("QueueRunBtn")
+            & $ApplyTheme
+            return
+        }
+        $UtilityPageContent.Children.Clear()
+        [void]$UtilityPageContent.Children.Add($ui["PageViews"][$Name])
+        $UtilityPageHost.Visibility = [System.Windows.Visibility]::Visible
+        $ui["ActivePage"] = $Name
+        $page = $ui["PageControls"][$Name]
+        $ui["PageControls"]["QueueCount"] = $page.QueueCount
+        $ui["PageControls"]["QueueRunBtn"] = $page.QueueRunBtn
+        & $RefreshWorkspacePages
+        & $ApplyTheme
+        & $UpdateSelectedCount
+    }
+    $NavExploreBtn.Tag = "Explore"
+    $NavInstalledBtn.Tag = "Installed"
+    $NavUpdatesBtn.Tag = "Updates"
+    $NavProfilesBtn.Tag = "Profiles"
+    $NavPolicyBtn.Tag = "Policy"
+    $NavDiagnosticsBtn.Tag = "Diagnostics"
+    $NavSettingsBtn.Tag = "Settings"
+    $NavAboutBtn.Tag = "About"
+    foreach ($navEntry in @(
+        @{ Button = $NavExploreBtn; Page = "Explore" },
+        @{ Button = $NavInstalledBtn; Page = "Installed" },
+        @{ Button = $NavUpdatesBtn; Page = "Updates" },
+        @{ Button = $NavProfilesBtn; Page = "Profiles" },
+        @{ Button = $NavPolicyBtn; Page = "Policy" },
+        @{ Button = $NavDiagnosticsBtn; Page = "Diagnostics" },
+        @{ Button = $NavSettingsBtn; Page = "Settings" },
+        @{ Button = $NavAboutBtn; Page = "About" }
+    )) {
+        $navPage = [string]$navEntry.Page
+        $navEntry.Button.Add_Click({ & $ShowWorkspacePage $navPage }.GetNewClosure())
+    }
+
+    $profilesGalleryBtn.Add_Click({ & $InvokeWorkspaceButton $GalleryBtn }.GetNewClosure())
+    $profilesImportBtn.Add_Click({ & $InvokeWorkspaceButton $ImportBtn }.GetNewClosure())
+    $profilesNewBtn.Add_Click({ & $InvokeWorkspaceButton $SaveGroupBtn }.GetNewClosure())
+    $installedCatalogBtn.Add_Click({ & $ShowWorkspacePage "Explore" }.GetNewClosure())
+    $installedUpdatesBtn.Add_Click({ & $ShowWorkspacePage "Updates" }.GetNewClosure())
+    $updatesPolicyBtn.Add_Click({ & $InvokeWorkspaceButton $UpdatePolicyBtn }.GetNewClosure())
+    $updatesRunBtn.Add_Click({
+        if ($ui["InstalledIds"].Count -eq 0) { return }
+        & $ShowWorkspacePage "Explore"
+        $ui["UpdateOnlyMode"] = $true
+        $ui["ActivePage"] = "Updates"
+        & $EnterUpdateView
+        & $ApplyTheme
+    }.GetNewClosure())
+    $policySourceBtn.Add_Click({ & $InvokeWorkspaceButton $EditSourcePolicyBtn; & $RefreshWorkspacePages }.GetNewClosure())
+    $policyUpdateBtn.Add_Click({ & $InvokeWorkspaceButton $UpdatePolicyBtn; & $RefreshWorkspacePages }.GetNewClosure())
+    $diagnosticsExportBtn.Add_Click({ & $InvokeWorkspaceButton $DiagnosticsBtn }.GetNewClosure())
+    $diagnosticsRunBtn.Add_Click({
+        try {
+            $readiness = Get-WinGetClientReadiness
+            if ($readiness -and $readiness.Summary) { $ui["PageControls"]["DiagnosticsWinGetValue"].Text = [string]$readiness.Summary }
+            $ui["PageControls"]["SettingsStatusText"].Text = "Health checks refreshed at $((Get-Date).ToString('HH:mm'))."
+        } catch {
+            $ui["PageControls"]["SettingsStatusText"].Text = "Health checks could not complete: $($_.Exception.Message)"
+        }
+        & $RefreshWorkspacePages
+    }.GetNewClosure())
+    $settingsThemeBtn.Add_Click({ & $InvokeWorkspaceButton $ModeBtn; $ui["PageControls"]["SettingsThemeText"].Text = if ($ui["IsDark"]) { "Dark workspace" } else { "Light workspace" } }.GetNewClosure())
+    $settingsIconCheck.Add_Click({ $PrivateIconModeCheck.IsChecked = $settingsIconCheck.IsChecked; & $InvokeWorkspaceButton $PrivateIconModeCheck }.GetNewClosure())
+    $settingsCorporateCheck.Add_Click({ $CorporateModeCheck.IsChecked = $settingsCorporateCheck.IsChecked; & $InvokeWorkspaceButton $CorporateModeCheck; & $RefreshWorkspacePages }.GetNewClosure())
+    $settingsSilentCheck.Add_Click({ $SilentCheck.IsChecked = $settingsSilentCheck.IsChecked }.GetNewClosure())
+    $settingsAgreementsCheck.Add_Click({ $AcceptCheck.IsChecked = $settingsAgreementsCheck.IsChecked }.GetNewClosure())
+    foreach ($pageName in @("Profiles", "Installed", "Updates", "Policy", "Diagnostics", "Settings", "About")) {
+        $page = $ui["PageControls"][$pageName]
+        $page.QueueRunBtn.Add_Click({
+            if ($InstallBtn.IsEnabled) {
+                & $ShowWorkspacePage "Explore"
+                & $InvokeWorkspaceButton $InstallBtn
+            }
+        }.GetNewClosure())
+    }
+    & $RefreshWorkspacePages
+    & $ApplyTheme
     $UpdateAllBtn.Add_Click({
         if ($ui["IsUpdateMode"]) {
             & $ExitUpdateView
@@ -5600,6 +6468,27 @@ function Show-WinGetInstallerGUI {
             if ($ui["AllCheckboxes"].ContainsKey($readmeId)) { $ui["AllCheckboxes"][$readmeId].IsChecked = $false }
         }
         $WinGetStatus.Text = "WinGet smoke"
+
+        foreach ($pageCapture in @(
+            @{ Button = $NavInstalledBtn; Name = "09-installed-page.png" },
+            @{ Button = $NavUpdatesBtn; Name = "10-updates-page.png" },
+            @{ Button = $NavProfilesBtn; Name = "11-profiles-page.png" },
+            @{ Button = $NavPolicyBtn; Name = "12-policy-page.png" },
+            @{ Button = $NavDiagnosticsBtn; Name = "13-diagnostics-page.png" },
+            @{ Button = $NavSettingsBtn; Name = "14-settings-page.png" },
+            @{ Button = $NavAboutBtn; Name = "15-about-page.png" }
+        )) {
+            Invoke-WingetterUiSmokeButtonClick -Ui $ui -Button $pageCapture.Button
+            [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+            $Window.UpdateLayout()
+            if ($UtilityPageHost.Visibility -ne [System.Windows.Visibility]::Visible) {
+                Add-WingetterUiSmokeFailure -Ui $ui -Message "Navigation page '$($pageCapture.Name)' did not open the workspace page host."
+            }
+            Save-WingetterUiSmokeScreenshot -Ui $ui -Window $Window -Name $pageCapture.Name -Element $Window
+        }
+        Invoke-WingetterUiSmokeButtonClick -Ui $ui -Button $NavExploreBtn
+        [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)
+        $Window.UpdateLayout()
 
         Invoke-WingetterUiSmokeButtonClick -Ui $ui -Button $ModeBtn
         [void]$Window.Dispatcher.Invoke([System.Action]{}, [System.Windows.Threading.DispatcherPriority]::Background)

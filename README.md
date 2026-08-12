@@ -29,6 +29,7 @@ Paste the above into any PowerShell window to download and run Wingetter instant
 
 - **Dark / Light mode** -- defaults to dark, toggle with one click
 - **Premium discovery workspace** -- responsive search and command hierarchy, three-column catalog density, and a persistent reviewed-selection panel with per-app removal
+- **Navigation-driven workspace** -- dedicated Explore, Installed, Updates, Profiles, Policy, Diagnostics, Settings, and About pages share a persistent review queue and consistent page actions
 - **Accessible catalog navigation** -- keyboard-operable app rows, category sections, sidebar jumps, visible focus states, and screen-reader package labels
 - **Metadata-rich search** -- ranked local search across names, package IDs, categories, built-in groups, publisher-like ID tokens, installed state, source, scope, update state, and pin state
 - **Favicon icons** -- parallel-fetched from app domains with colored letter fallbacks and local caching
@@ -128,12 +129,13 @@ powershell -ExecutionPolicy Bypass -File "C:\Path\To\Wingetter.ps1"
 ### Workflow
 
 1. Launch the script -- the splash screen loads while icons are fetched
-2. Browse categories using the sidebar or use the search bar to find apps
-3. Check the boxes for everything you want to install (Shift-click for range selection)
-4. Optionally toggle **Silent Install** and **Auto-accept Agreements**
-5. Click **Install Selected** to review the preflight plan and remove anything that should not run
-6. Start the reviewed plan and monitor results in the log panel -- color-coded per app
-7. Save your selection as a named group for next time, or export it as a standalone PS1/JSON
+2. Use the workspace rail to move between Explore, Installed, Updates, Profiles, Policy, Diagnostics, Settings, and About
+3. Browse categories using the sidebar or use the search bar to find apps
+4. Check the boxes for everything you want to install (Shift-click for range selection)
+5. Optionally toggle **Silent Install** and **Auto-accept Agreements**
+6. Click **Install Selected** to review the preflight plan and remove anything that should not run
+7. Start the reviewed plan and monitor results in the log panel -- color-coded per app
+8. Save your selection as a named group for next time, or export it as a standalone PS1/JSON
 
 ### Exporting
 

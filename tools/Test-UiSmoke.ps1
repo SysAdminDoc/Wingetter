@@ -145,7 +145,14 @@ if ($failures.Count -eq 0) {
                 "04-profile-gallery.png",
                 "06-update-mode.png",
                 "07-browse-restored.png",
-                "08-readme.png"
+                "08-readme.png",
+                "09-installed-page.png",
+                "10-updates-page.png",
+                "11-profiles-page.png",
+                "12-policy-page.png",
+                "13-diagnostics-page.png",
+                "14-settings-page.png",
+                "15-about-page.png"
             )) {
                 $expectedPath = Join-Path $OutputPath $requiredName
                 if ($screenshots -notcontains $expectedPath) {
@@ -154,8 +161,8 @@ if ($failures.Count -eq 0) {
                 Test-SmokeScreenshot -Path $expectedPath
             }
 
-            if ($screenshots.Count -lt 7) {
-                Add-Failure "UI smoke captured $($screenshots.Count) screenshots; expected at least 7."
+            if ($screenshots.Count -lt 14) {
+                Add-Failure "UI smoke captured $($screenshots.Count) screenshots; expected at least 14."
             }
         }
     } catch {

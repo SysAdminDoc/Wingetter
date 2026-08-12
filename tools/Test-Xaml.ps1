@@ -34,7 +34,16 @@ try {
         "PinPackageBtn",
         "PinBlockingBtn",
         "PinInstalledBtn",
-        "RemovePinBtn"
+        "RemovePinBtn",
+        "NavExploreBtn",
+        "NavInstalledBtn",
+        "NavUpdatesBtn",
+        "NavProfilesBtn",
+        "NavPolicyBtn",
+        "NavDiagnosticsBtn",
+        "NavSettingsBtn",
+        "NavAboutBtn",
+        "UtilityPageHost"
     )) {
         if (!$window.FindName($requiredName)) {
             throw "Missing named XAML control '$requiredName'."

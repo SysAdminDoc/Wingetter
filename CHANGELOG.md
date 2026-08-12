@@ -4,6 +4,8 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Added: Reimagined the workspace as a navigation-driven shell with Explore, Installed, Updates, Profiles, Policy, Diagnostics, Settings, and About pages, shared review queues, live catalog summaries, and page-specific action surfaces.
+
 ## [v6.2.1] - 2026-08-12
 
 - Security: Diagnostics bundles now redact bearer credentials, API keys, and token-like query parameters wherever they appear in captured output, including stderr and JSON log lines.
