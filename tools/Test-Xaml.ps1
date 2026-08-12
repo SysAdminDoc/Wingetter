@@ -59,11 +59,6 @@ foreach ($requiredToken in @(
     }
 }
 
-if ($text -match '-PumpUi\s+\{\s*\[System\.Windows\.Forms\.Application\]::DoEvents\(\)\s*\}') {
-    Write-Host "XAML validation failed: package operation handlers must not pump UI with DoEvents." -ForegroundColor Red
-    exit 1
-}
-
 $worker = $null
 $stubRoot = $null
 $previousWorkerSmokeRoot = $env:WINGETTER_WORKER_SMOKE_ROOT

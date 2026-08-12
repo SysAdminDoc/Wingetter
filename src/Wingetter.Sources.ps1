@@ -121,10 +121,9 @@ function Get-WingetterWinGetSourceAdapter {
                 [bool]$IncludePinned,
                 [object]$InstallOptions = $null,
                 [string]$RunLogDir,
-                [scriptblock]$ShouldCancel = { $false },
-                [scriptblock]$PumpUi = {}
+                [scriptblock]$ShouldCancel = { $false }
             )
-            Invoke-WinGetPackageOperation -Action "install" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -InstallOptions $InstallOptions -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
+            Invoke-WinGetPackageOperation -Action "install" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -InstallOptions $InstallOptions -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel
         }
         Upgrade = {
             param(
@@ -136,10 +135,9 @@ function Get-WingetterWinGetSourceAdapter {
                 [bool]$IncludePinned,
                 [object]$InstallOptions = $null,
                 [string]$RunLogDir,
-                [scriptblock]$ShouldCancel = { $false },
-                [scriptblock]$PumpUi = {}
+                [scriptblock]$ShouldCancel = { $false }
             )
-            Invoke-WinGetPackageOperation -Action "upgrade" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -InstallOptions $InstallOptions -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
+            Invoke-WinGetPackageOperation -Action "upgrade" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $AcceptAgreements -IncludePinned $IncludePinned -InstallOptions $InstallOptions -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel
         }
         Uninstall = {
             param(
@@ -151,8 +149,7 @@ function Get-WingetterWinGetSourceAdapter {
                 [bool]$IncludePinned,
                 [object]$InstallOptions = $null,
                 [string]$RunLogDir,
-                [scriptblock]$ShouldCancel = { $false },
-                [scriptblock]$PumpUi = {}
+                [scriptblock]$ShouldCancel = { $false }
             )
             # AcceptAgreements and IncludePinned are part of the install/upgrade/
             # uninstall adapter contract but do not apply to uninstall; reference
@@ -160,7 +157,7 @@ function Get-WingetterWinGetSourceAdapter {
             [void]$AcceptAgreements
             [void]$IncludePinned
             [void]$InstallOptions
-            Invoke-WinGetPackageOperation -Action "uninstall" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $false -IncludePinned $false -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel -PumpUi $PumpUi
+            Invoke-WinGetPackageOperation -Action "uninstall" -PackageId $PackageId -PackageName $PackageName -SourceName $SourceName -Silent $Silent -AcceptAgreements $false -IncludePinned $false -RunLogDir $RunLogDir -ShouldCancel $ShouldCancel
         }
         ExportProfile = {
             param(
@@ -314,8 +311,7 @@ function Invoke-WingetterPackageSourcePackageOperation {
         [bool]$IncludePinned,
         [object]$InstallOptions = $null,
         [string]$RunLogDir,
-        [scriptblock]$ShouldCancel = { $false },
-        [scriptblock]$PumpUi = {}
+        [scriptblock]$ShouldCancel = { $false }
     )
 
     $operation = switch ($Action) {
@@ -334,7 +330,6 @@ function Invoke-WingetterPackageSourcePackageOperation {
         InstallOptions   = $InstallOptions
         RunLogDir        = $RunLogDir
         ShouldCancel     = $ShouldCancel
-        PumpUi           = $PumpUi
     }
 }
 

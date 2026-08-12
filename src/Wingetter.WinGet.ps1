@@ -936,8 +936,7 @@ function Invoke-WinGetPackageOperation {
         [bool]$IncludePinned,
         [object]$InstallOptions = $null,
         [string]$RunLogDir,
-        [scriptblock]$ShouldCancel = { $false },
-        [scriptblock]$PumpUi = {}
+        [scriptblock]$ShouldCancel = { $false }
     )
 
     $options = ConvertTo-WingetterInstallOptions -InstallOptions $InstallOptions -AllowCustom $true
@@ -974,7 +973,6 @@ function Invoke-WinGetPackageOperation {
         $stderrTask = $proc.StandardError.ReadToEndAsync()
 
         while (-not $proc.HasExited) {
-            & $PumpUi
             Start-Sleep -Milliseconds 100
             if (& $ShouldCancel) {
                 $cancelled = $true

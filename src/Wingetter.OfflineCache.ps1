@@ -84,8 +84,7 @@ function Invoke-WingetterOfflinePackageDownload {
         [string]$DownloadDirectory,
         [string]$RunLogDir,
         [bool]$AcceptAgreements = $true,
-        [scriptblock]$ShouldCancel = { $false },
-        [scriptblock]$PumpUi = {}
+        [scriptblock]$ShouldCancel = { $false }
     )
 
     if (!(Test-Path $DownloadDirectory)) { New-Item -ItemType Directory -Path $DownloadDirectory -Force | Out-Null }
@@ -119,7 +118,6 @@ function Invoke-WingetterOfflinePackageDownload {
         $stderrTask = $proc.StandardError.ReadToEndAsync()
 
         while (-not $proc.HasExited) {
-            & $PumpUi
             Start-Sleep -Milliseconds 100
             if (& $ShouldCancel) {
                 $cancelled = $true

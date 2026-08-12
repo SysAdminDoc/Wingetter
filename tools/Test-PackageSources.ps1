@@ -33,6 +33,13 @@ foreach ($moduleName in @(
 }
 
 if ($failures.Count -eq 0) {
+    foreach ($moduleName in @("Wingetter.WinGet.ps1", "Wingetter.Sources.ps1", "Wingetter.OfflineCache.ps1")) {
+        $moduleText = Get-Content -Path (Join-Path $SourceDir $moduleName) -Raw
+        if ($moduleText -match '\bPumpUi\b') {
+            Add-Failure "Dead PumpUi callback remains in '$moduleName'."
+        }
+    }
+
     $requiredOperations = @(
         "TestAvailability",
         "InstallManager",
