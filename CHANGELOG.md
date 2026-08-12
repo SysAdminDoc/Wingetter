@@ -8,6 +8,7 @@ All notable changes to Wingetter will be documented in this file.
 - Security: Raw-launch module downloads now use only the canonical GitHub source URL; the same-user `WINGETTER_MODULE_BASE_URL` override was removed to prevent redirecting usage metadata to an untrusted mirror.
 - Refactored: Removed the unused `PumpUi` callback from package-source and offline-cache workers; their polling loops now perform only cancellation checks.
 - Changed: `catalog/winget.json` is now the single catalog source of truth. Local runs load it directly, raw launches download it with SHA256 verification, and packaged builds embed a snapshot generated from the same JSON; the duplicate 765-app PowerShell literal was removed.
+- Fixed: `Restore-WingetterWindowBounds` now loads System.Windows.Forms itself before enumerating screens, removing its dependency on the later App.ps1 bootstrap step.
 
 ## [v6.2.0] - 2026-07-09
 

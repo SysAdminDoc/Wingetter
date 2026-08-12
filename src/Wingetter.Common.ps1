@@ -87,6 +87,14 @@ function Restore-WingetterWindowBounds {
     )
 
     if ($null -eq $Window) { return }
+    try {
+        # Common.ps1 is loaded before App.ps1 initializes the WPF/WinForms
+        # assemblies. Keep this helper self-contained so callers do not depend
+        # on bootstrap ordering before restoring persisted bounds.
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+    } catch {
+        return
+    }
     $settings = Get-WingetterSettings -Path $Path
     if ($null -eq $settings.WindowWidth -or $null -eq $settings.WindowHeight) { return }
     $w = [int]$settings.WindowWidth

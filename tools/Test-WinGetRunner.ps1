@@ -37,6 +37,19 @@ if (!(Test-Path $sourcesModulePath)) {
 }
 
 if ($failures.Count -eq 0) {
+    $commonText = Get-Content -Path (Join-Path $SourceDir "Wingetter.Common.ps1") -Raw
+    $restoreMatch = [regex]::Match($commonText, '(?ms)function Restore-WingetterWindowBounds\s*\{(?<body>.*?)^\}')
+    if (!$restoreMatch.Success) {
+        Add-Failure "Could not locate Restore-WingetterWindowBounds for assembly-order validation."
+    } else {
+        $restoreBody = $restoreMatch.Groups["body"].Value
+        $loadIndex = $restoreBody.IndexOf("Add-Type -AssemblyName System.Windows.Forms", [System.StringComparison]::Ordinal)
+        $screenIndex = $restoreBody.IndexOf("[System.Windows.Forms.Screen]", [System.StringComparison]::Ordinal)
+        if ($loadIndex -lt 0 -or $screenIndex -lt 0 -or $loadIndex -gt $screenIndex) {
+            Add-Failure "Restore-WingetterWindowBounds must load System.Windows.Forms before using Screen."
+        }
+    }
+
     $joined = Join-ProcessArguments -Arguments @("install", "--id", "Example.Package", "--exact", "--custom", "value with spaces")
     if ($joined -ne 'install --id Example.Package --exact --custom "value with spaces"') {
         Add-Failure "Join-ProcessArguments produced unexpected output: $joined"
