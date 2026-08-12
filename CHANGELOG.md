@@ -4,6 +4,8 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+- Security: Diagnostics bundles now redact bearer credentials, API keys, and token-like query parameters wherever they appear in captured output, including stderr and JSON log lines.
+
 ## [v6.2.0] - 2026-07-09
 
 - Changed: Reimagined the main WPF shell around a premium discovery workspace with a full-width command area, responsive search, denser three-column catalog, and a persistent selection and run-options panel.

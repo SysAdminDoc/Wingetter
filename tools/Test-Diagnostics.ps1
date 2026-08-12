@@ -41,7 +41,14 @@ if ($failures.Count -eq 0) {
         $logRoot = Join-Path $tempRoot "logs"
         $updateRoot = Join-Path $logRoot "update-checks"
         New-Item -ItemType Directory -Path $updateRoot -Force | Out-Null
-        Set-Content -Path (Join-Path $logRoot "winget-bootstrap-test.jsonl") -Value '{"Header":"Authorization=Bearer secret-token","Path":"C:\\Users\\operator"}' -Encoding UTF8
+        Set-Content -Path (Join-Path $logRoot "winget-bootstrap-test.jsonl") -Value @(
+            '{"Header":"Authorization=Bearer secret-token","Path":"C:\\Users\\operator"}'
+            'stderr: request failed https://packages.example.test/api?access_token=url-only-token&tenant=corp'
+            'stderr: Response header X-API-Key: header-only-token'
+            'stderr: Authorization: Bearer bearer-only-token'
+            'stderr: {"refresh_token":"json-only-token"}'
+            'stderr: winget --header "X-Api-Key: cli-only-token"'
+        ) -Encoding UTF8
         [PSCustomObject]@{
             Schema       = "Wingetter.UpdateCheck.v1"
             CheckedAtUtc = "2026-06-30T00:00:00Z"
@@ -103,8 +110,17 @@ if ($failures.Count -eq 0) {
         foreach ($file in @(Get-ChildItem -LiteralPath $extractRoot -Recurse -File)) {
             $combined += [System.IO.File]::ReadAllText($file.FullName)
         }
-        if ($combined -like "*secret-token*" -or $combined -like "*Authorization=Bearer*") {
-            Add-Failure "Diagnostics bundle leaked a private source header."
+        foreach ($sensitiveFixture in @(
+            "secret-token",
+            "url-only-token",
+            "header-only-token",
+            "bearer-only-token",
+            "json-only-token",
+            "cli-only-token"
+        )) {
+            if ($combined -like "*$sensitiveFixture*") {
+                Add-Failure "Diagnostics bundle leaked sensitive fixture '$sensitiveFixture'."
+            }
         }
         if ($combined -notlike "*<redacted*" -and $combined -notlike "*<redacted-header>*") {
             Add-Failure "Diagnostics bundle did not contain any redaction marker."

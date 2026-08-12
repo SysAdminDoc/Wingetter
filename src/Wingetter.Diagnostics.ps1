@@ -55,9 +55,10 @@ function Redact-WingetterDiagnosticText {
         $redacted = [regex]::Replace($redacted, [regex]::Escape($value), $replacement, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
     }
 
-    $redacted = [regex]::Replace($redacted, '(?i)(Authorization\s*[:=]\s*)(Bearer\s+)?[^\r\n;,"}]+', '${1}<redacted>')
+    $redacted = [regex]::Replace($redacted, '(?i)(\b(?:authorization|proxy-authorization)\b["'']?\s*[:=]\s*(?:(?:bearer|basic|token)\s+)?["'']?)[^\s,;&#"''}\]]+', '${1}<redacted>')
     $redacted = [regex]::Replace($redacted, '(?i)(--header\s+)(?:"[^"]+"|\S+)', '${1}<redacted-header>')
-    $redacted = [regex]::Replace($redacted, '(?i)\b(token|secret|password|api[-_ ]?key)(\s*[:=]\s*)[^\s,;"''}]+', '${1}${2}<redacted>')
+    $redacted = [regex]::Replace($redacted, '(?i)(\b(?:cookie|set-cookie|x-[a-z0-9-]*key|api[-_ ]?key|apikey|access[-_]?token|refresh[-_]?token|id[-_]?token|auth[-_]?token|client[-_]?secret|private[-_]?key|token|secret|password)\b["'']?\s*[:=]\s*(?:(?:bearer|basic|token)\s+)?["'']?)[^\s,;&#"''}\]]+', '${1}<redacted>')
+    $redacted = [regex]::Replace($redacted, '(?i)(\b(?:bearer|basic|token)\s+["'']?)[^\s,;&#"''}\]]+', '${1}<redacted>')
     return $redacted
 }
 
