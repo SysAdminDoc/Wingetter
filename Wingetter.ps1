@@ -35,8 +35,8 @@ $Script:WingetterModuleFiles = @(
 
 # Canonical SHA256 of each module under `src/` at the time this launcher was
 # released. The download path verifies each fetched module against this table
-# before dot-sourcing so a tampered mirror, redirected URL, or cache-poisoning
-# attack cannot inject code via WINGETTER_MODULE_BASE_URL or %TEMP%.
+# before dot-sourcing so a tampered response or cache-poisoning attack cannot
+# inject code via the fixed upstream source or %TEMP%.
 #
 # Maintainer workflow: when any `src/Wingetter.*.ps1` file changes, run
 #   pwsh -NoProfile -File .\tools\Sync-LauncherManifest.ps1
@@ -119,11 +119,7 @@ function Get-WingetterModuleDirectory {
         }
     }
 
-    $baseUrl = if (![string]::IsNullOrWhiteSpace($env:WINGETTER_MODULE_BASE_URL)) {
-        $env:WINGETTER_MODULE_BASE_URL.TrimEnd("/")
-    } else {
-        "https://raw.githubusercontent.com/SysAdminDoc/Wingetter/main/src"
-    }
+    $baseUrl = "https://raw.githubusercontent.com/SysAdminDoc/Wingetter/main/src"
     # Use a per-process subdirectory so two concurrent launches don't race on
     # the same destination paths. Older runs are cleaned up on a best-effort
     # basis if the parent grows beyond a small number of stale subdirs.

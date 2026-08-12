@@ -4,10 +4,6 @@ Actionable work only. Historical and completed roadmap material is archived in C
 
 ## Actionable Items
 
-- [ ] P2 - WINGETTER_MODULE_BASE_URL env var enables download-source information leak
-  Why: Any same-user process can set this env var to redirect module download requests to an attacker server. SHA256 hash verification prevents code execution but the attacker learns the user's IP and Wingetter usage.
-  Where: `Wingetter.ps1` download path
-
 - [ ] P3 - `$PumpUi` scriptblock is dead logic in background worker
   Why: The PumpUi parameter defaults to an empty scriptblock and is never set to anything useful by the UI tier. The 100ms polling loop serves only for cancel-checking.
   Where: `src\Wingetter.WinGet.ps1` Invoke-WinGetPackageOperation

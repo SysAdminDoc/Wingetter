@@ -46,6 +46,10 @@ if (!(Test-Path $SourceDir)) {
 if ($failures.Count -eq 0) {
     $launcherText = Get-Content -Path $LauncherPath -Raw
 
+    if ($launcherText -match 'WINGETTER_MODULE_BASE_URL') {
+        Add-Failure "Launcher must use the canonical module source URL; environment-controlled redirects are not allowed."
+    }
+
     # Extract the module file list.
     $listMatch = [regex]::Match($launcherText, '(?ms)\$Script:WingetterModuleFiles\s*=\s*@\((?<list>.*?)\)')
     if (-not $listMatch.Success) {

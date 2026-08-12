@@ -1,7 +1,7 @@
 {
     "schema":  "Wingetter.ReleaseArtifactManifest.v1",
     "version":  "v6.2.0",
-    "generatedAtUtc":  "2026-08-12T10:47:28Z",
+    "generatedAtUtc":  "2026-08-12T10:49:05Z",
     "build":  {
                   "source":  "Bundled launcher generated from Wingetter.ps1 plus the dot-sourced modules under src/ at v6.2.0",
                   "tool":  "tools\\\\Build-WingetterExe.ps1",
@@ -34,7 +34,7 @@
     "artifacts":  [
                       {
                           "path":  "Wingetter.exe",
-                          "sha256":  "3595D6B82EE24B9D0EED67FC55862AA65EA738146DE80C6F1D6FED1A8A01D223",
+                          "sha256":  "FBF148ACD2AC103F4D72D9083EC4839BB3D969705294A287DEB2110564C74CB8",
                           "size":  699904,
                           "description":  "PS2EXE-packaged Wingetter launcher built from v6.2.0."
                       },
