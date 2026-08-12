@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "version":  "v6.2.0",
+    "version":  "v6.2.1",
     "canonicalFile":  "catalog/groups.json",
     "embeddedFallbackFile":  "src/Wingetter.Groups.ps1",
     "groupCount":  10,

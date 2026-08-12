@@ -9,7 +9,7 @@
     parallel icon loading, app icons with caching, search filter, package groups
     (save/load/export as PS1 or JSON), 765 apps across 39 categories.
 .VERSION
-    6.2.0
+    6.2.1
 #>
 
 #Requires -Version 5.1
@@ -44,7 +44,7 @@ $Script:WingetterModuleFiles = @(
 # local validation so the table never drifts from the modules on disk.
 # BEGIN WingetterModuleHashes
 $Script:WingetterModuleHashes = @{
-    'Wingetter.Common.ps1' = 'C97A18C124BA2CC8AD5F39DD318F44796B8448886CAB6E401C367B211CA5C909'
+    'Wingetter.Common.ps1' = '17CD19D63CAF566EB6DD5E2865A3D16F49D7CC31E1166EA57BF011FFE7564B18'
     'Wingetter.Catalog.ps1' = 'D0F23C563AC5422DB6DFF6B96C29291783CB4550B8B8399FC5758755CE7DD913'
     'Wingetter.WinGet.ps1' = 'E5951FEA33EC4522914BB59CA12FC8D76007B7B0F094AB0A5C7C57E80D5761AA'
     'Wingetter.Groups.ps1' = '7EFCEB9EC4E73313D9251C58402029FEBD9906EE9EC460529B5755BA4D487783'
@@ -62,7 +62,7 @@ $Script:WingetterModuleHashes = @{
 # END WingetterModuleHashes
 
 # BEGIN WingetterCatalogHash
-$Script:WingetterCatalogHash = 'FC008B708600D48EBFA313B426A7CAE4D3820BE5F218C6B5B44501CDCEF0816D'
+$Script:WingetterCatalogHash = '30495113BCFBAFA39953EB9C745BF9C4BCD93641A19EECA30F1320BD675D0F8F'
 # END WingetterCatalogHash
 
 function Get-WingetterFileSha256 {

@@ -3,7 +3,7 @@
 A powerful PowerShell GUI application for discovering, selecting, and bulk installing Windows software using [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/winget/). Think Ninite, but with 765 apps and full winget integration.
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)
-![Version](https://img.shields.io/badge/version-v6.2.0-blue)
+![Version](https://img.shields.io/badge/version-v6.2.1-blue)
 ![Apps](https://img.shields.io/badge/Apps-765-green)
 ![Categories](https://img.shields.io/badge/Categories-39-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)

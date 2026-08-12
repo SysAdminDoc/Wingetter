@@ -4,6 +4,8 @@ All notable changes to Wingetter will be documented in this file.
 
 ## [Unreleased]
 
+## [v6.2.1] - 2026-08-12
+
 - Security: Diagnostics bundles now redact bearer credentials, API keys, and token-like query parameters wherever they appear in captured output, including stderr and JSON log lines.
 - Security: Raw-launch module downloads now use only the canonical GitHub source URL; the same-user `WINGETTER_MODULE_BASE_URL` override was removed to prevent redirecting usage metadata to an untrusted mirror.
 - Refactored: Removed the unused `PumpUi` callback from package-source and offline-cache workers; their polling loops now perform only cancellation checks.
