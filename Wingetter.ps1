@@ -45,7 +45,7 @@ $Script:WingetterModuleFiles = @(
 # BEGIN WingetterModuleHashes
 $Script:WingetterModuleHashes = @{
     'Wingetter.Common.ps1' = '0BFE2C559DEC2DEA1E836D126B07E71C252795EF415BF6E265648AAC308D6C73'
-    'Wingetter.Catalog.ps1' = '2EE56DECDF107B59CD572D0D1C9AE82F331CCEAA97900ACD7ED741D8BD3DD4E5'
+    'Wingetter.Catalog.ps1' = 'D0F23C563AC5422DB6DFF6B96C29291783CB4550B8B8399FC5758755CE7DD913'
     'Wingetter.WinGet.ps1' = 'E5951FEA33EC4522914BB59CA12FC8D76007B7B0F094AB0A5C7C57E80D5761AA'
     'Wingetter.Groups.ps1' = '7EFCEB9EC4E73313D9251C58402029FEBD9906EE9EC460529B5755BA4D487783'
     'Wingetter.ProfileGallery.ps1' = '34043F5BF1EFC70E0C0D7B611F5E30A0D9A547057D43B2C44BCDCC7C5C664D9D'
@@ -60,6 +60,10 @@ $Script:WingetterModuleHashes = @{
     'Wingetter.App.ps1' = 'E74AE740AFD1B9DCEC8E5CCF9CA1E6290D78F9FC86A75BC06E0DCDF7F9A2B952'
 }
 # END WingetterModuleHashes
+
+# BEGIN WingetterCatalogHash
+$Script:WingetterCatalogHash = 'FC008B708600D48EBFA313B426A7CAE4D3820BE5F218C6B5B44501CDCEF0816D'
+# END WingetterCatalogHash
 
 function Get-WingetterFileSha256 {
     param([string]$Path)
@@ -93,6 +97,18 @@ function Test-WingetterModuleHash {
     $actual = Get-WingetterFileSha256 -Path $Path
     if ($actual -ne $expected.ToUpperInvariant()) {
         throw "Wingetter module '$FileName' SHA256 mismatch. Expected $expected, got $actual. The downloaded module will not be loaded."
+    }
+}
+
+function Test-WingetterCatalogHash {
+    param([string]$Path)
+    $expected = $Script:WingetterCatalogHash
+    if ([string]::IsNullOrWhiteSpace($expected)) {
+        throw "Wingetter launcher has no expected SHA256 for the catalog."
+    }
+    $actual = Get-WingetterFileSha256 -Path $Path
+    if ($actual -ne $expected.ToUpperInvariant()) {
+        throw "Wingetter catalog SHA256 mismatch. Expected $expected, got $actual. The downloaded catalog will not be loaded."
     }
 }
 
@@ -175,6 +191,30 @@ function Get-WingetterModuleDirectory {
         if (-not $success) {
             throw "Could not download Wingetter module '$file' from $url after 3 attempts. Last error: $($lastError.Exception.Message)"
         }
+    }
+
+    $catalogDirectory = Join-Path (Split-Path -Parent $downloadRoot) "catalog"
+    New-Item -ItemType Directory -Path $catalogDirectory -Force | Out-Null
+    $catalogTarget = Join-Path $catalogDirectory "winget.json"
+    $catalogStagePath = "$catalogTarget.partial"
+    $catalogUrl = "https://raw.githubusercontent.com/SysAdminDoc/Wingetter/main/catalog/winget.json"
+    $catalogSuccess = $false
+    $catalogLastError = $null
+    for ($attempt = 1; $attempt -le 3 -and -not $catalogSuccess; $attempt++) {
+        try {
+            if (Test-Path $catalogStagePath) { Remove-Item -Path $catalogStagePath -Force -ErrorAction SilentlyContinue }
+            Invoke-WebRequest -Uri $catalogUrl -UseBasicParsing -OutFile $catalogStagePath -ErrorAction Stop
+            Test-WingetterCatalogHash -Path $catalogStagePath
+            Move-Item -Path $catalogStagePath -Destination $catalogTarget -Force -ErrorAction Stop
+            $catalogSuccess = $true
+        } catch {
+            $catalogLastError = $_
+            if (Test-Path $catalogStagePath) { Remove-Item -Path $catalogStagePath -Force -ErrorAction SilentlyContinue }
+            Start-Sleep -Seconds ([math]::Min(5, $attempt))
+        }
+    }
+    if (-not $catalogSuccess) {
+        throw "Could not download the Wingetter catalog from $catalogUrl after 3 attempts. Last error: $($catalogLastError.Exception.Message)"
     }
 
     $Script:WingetterRoot = (Split-Path -Parent $downloadRoot)

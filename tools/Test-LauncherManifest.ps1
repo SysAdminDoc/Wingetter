@@ -1,6 +1,7 @@
 param(
     [string]$LauncherPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1"),
-    [string]$SourceDir = (Join-Path $PSScriptRoot "..\src")
+    [string]$SourceDir = (Join-Path $PSScriptRoot "..\src"),
+    [string]$CatalogPath = (Join-Path $PSScriptRoot "..\catalog\winget.json")
 )
 
 Set-StrictMode -Version Latest
@@ -41,6 +42,9 @@ if (!(Test-Path $LauncherPath)) {
 }
 if (!(Test-Path $SourceDir)) {
     Add-Failure "Missing source directory at $SourceDir."
+}
+if (!(Test-Path $CatalogPath)) {
+    Add-Failure "Missing canonical catalog at $CatalogPath."
 }
 
 if ($failures.Count -eq 0) {
@@ -101,6 +105,16 @@ if ($failures.Count -eq 0) {
                 }
             }
         }
+
+        $catalogHashMatch = [regex]::Match($launcherText, '(?ms)\$Script:WingetterCatalogHash\s*=\s*\x27(?<hash>[A-F0-9]+)\x27')
+        if (-not $catalogHashMatch.Success) {
+            Add-Failure "Launcher does not declare a canonical catalog SHA256."
+        } else {
+            $actualCatalogHash = Get-WingetterFileSha256 -Path $CatalogPath
+            if ($actualCatalogHash -ne $catalogHashMatch.Groups['hash'].Value.ToUpperInvariant()) {
+                Add-Failure "Launcher catalog hash is stale. Expected (from disk) $actualCatalogHash, embedded $($catalogHashMatch.Groups['hash'].Value). Re-run tools\Sync-LauncherManifest.ps1."
+            }
+        }
     }
 
     # Exercise the verifier directly: extract the embedded hashtable + the
@@ -114,11 +128,13 @@ if ($failures.Count -eq 0) {
             "# tampered content" | Set-Content -Path $tampered -Encoding UTF8
 
             $hashtableBlock = [regex]::Match($launcherText, '(?ms)\$Script:WingetterModuleHashes\s*=\s*@\{.*?\}').Value
+            $catalogHashBlock = [regex]::Match($launcherText, '(?ms)\$Script:WingetterCatalogHash\s*=\s*\x27[^\x27]+\x27').Value
             $functionBlock = [regex]::Match($launcherText, '(?ms)function Test-WingetterModuleHash\s*\{.*?\n\}').Value
-            if ([string]::IsNullOrWhiteSpace($hashtableBlock) -or [string]::IsNullOrWhiteSpace($functionBlock)) {
-                Add-Failure "Could not extract hashtable or Test-WingetterModuleHash function from launcher for probe."
+            $catalogFunctionBlock = [regex]::Match($launcherText, '(?ms)function Test-WingetterCatalogHash\s*\{.*?\n\}').Value
+            if ([string]::IsNullOrWhiteSpace($hashtableBlock) -or [string]::IsNullOrWhiteSpace($catalogHashBlock) -or [string]::IsNullOrWhiteSpace($functionBlock) -or [string]::IsNullOrWhiteSpace($catalogFunctionBlock)) {
+                Add-Failure "Could not extract launcher hash blocks or verifier functions for probe."
             } else {
-                . ([scriptblock]::Create($hashtableBlock + "`n" + $functionBlock))
+                . ([scriptblock]::Create($hashtableBlock + "`n" + $catalogHashBlock + "`n" + $functionBlock + "`n" + $catalogFunctionBlock))
 
                 $positiveOk = $false
                 try {
@@ -141,6 +157,29 @@ if ($failures.Count -eq 0) {
                     }
                     if (-not $negativeOk) {
                         Add-Failure "Test-WingetterModuleHash accepted a tampered file - the hash-pin defense is broken."
+                    }
+                }
+
+                $catalogPositiveOk = $false
+                try {
+                    Test-WingetterCatalogHash -Path $CatalogPath
+                    $catalogPositiveOk = $true
+                } catch {
+                    Add-Failure "Test-WingetterCatalogHash rejected the canonical catalog: $($_.Exception.Message)"
+                }
+                if ($catalogPositiveOk) {
+                    $catalogNegativeOk = $false
+                    try {
+                        Test-WingetterCatalogHash -Path $tampered
+                    } catch {
+                        if ($_.Exception.Message -match "catalog SHA256 mismatch") {
+                            $catalogNegativeOk = $true
+                        } else {
+                            Add-Failure "Test-WingetterCatalogHash failed on a tampered file with an unexpected message: $($_.Exception.Message)"
+                        }
+                    }
+                    if (-not $catalogNegativeOk) {
+                        Add-Failure "Test-WingetterCatalogHash accepted a tampered file - the catalog hash-pin defense is broken."
                     }
                 }
             }

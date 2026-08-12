@@ -1,6 +1,7 @@
 param(
     [string]$LauncherPath = (Join-Path $PSScriptRoot "..\Wingetter.ps1"),
-    [string]$SourceDir = (Join-Path $PSScriptRoot "..\src")
+    [string]$SourceDir = (Join-Path $PSScriptRoot "..\src"),
+    [string]$CatalogPath = (Join-Path $PSScriptRoot "..\catalog\winget.json")
 )
 
 Set-StrictMode -Version Latest
@@ -37,6 +38,10 @@ if (!(Test-Path $SourceDir)) {
     Write-Host "Missing source directory at $SourceDir." -ForegroundColor Red
     exit 1
 }
+if (!(Test-Path $CatalogPath)) {
+    Write-Host "Missing canonical catalog at $CatalogPath." -ForegroundColor Red
+    exit 1
+}
 
 $launcherText = Get-Content -Path $LauncherPath -Raw
 $listMatch = [regex]::Match($launcherText, '(?ms)\$Script:WingetterModuleFiles\s*=\s*@\((?<list>.*?)\)')
@@ -49,6 +54,7 @@ $moduleFiles = @(
         ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
         Where-Object { $_ -and $_.EndsWith('.ps1') }
 )
+$catalogHash = Get-WingetterFileSha256 -Path $CatalogPath
 
 $rows = New-Object System.Collections.Generic.List[string]
 foreach ($file in $moduleFiles) {
@@ -78,6 +84,17 @@ if (-not $blockMatch.Success) {
     exit 1
 }
 $updated = $launcherText.Substring(0, $blockMatch.Index) + $replacement + $launcherText.Substring($blockMatch.Index + $blockMatch.Length)
+
+$catalogReplacement = "# BEGIN WingetterCatalogHash" + $nl +
+    "`$Script:WingetterCatalogHash = '$catalogHash'" + $nl +
+    "# END WingetterCatalogHash"
+$catalogBlockPattern = '(?ms)# BEGIN WingetterCatalogHash.*?# END WingetterCatalogHash'
+$catalogBlockMatch = [regex]::Match($updated, $catalogBlockPattern)
+if (-not $catalogBlockMatch.Success) {
+    Write-Host "Could not locate BEGIN/END WingetterCatalogHash markers in launcher." -ForegroundColor Red
+    exit 1
+}
+$updated = $updated.Substring(0, $catalogBlockMatch.Index) + $catalogReplacement + $updated.Substring($catalogBlockMatch.Index + $catalogBlockMatch.Length)
 
 if ($updated -eq $launcherText) {
     Write-Host "Launcher hashtable is already current."

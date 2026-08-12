@@ -76,6 +76,19 @@ $moduleFiles = @(
 )
 if ($moduleFiles.Count -eq 0) { throw "Launcher module list parsed empty." }
 
+$catalogPath = Join-Path $repoRoot "catalog\winget.json"
+if (!(Test-Path -LiteralPath $catalogPath)) { throw "Missing canonical catalog at $catalogPath." }
+$catalogJson = [System.IO.File]::ReadAllText((Resolve-Path -LiteralPath $catalogPath).Path).Trim()
+try {
+    $catalogObject = $catalogJson | ConvertFrom-Json
+    if ($catalogObject.schemaVersion -ne 1 -or !$catalogObject.categories) {
+        throw "The canonical catalog does not have the expected schema."
+    }
+} catch {
+    throw "Could not validate canonical catalog '$catalogPath': $($_.Exception.Message)"
+}
+$catalogBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($catalogJson))
+
 if ([string]::IsNullOrWhiteSpace($BundleOutput)) {
     $BundleOutput = Join-Path $repoRoot "release\Wingetter.bundled.ps1"
 }
@@ -90,6 +103,14 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine("# Source order: " + ($moduleFiles -join ", "))
 [void]$sb.AppendLine("#Requires -Version 5.1")
 [void]$sb.AppendLine("`$ErrorActionPreference = 'Stop'")
+[void]$sb.AppendLine("")
+[void]$sb.AppendLine("# Canonical catalog snapshot generated from catalog\\winget.json - DO NOT EDIT")
+[void]$sb.AppendLine('$Script:WingetterEmbeddedCatalogJsonBase64 = @(')
+for ($offset = 0; $offset -lt $catalogBase64.Length; $offset += 8192) {
+    $length = [Math]::Min(8192, $catalogBase64.Length - $offset)
+    [void]$sb.AppendLine('    "' + $catalogBase64.Substring($offset, $length) + '"')
+}
+[void]$sb.AppendLine(') -join ""')
 [void]$sb.AppendLine("")
 
 foreach ($file in $moduleFiles) {

@@ -22,47 +22,6 @@ function ConvertTo-DoubleQuotedLiteral {
     return '"' + (($Value -replace '`', '``') -replace '"', '`"') + '"'
 }
 
-function Get-IconDomain {
-    param([object]$App)
-    if ($App.iconDomain) {
-        return [string]$App.iconDomain
-    }
-    if ($App.iconUrl -match '[?&]domain=(?<domain>[^&]+)') {
-        return [System.Uri]::UnescapeDataString($matches.domain)
-    }
-    throw "App '$($App.name)' is missing iconDomain and a parseable iconUrl."
-}
-
-function New-CatalogBlock {
-    param([object]$Catalog)
-
-    $lines = New-Object System.Collections.Generic.List[string]
-    $lines.Add('$Script:SoftwareDatabase = [ordered]@{')
-    $lines.Add('')
-
-    foreach ($category in @($Catalog.categories)) {
-        $lines.Add("    $(ConvertTo-DoubleQuotedLiteral ([string]$category.name)) = @(")
-        foreach ($app in @($category.apps)) {
-            $domain = Get-IconDomain -App $app
-            $line = '        @{ Name = ' +
-                (ConvertTo-DoubleQuotedLiteral ([string]$app.name)) +
-                '; WingetId = ' +
-                (ConvertTo-DoubleQuotedLiteral ([string]$app.wingetId)) +
-                '; Icon = "' + '${f}' + $domain + '" }'
-            $lines.Add($line)
-        }
-        $lines.Add('    )')
-        $lines.Add('')
-    }
-
-    if ($lines[$lines.Count - 1] -eq '') {
-        $lines.RemoveAt($lines.Count - 1)
-    }
-    $lines.Add('}')
-
-    return ($lines -join [Environment]::NewLine)
-}
-
 function New-GroupsBlock {
     param([object]$Groups)
 
@@ -123,19 +82,17 @@ $resolvedGroupsModulePath = (Resolve-Path $GroupsModulePath).Path
 $catalogText = [System.IO.File]::ReadAllText($resolvedCatalogModulePath)
 $groupsText = [System.IO.File]::ReadAllText($resolvedGroupsModulePath)
 
-$catalogBlock = New-CatalogBlock -Catalog $catalog
 $groupsBlock = New-GroupsBlock -Groups $groups
 
-$databasePattern = '(?ms)^\$Script:SoftwareDatabase = \[ordered\]@\{.*?^\}\s*(?=^\$wingetterRoot = Get-WingetterRootPath)'
 $groupsPattern = '(?ms)^\$Script:BuiltInGroups = \[ordered\]@\{.*?^\}\s*(?=^\$wingetterRoot = Get-WingetterRootPath)'
 
-$updatedCatalogText = Replace-SingleBlock -Text $catalogText -Pattern $databasePattern -Replacement $catalogBlock -Name "catalog" -Path $resolvedCatalogModulePath
 $updatedGroupsText = Replace-SingleBlock -Text $groupsText -Pattern $groupsPattern -Replacement $groupsBlock -Name "groups" -Path $resolvedGroupsModulePath
+$catalogUsesCanonicalSource = $catalogText -match 'catalog/winget\.json' -and $catalogText -match 'Get-WingetterEmbeddedCatalogJson' -and $catalogText -notmatch '\$Script:SoftwareDatabase\s*=\s*\[ordered\]@\{'
 
 if ($Check) {
     $failed = $false
-    if ((ConvertTo-NormalizedText $updatedCatalogText) -ne (ConvertTo-NormalizedText $catalogText)) {
-        Write-Host "Embedded catalog fallback is stale. Run tools/Sync-EmbeddedCatalog.ps1." -ForegroundColor Red
+    if (!$catalogUsesCanonicalSource) {
+        Write-Host "Catalog module does not use catalog/winget.json as its canonical source." -ForegroundColor Red
         $failed = $true
     }
     if ((ConvertTo-NormalizedText $updatedGroupsText) -ne (ConvertTo-NormalizedText $groupsText)) {
@@ -143,10 +100,9 @@ if ($Check) {
         $failed = $true
     }
     if ($failed) { exit 1 }
-    Write-Host "Embedded catalog and groups fallbacks are current for $($catalog.version)."
+    Write-Host "Canonical catalog loader and embedded group fallback are current for $($catalog.version)."
     exit 0
 }
 
-Write-Utf8NoBom -Path $resolvedCatalogModulePath -Value $updatedCatalogText
 Write-Utf8NoBom -Path $resolvedGroupsModulePath -Value $updatedGroupsText
-Write-Host "Updated embedded catalog fallback in $resolvedCatalogModulePath and group fallback in $resolvedGroupsModulePath."
+Write-Host "Catalog loads from catalog/winget.json; updated embedded group fallback in $resolvedGroupsModulePath."

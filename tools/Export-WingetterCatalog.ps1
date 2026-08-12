@@ -81,17 +81,6 @@ function Get-ProjectVersion {
     return $uniqueVersions[0]
 }
 
-function Convert-AppMatch {
-    param([System.Text.RegularExpressions.Match]$Match)
-    $domain = $Match.Groups["domain"].Value.Trim()
-    [ordered]@{
-        name       = $Match.Groups["name"].Value.Trim()
-        wingetId   = $Match.Groups["id"].Value.Trim()
-        iconDomain = $domain
-        iconUrl    = "https://www.google.com/s2/favicons?sz=32&domain=$domain"
-    }
-}
-
 function Export-CatalogObject {
     param(
         [string]$Text,
@@ -100,48 +89,27 @@ function Export-CatalogObject {
         [string]$FallbackPath
     )
 
-    $databaseSection = Get-Section `
-        -Text $Text `
-        -StartMarker '$Script:SoftwareDatabase = [ordered]@{' `
-        -EndMarker '$wingetterRoot = Get-WingetterRootPath'
-
-    $categoryPattern = '(?ms)^\s*"(?<category>[^"]+)"\s*=\s*@\((?<body>.*?)^\s*\)\s*(?=^\s*"[^"]+"\s*=\s*@\(|^\s*\}\s*$)'
-    $appPattern = '@\{\s*Name\s*=\s*"(?<name>[^"]+)";\s*WingetId\s*=\s*"(?<id>[^"]+)";\s*Icon\s*=\s*"\$\{f\}(?<domain>[^"]+)"\s*\}'
-
-    $categories = New-Object System.Collections.ArrayList
-    foreach ($categoryMatch in [regex]::Matches($databaseSection, $categoryPattern)) {
-        $apps = New-Object System.Collections.ArrayList
-        foreach ($appMatch in [regex]::Matches($categoryMatch.Groups["body"].Value, $appPattern)) {
-            [void]$apps.Add((Convert-AppMatch -Match $appMatch))
-        }
-        if ($apps.Count -eq 0) {
-            throw "Category '$($categoryMatch.Groups["category"].Value)' did not produce any apps."
-        }
-        [void]$categories.Add([ordered]@{
-            name  = $categoryMatch.Groups["category"].Value
-            count = $apps.Count
-            apps  = @($apps)
-        })
+    if ($Text -notmatch 'catalog/winget\.json' -or $Text -match '\$Script:SoftwareDatabase\s*=\s*\[ordered\]@\{') {
+        throw "Catalog module must load the canonical catalog JSON instead of carrying a generated app database."
+    }
+    if (!(Test-Path -LiteralPath $CanonicalPath)) {
+        throw "Missing canonical catalog at $CanonicalPath."
     }
 
-    if ($categories.Count -eq 0) {
-        throw "No catalog categories were parsed from $CatalogModulePath."
+    $catalog = Get-Content -LiteralPath $CanonicalPath -Raw | ConvertFrom-Json
+    if ($catalog.schemaVersion -ne 1 -or !$catalog.categories) {
+        throw "Canonical catalog at $CanonicalPath has an invalid schema."
     }
-
-    $appCount = 0
-    foreach ($category in $categories) {
-        $appCount += [int]$category.count
+    if ([string]$catalog.version -ne $Version) {
+        throw "Canonical catalog version '$($catalog.version)' does not match project version '$Version'."
     }
-
-    return [ordered]@{
-        schemaVersion        = 1
-        version              = $Version
-        canonicalFile        = Get-RepoRelativePath -Path $CanonicalPath
-        embeddedFallbackFile = Get-RepoRelativePath -Path $FallbackPath
-        appCount             = $appCount
-        categoryCount        = $categories.Count
-        categories           = @($categories)
+    if ([string]$catalog.canonicalFile -ne (Get-RepoRelativePath -Path $CanonicalPath)) {
+        throw "Canonical catalog metadata points to '$($catalog.canonicalFile)' instead of its canonical path."
     }
+    if ([string]$catalog.embeddedFallbackFile -ne (Get-RepoRelativePath -Path $FallbackPath)) {
+        throw "Canonical catalog metadata has an unexpected embeddedFallbackFile '$($catalog.embeddedFallbackFile)'."
+    }
+    return $catalog
 }
 
 function Export-GroupsObject {
