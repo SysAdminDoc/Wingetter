@@ -23,7 +23,7 @@
                           },
                   "authenticode":  {
                                        "status":  "NotSigned",
-                                       "statusMessage":  "The file C:\\Users\\--\\repos\\Wingetter\\Wingetter.exe is not digitally signed. You cannot run this script on the current system. For more information about running scripts and setting execution policy, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170",
+                                       "statusMessage":  "The file C:\\repos\\Wingetter\\Wingetter.exe is not digitally signed. You cannot run this script on the current system. For more information about running scripts and setting execution policy, see about_Execution_Policies at https:/go.microsoft.com/fwlink/?LinkID=135170",
                                        "signerSubject":  "",
                                        "signerThumbprint":  "",
                                        "timestamp":  "",
