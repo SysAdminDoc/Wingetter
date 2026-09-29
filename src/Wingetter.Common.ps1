@@ -1,5 +1,5 @@
 # Shared helpers for dot-sourced Wingetter modules.
-$Script:WingetterVersion = "6.2.1"
+$Script:WingetterVersion = "6.2.2"
 function Get-WingetterRootPath {
     $rootVar = Get-Variable -Name WingetterRoot -Scope Script -ErrorAction SilentlyContinue
     if ($rootVar -and ![string]::IsNullOrWhiteSpace([string]$rootVar.Value)) {

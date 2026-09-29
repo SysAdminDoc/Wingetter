@@ -6,6 +6,10 @@ All notable changes to Wingetter will be documented in this file.
 
 - Added: Reimagined the workspace as a navigation-driven shell with Explore, Installed, Updates, Profiles, Policy, Diagnostics, Settings, and About pages, shared review queues, live catalog summaries, and page-specific action surfaces.
 
+## [v6.2.2] - 2026-09-28
+
+- Changed: The README no longer asks anyone to paste an `irm | iex` one-liner. Quick Launch now links to the release `.exe` and the plain `.ps1` file, with a note to read the script before you run it.
+
 ## [v6.2.1] - 2026-08-12
 
 - Security: Diagnostics bundles now redact bearer credentials, API keys, and token-like query parameters wherever they appear in captured output, including stderr and JSON log lines.

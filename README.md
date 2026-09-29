@@ -3,7 +3,7 @@
 A powerful PowerShell GUI application for discovering, selecting, and bulk installing Windows software using [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/winget/). Think Ninite, but with 765 apps and full winget integration.
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1+-blue?logo=powershell&logoColor=white)
-![Version](https://img.shields.io/badge/version-v6.2.1-blue)
+![Version](https://img.shields.io/badge/version-v6.2.2-blue)
 ![Apps](https://img.shields.io/badge/Apps-765-green)
 ![Categories](https://img.shields.io/badge/Categories-39-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
@@ -25,11 +25,9 @@ A powerful PowerShell GUI application for discovering, selecting, and bulk insta
 
 ## Quick Launch
 
-```powershell
-irm "https://raw.githubusercontent.com/SysAdminDoc/Wingetter/main/Wingetter.ps1" | iex
-```
+[**Download Wingetter.exe**](https://github.com/SysAdminDoc/Wingetter/releases/latest/download/Wingetter.exe) from the latest release, or grab [`Wingetter.ps1`](https://github.com/SysAdminDoc/Wingetter/blob/main/Wingetter.ps1) if you'd rather run the plain script.
 
-Paste the above into any PowerShell window to download and run Wingetter instantly. No installation required.
+It's one file either way, so open it and take a look before you run it. Double-click the `.exe`, or right-click `Wingetter.ps1` and choose **Run with PowerShell**. The script fetches its own modules from GitHub and checks each one's SHA256 against the hashes baked into the launcher, so a tampered download won't load. No installation required.
 
 ---
 
